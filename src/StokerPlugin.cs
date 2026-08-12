@@ -29,6 +29,10 @@ namespace Stoker
             _harmony.PatchAll(typeof(ScenePatches));
 
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
+
+            if (StokerConfig.TestMode.Value)
+                Log.LogWarning("TEST MODE: the hopper costs one wood. "
+                               + "Turn TestMode off in the config before playing for real.");
         }
 
         private void OnDestroy()

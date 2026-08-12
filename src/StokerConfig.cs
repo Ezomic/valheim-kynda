@@ -25,9 +25,27 @@ namespace Stoker
         public static ConfigEntry<float> HopperRange;
         public static ConfigEntry<int> MaxHoppers;
         public static ConfigEntry<int> CapacityPerHopper;
+        public static ConfigEntry<bool> TestMode;
+
+        /// <summary>
+        /// The hopper's real cost is gated behind bronze, which is a whole biome of
+        /// progression before you can check that the thing even appears on the hammer.
+        /// This makes that a switch rather than a config string to edit and remember to
+        /// put back.
+        /// </summary>
+        private const string TestCost = "Wood:1";
+
+        public static string HopperCostNow()
+        {
+            return TestMode.Value ? TestCost : HopperCost.Value;
+        }
 
         public static void Bind(ConfigFile config)
         {
+            TestMode = config.Bind("Diagnostics", "TestMode", false,
+                "Makes the hopper cost one wood, so it can be built and checked without "
+                + "bronze. Announced in the log on startup so it is hard to leave on.");
+
             HopperEnabled = config.Bind("Hopper", "HopperEnabled", true,
                 "Add the buildable hopper that raises a nearby station's capacity.");
 

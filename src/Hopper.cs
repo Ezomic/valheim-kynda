@@ -155,7 +155,7 @@ namespace Stoker
             {
                 piece.m_name = StokerConfig.HopperName.Value;
                 piece.m_description = "Beside a smelter, kiln or furnace, it holds more.";
-                piece.m_resources = Requirements(StokerConfig.HopperCost.Value);
+                piece.m_resources = Requirements(StokerConfig.HopperCostNow());
             }
 
             if (clone.GetComponent<Hopper>() == null) clone.AddComponent<Hopper>();
