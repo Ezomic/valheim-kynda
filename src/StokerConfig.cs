@@ -27,6 +27,9 @@ namespace Stoker
         public static ConfigEntry<int> CapacityPerHopper;
         public static ConfigEntry<float> HopperScale;
         public static ConfigEntry<float> HopperSquash;
+        public static ConfigEntry<string> HopperVisual;
+        public static ConfigEntry<float> HopperVisualScale;
+        public static ConfigEntry<bool> LogVisualCandidates;
         public static ConfigEntry<bool> TestMode;
 
         /// <summary>
@@ -63,6 +66,22 @@ namespace Stoker
                 + "piece_chest_wood if this does not exist. Other vanilla pieces worth "
                 + "trying: piece_oven (stone, reads industrial), piece_cauldron (metal), "
                 + "piece_pot1 (clay). Changing this needs a restart, not a rebuild.");
+
+            HopperVisual = config.Bind("Hopper", "HopperVisual", "",
+                "Name of a vanilla prop to wear instead of the built model. Empty uses "
+                + "the hand-built mesh. Worth trying: CargoCrate, Crate_box, Barrels, "
+                + "Baskets, Sacks, fi_vil_container_sack03_grain, "
+                + "fi_vil_container_basket01_grain_lid, Cart. Needs a restart, not a "
+                + "rebuild - so cycling through them is a relaunch each, not a build each.");
+
+            HopperVisualScale = config.Bind("Hopper", "HopperVisualScale", 1f,
+                "Size of the grafted prop. Props are modelled at their own scale, so "
+                + "expect to tune this per prop rather than once.");
+
+            LogVisualCandidates = config.Bind("Diagnostics", "LogVisualCandidates", true,
+                "List which of the candidate props are actually loaded at startup. They "
+                + "are not all guaranteed - some are location dressing that only exists "
+                + "while such a location is streamed in.");
 
             HopperScale = config.Bind("Hopper", "HopperScale", 1f,
                 "Overall size of the hopper.");

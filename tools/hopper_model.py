@@ -56,7 +56,13 @@ def add_box(name, size, location, mat, rot_z=0.0, rot_x=0.0, collider=False):
     bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
     obj = bpy.context.active_object
     obj.name = name
-    obj.scale = (size[0] / 2.0, size[1] / 2.0, size[2] / 2.0)
+    # scale, not scale/2. primitive_cube_add(size=1.0) already makes a unit cube
+    # spanning -0.5..0.5, so halving again produced every box at half its stated
+    # size - while cones and cylinders, which take a radius, came out correct. Mixing
+    # the two is why banding sat inside the bin, corner straps floated clear of the
+    # crate they were meant to bind, and a footing swallowed a chute: every
+    # box-against-cone relationship in the file was wrong by a factor of two.
+    obj.scale = (size[0], size[1], size[2])
     obj.rotation_euler = (math.radians(rot_x), 0.0, math.radians(rot_z))
     obj.data.materials.append(material(mat))
     if collider:

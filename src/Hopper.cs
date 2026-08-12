@@ -163,10 +163,13 @@ namespace Stoker
                 piece.m_category = Piece.PieceCategory.Crafting;
             }
 
-            // Its own model, replacing the donor's entirely. If the OBJ is missing the
-            // donor's look is kept and squashed instead, so a lost asset costs the piece
-            // its shape rather than making it invisible.
-            var modelled = HopperModel.Apply(clone);
+            // Three ways to look, in falling order of preference: a grafted vanilla prop,
+            // the hand-built model, then the donor's own body squashed down. Each falls
+            // through to the next, so a name that does not resolve costs the piece its
+            // appearance rather than making it invisible.
+            var modelled = PropGraft.Apply(clone, StokerConfig.HopperVisual.Value,
+                                           StokerConfig.HopperVisualScale.Value)
+                           || HopperModel.Apply(clone);
 
             var scale = StokerConfig.HopperScale.Value;
             var squash = modelled ? 1f : Mathf.Max(0.05f, StokerConfig.HopperSquash.Value);

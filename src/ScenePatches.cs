@@ -23,6 +23,8 @@ namespace Stoker
                 StokerPlugin.Log.LogInfo("Capacity component added to " + touched + " station prefab(s).");
 
             HopperPrefab.Register();
+
+            if (StokerConfig.LogVisualCandidates.Value) PropGraft.ReportCandidates();
         }
 
         [HarmonyPostfix]
