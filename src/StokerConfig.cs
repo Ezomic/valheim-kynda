@@ -30,6 +30,7 @@ namespace Stoker
         public static ConfigEntry<string> HopperVisual;
         public static ConfigEntry<float> HopperVisualScale;
         public static ConfigEntry<bool> LogVisualCandidates;
+        public static ConfigEntry<string> VisualSearch;
         public static ConfigEntry<bool> TestMode;
 
         /// <summary>
@@ -77,6 +78,12 @@ namespace Stoker
             HopperVisualScale = config.Bind("Hopper", "HopperVisualScale", 1f,
                 "Size of the grafted prop. Props are modelled at their own scale, so "
                 + "expect to tune this per prop rather than once.");
+
+            VisualSearch = config.Bind("Diagnostics", "VisualSearch",
+                "crate,sack,barrel,basket,cart,pile,bucket,ore,coal,wood,stack,anvil,forge",
+                "Comma-separated words. Every loaded prop whose name contains one is listed "
+                + "in the log, so a real name can be picked instead of guessed at. Empty "
+                + "turns it off.");
 
             LogVisualCandidates = config.Bind("Diagnostics", "LogVisualCandidates", true,
                 "List which of the candidate props are actually loaded at startup. They "

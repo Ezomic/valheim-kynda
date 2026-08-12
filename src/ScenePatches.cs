@@ -25,6 +25,7 @@ namespace Stoker
             HopperPrefab.Register();
 
             if (StokerConfig.LogVisualCandidates.Value) PropGraft.ReportCandidates();
+            PropGraft.Search(StokerConfig.VisualSearch.Value);
         }
 
         [HarmonyPostfix]

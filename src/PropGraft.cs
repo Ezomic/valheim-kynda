@@ -27,23 +27,30 @@ namespace Stoker
         /// </summary>
         public static readonly string[] Candidates =
         {
+            // Verified loaded in-game, not taken from the asset manifest. The first list
+            // was manifest-derived and only 2 of 16 actually resolved: the manifest
+            // catalogues what exists on disk, most of which lives in bundles that only
+            // stream in with the location using them.
+            "wood_stack",            // split logs, stacked - the kiln's own input
+            "wood_fine_stack",
+            "blackwood_stack",
+            "wood_core_stack",
+            "wood_yggdrasil_stack",
+            "coal_pile",             // heaped charcoal - the smelter's fuel
+            "stone_pile",
+            "blackmarble_pile",
+            "grausten_pile",
+            "treasure_pile",
             "CargoCrate",
-            "Crate_box",
-            "Barrel",
-            "Barrels",
-            "HildirBarrel",
-            "Baskets",
-            "Sacks",
-            "fi_vil_container_sack01",
-            "fi_vil_container_sack03_grain",
-            "fi_vil_container_basket01_grain_lid",
-            "fi_vil_container_basket02_closed",
-            "fi_vil_container_bucket01",
-            "fi_vil_forge_bellow1",
-            "wooden_bucket",
+            "dvergrprops_crate",
+            "dvergrprops_crate_long",
+            "dvergrprops_crate_ashlands",
+            "dvergrprops_barrel",
+            "barrell",
+            "bone_stack",
             "Cart",
-            "CartNew",
         };
+
 
         private static Dictionary<string, GameObject> _index;
 
@@ -155,6 +162,45 @@ namespace Stoker
             }
 
             StokerPlugin.Log.LogInfo("Prop index built: " + _index.Count + " candidates with meshes.");
+        }
+
+        /// <summary>
+        /// Lists everything loaded whose name contains one of the given words.
+        ///
+        /// The hand-written candidate list came off the asset manifest, which catalogues
+        /// every asset that exists rather than every asset that is loaded - and only two
+        /// of sixteen turned out to be reachable. The index knows what is genuinely there,
+        /// so asking it beats guessing at names.
+        /// </summary>
+        public static void Search(string keywords)
+        {
+            if (string.IsNullOrEmpty(keywords)) return;
+            if (_index == null) BuildIndex();
+
+            foreach (var raw in keywords.Split(','))
+            {
+                var word = raw.Trim();
+                if (word.Length == 0) continue;
+
+                var hits = new List<string>();
+                foreach (var pair in _index)
+                {
+                    if (pair.Key.IndexOf(word, StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                    // Broken and destruction variants are the same prop in pieces.
+                    var lower = pair.Key.ToLowerInvariant();
+                    if (lower.Contains("destruction") || lower.Contains("broken")
+                        || lower.Contains("lod") || lower.Contains("vfx")
+                        || lower.Contains("sfx")) continue;
+
+                    hits.Add(pair.Key);
+                }
+
+                hits.Sort();
+                StokerPlugin.Log.LogInfo(
+                    "Props matching '" + word + "' (" + hits.Count + "): "
+                    + string.Join(", ", hits.GetRange(0, Math.Min(40, hits.Count)).ToArray()));
+            }
         }
 
         /// <summary>Says which of the candidates are actually available right now.</summary>
