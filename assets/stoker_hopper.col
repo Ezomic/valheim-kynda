@@ -1,0 +1,4 @@
+# box  centre x y z  size x y z  qx qy qz qw   (metres, Y-up, Unity quat)
+box 0.000 0.065 0.000 0.720 0.130 0.720 0 0 0 1
+box 0.000 0.700 0.000 0.860 1.200 0.860 0 0 0 1
+box 0.000 0.300 0.260 0.340 0.520 0.260 0 0 0 1

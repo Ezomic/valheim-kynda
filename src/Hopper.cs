@@ -156,7 +156,21 @@ namespace Stoker
                 piece.m_name = StokerConfig.HopperName.Value;
                 piece.m_description = "Beside a smelter, kiln or furnace, it holds more.";
                 piece.m_resources = Requirements(StokerConfig.HopperCostNow());
+
+                // Inherited from the donor, which is a chest and so files under Furniture.
+                // This upgrades a smelter, so it belongs on the same hammer tab as the
+                // smelter - Crafting - not next to the beds and banners.
+                piece.m_category = Piece.PieceCategory.Crafting;
             }
+
+            // Its own model, replacing the donor's entirely. If the OBJ is missing the
+            // donor's look is kept and squashed instead, so a lost asset costs the piece
+            // its shape rather than making it invisible.
+            var modelled = HopperModel.Apply(clone);
+
+            var scale = StokerConfig.HopperScale.Value;
+            var squash = modelled ? 1f : Mathf.Max(0.05f, StokerConfig.HopperSquash.Value);
+            clone.transform.localScale = new Vector3(scale, scale * squash, scale);
 
             if (clone.GetComponent<Hopper>() == null) clone.AddComponent<Hopper>();
 

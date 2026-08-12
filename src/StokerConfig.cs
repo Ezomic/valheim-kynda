@@ -25,6 +25,8 @@ namespace Stoker
         public static ConfigEntry<float> HopperRange;
         public static ConfigEntry<int> MaxHoppers;
         public static ConfigEntry<int> CapacityPerHopper;
+        public static ConfigEntry<float> HopperScale;
+        public static ConfigEntry<float> HopperSquash;
         public static ConfigEntry<bool> TestMode;
 
         /// <summary>
@@ -58,7 +60,17 @@ namespace Stoker
 
             HopperDonor = config.Bind("Hopper", "HopperDonor", "piece_chest_barrel",
                 "Prefab whose model and icon the hopper borrows. Falls back to "
-                + "piece_chest_wood if this does not exist.");
+                + "piece_chest_wood if this does not exist. Other vanilla pieces worth "
+                + "trying: piece_oven (stone, reads industrial), piece_cauldron (metal), "
+                + "piece_pot1 (clay). Changing this needs a restart, not a rebuild.");
+
+            HopperScale = config.Bind("Hopper", "HopperScale", 1f,
+                "Overall size of the hopper.");
+
+            HopperSquash = config.Bind("Hopper", "HopperSquash", 0.7f,
+                "Height multiplier on top of HopperScale. Below 1 squats the donor down so "
+                + "it reads as a bin rather than the barrel it was cloned from. 1 keeps the "
+                + "donor's own proportions.");
 
             HopperRange = config.Bind("Hopper", "HopperRange", 4f,
                 "How close a hopper must be to the station it feeds.");

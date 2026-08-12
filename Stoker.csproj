@@ -40,6 +40,11 @@
   <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(ProfileDir)\BepInEx\plugins')">
     <MakeDir Directories="$(DeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
+    <!-- The model and its collision sidecar are read from beside the dll at runtime. -->
+    <ItemGroup>
+      <HopperAssets Include="$(MSBuildProjectDirectory)\assets\*.obj;$(MSBuildProjectDirectory)\assets\*.col;$(MSBuildProjectDirectory)\assets\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HopperAssets)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
   </Target>
 
 </Project>
