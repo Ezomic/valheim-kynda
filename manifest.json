@@ -1,0 +1,10 @@
+{
+  "name": "Stoker",
+  "author": "Robbin Thijssen",
+  "version_number": "1.0.0",
+  "website_url": "",
+  "description": "Load smelters, kilns and fires several items at a time.",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2333"
+  ]
+}
