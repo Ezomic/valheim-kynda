@@ -64,6 +64,32 @@ namespace Stoker
                                      && SmelterFindCookable != null && SmelterNView != null
                                      && FireplaceNView != null;
 
+        /// <summary>
+        /// How many extra items this press should add - zero unless the modifier is held.
+        ///
+        /// The gate is here rather than at each call site so a plain press is vanilla in
+        /// exactly one place. Set BatchModifier to None and the check falls away, which
+        /// makes batching unconditional for anyone who wants it that way.
+        /// </summary>
+        private static int Extra(int perAdd)
+        {
+            var key = StokerConfig.BatchModifier.Value;
+            if (key != KeyCode.None && !Input.GetKey(key)) return 0;
+
+            return Mathf.Max(0, perAdd - 1);
+        }
+
+        /// <summary>The hint appended to a station's hover text, or nothing when off.</summary>
+        internal static string BatchHint(int perAdd)
+        {
+            var key = StokerConfig.BatchModifier.Value;
+            if (perAdd <= 1) return "";
+
+            return key == KeyCode.None
+                ? "  (x" + perAdd + ")"
+                : "  (" + key + " for x" + perAdd + ")";
+        }
+
         // ------------------------------------------------------------------ smelter fuel
 
         [HarmonyPostfix]
@@ -72,7 +98,7 @@ namespace Stoker
         {
             if (!__result || user == null || !Ready) return;
 
-            var extra = StokerConfig.SmelterItemsPerAdd.Value - 1;
+            var extra = Extra(StokerConfig.SmelterItemsPerAdd.Value);
             if (extra <= 0) return;
 
             var nview = SmelterNView.GetValue(__instance) as ZNetView;
@@ -110,7 +136,7 @@ namespace Stoker
         {
             if (!__result || user == null || !Ready) return;
 
-            var extra = StokerConfig.SmelterItemsPerAdd.Value - 1;
+            var extra = Extra(StokerConfig.SmelterItemsPerAdd.Value);
             if (extra <= 0) return;
 
             var nview = SmelterNView.GetValue(__instance) as ZNetView;
@@ -180,7 +206,7 @@ namespace Stoker
 
         private static void TopUpFire(Fireplace fireplace, Humanoid user)
         {
-            var extra = StokerConfig.FireplaceItemsPerAdd.Value - 1;
+            var extra = Extra(StokerConfig.FireplaceItemsPerAdd.Value);
             if (extra <= 0 || !Ready || fireplace.m_infiniteFuel || !fireplace.m_canRefill) return;
 
             var nview = FireplaceNView.GetValue(fireplace) as ZNetView;

@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using UnityEngine;
 
 namespace Stoker
 {
@@ -16,6 +17,7 @@ namespace Stoker
     {
         public static ConfigEntry<int> SmelterItemsPerAdd;
         public static ConfigEntry<int> FireplaceItemsPerAdd;
+        public static ConfigEntry<KeyCode> BatchModifier;
         public static ConfigEntry<bool> Verbose;
 
         public static ConfigEntry<bool> HopperEnabled;
@@ -24,7 +26,9 @@ namespace Stoker
         public static ConfigEntry<string> HopperDonor;
         public static ConfigEntry<float> HopperRange;
         public static ConfigEntry<int> MaxHoppers;
-        public static ConfigEntry<int> CapacityPerHopper;
+        public static ConfigEntry<int> OreCapacityPerHopper;
+        public static ConfigEntry<int> FuelCapacityPerHopper;
+        public static ConfigEntry<string> HopperModelFile;
         public static ConfigEntry<float> HopperScale;
         public static ConfigEntry<float> HopperSquash;
         public static ConfigEntry<string> HopperVisual;
@@ -105,9 +109,30 @@ namespace Stoker
                 "Most hoppers that will count for one station. Keeps the upgrade a decision "
                 + "rather than something you stack until capacity stops mattering.");
 
-            CapacityPerHopper = config.Bind("Hopper", "CapacityPerHopper", 10,
-                "Extra ore and fuel capacity per hopper. Never affects speed or fuel "
-                + "efficiency - only how long a station runs before it needs you.");
+            // Split rather than one number, because a smelter eats two coal for every ore.
+            // A single figure either starves the fuel side or overfills the ore side, and
+            // the whole point of the upgrade is that one filling lasts a sensible while.
+            OreCapacityPerHopper = config.Bind("Hopper", "OreCapacityPerHopper", 20,
+                "Extra ore capacity per hopper, added to whatever the station already holds. "
+                + "Never affects speed or fuel efficiency - only how long a station runs "
+                + "before it needs you.");
+
+            FuelCapacityPerHopper = config.Bind("Hopper", "FuelCapacityPerHopper", 40,
+                "Extra fuel capacity per hopper. Twice the ore figure by default, because a "
+                + "smelter burns two coal for every ore it melts - matching them means the "
+                + "coal side runs out first and the upgrade only half works.");
+
+            HopperModelFile = config.Bind("Hopper", "HopperModelFile", "stoker_hopper.obj",
+                "The OBJ loaded from the mod's assets folder for the hopper's shape. Named "
+                + "here rather than compiled in so a new model can be dropped in and looked "
+                + "at without a rebuild.");
+
+            // Held, not toggled: a plain press has to stay exactly vanilla, or the mod has
+            // taken the single-add away rather than added a batch. Set to None to make
+            // batching the default and lose the one-at-a-time press.
+            BatchModifier = config.Bind("Batching", "BatchModifier", KeyCode.LeftShift,
+                "Hold this while interacting to add a batch instead of one. Plain use stays "
+                + "vanilla, so nothing is taken away - the batch is an option you reach for.");
 
             SmelterItemsPerAdd = config.Bind("Batching", "SmelterItemsPerAdd", 3,
                 "Ore or coal added per press at a smelter, kiln, blast furnace, windmill, "

@@ -50,12 +50,13 @@ namespace Stoker
                 ? Mathf.Min(Hopper.CountNear(transform.position), Mathf.Max(0, StokerConfig.MaxHoppers.Value))
                 : 0;
 
-            var bonus = level * Mathf.Max(0, StokerConfig.CapacityPerHopper.Value);
+            var oreBonus  = level * Mathf.Max(0, StokerConfig.OreCapacityPerHopper.Value);
+            var fuelBonus = level * Mathf.Max(0, StokerConfig.FuelCapacityPerHopper.Value);
 
             // Only raise a cap the station already has. A charcoal kiln has no fuel slot at
             // all - giving it one would have it refuse to work until fed coal it cannot take.
-            if (_baseOre > 0) _smelter.m_maxOre = _baseOre + bonus;
-            if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + bonus;
+            if (_baseOre > 0) _smelter.m_maxOre = _baseOre + oreBonus;
+            if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + fuelBonus;
         }
 
         /// <summary>The station a hopper at this point is helping, for its hover text.</summary>

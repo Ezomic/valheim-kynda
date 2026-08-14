@@ -8,7 +8,7 @@ namespace Stoker
     [BepInProcess("valheim.exe")]
     public class StokerPlugin : BaseUnityPlugin
     {
-        public const string PluginGuid = "robbin.valheim.stoker";
+        public const string PluginGuid = "ezomic.valheim.stoker";
         public const string PluginName = "Stoker";
         public const string PluginVersion = "0.1.0";
         public const string PluginAuthor = "Robbin Thijssen";

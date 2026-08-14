@@ -18,6 +18,7 @@ namespace Stoker
     /// </summary>
     internal static class HopperModel
     {
+        /// <summary>Fallback only; the file is named in config so it can be swapped live.</summary>
         private const string ModelFile = "stoker_hopper.obj";
         private const string ColliderFile = "stoker_hopper.col";
 
@@ -41,7 +42,10 @@ namespace Stoker
         public static bool Apply(GameObject prefab)
         {
             var dir = Path.GetDirectoryName(typeof(HopperModel).Assembly.Location);
-            var model = ObjMesh.Load(Path.Combine(dir, ModelFile));
+            var wanted = StokerConfig.HopperModelFile.Value;
+            if (string.IsNullOrWhiteSpace(wanted)) wanted = ModelFile;
+
+            var model = ObjMesh.Load(Path.Combine(dir, wanted));
 
             if (model == null || model.Mesh == null)
             {
