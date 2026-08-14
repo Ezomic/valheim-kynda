@@ -7,21 +7,21 @@ namespace Stoker
     /// Makes the vanilla burning stations free to Build while TestMode is on.
     ///
     /// Checking that a hopper sits right beside a smelter means having a smelter, and a
-    /// smelter means Stone and surtling cores from a burial chamber. that is a fine cost
+    /// smelter means Stone and surtling cores from a burial chamber. That is a fine cost
     /// to pay when playing and a silly one to pay to look at a model, so the whole row -
     /// smelter, kiln, blast furnace, windmill, spinning wheel, eitr refinery - is free
     /// while testing.
     ///
-    /// matched on components rather than a Name List, exactly like the Capacity
-    /// component: anything that is Both a piece and a smelter is a burning station,
+    /// matched on components rather than a name list, exactly like the Capacity
+    /// component: anything that is both a piece and a smelter is a burning station,
     /// including modded ones.
     /// </summary>
     internal static class FreeStations
     {
         /// <summary>
         /// the real costs, kept so Turning TestMode off puts them back without a restart
-        /// of the whole game. captured before anything is cleared and never overwritten,
-        /// or the "original" would end up being the empty List we ourselves wrote.
+        /// of the whole game. Captured before anything is cleared and never overwritten,
+        /// or the "original" would end up being the empty list we ourselves wrote.
         /// </summary>
         private static readonly Dictionary<string, Piece.Requirement[]> original =
             new Dictionary<string, Piece.Requirement[]>();
@@ -41,10 +41,10 @@ namespace Stoker
                 var piece = prefab.GetComponent<Piece>();
                 if (piece == null || prefab.GetComponent<Smelter>() == null) continue;
 
-                if (!original.ContainsKey(prefab.Name))
-                    original[prefab.Name] = piece.m_resources;
+                if (!original.ContainsKey(prefab.name))
+                    original[prefab.name] = piece.m_resources;
 
-                var wanted = free ? new Piece.Requirement[0] : original[prefab.Name];
+                var wanted = free ? new Piece.Requirement[0] : original[prefab.name];
                 if (piece.m_resources == wanted) continue;
 
                 piece.m_resources = wanted;

@@ -6,7 +6,7 @@ namespace Stoker
     /// <summary>
     /// Raises a station's capacity for each hopper built beside it.
     ///
-    /// Capacity only. m_secPerProduct and m_fuelPerProduct are never touched, so an upgraded
+    /// Capacity only. M_secPerProduct and m_fuelPerProduct are never touched, so an upgraded
     /// smelter takes exactly as long and burns exactly as much coal per bar as a bare one -
     /// it simply goes longer between visits. That is the line the whole mod sits on, and it
     /// is the reason this is a convenience rather than a power increase.
