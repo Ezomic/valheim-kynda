@@ -39,6 +39,9 @@ PREVIEWS = os.path.join(ASSETS, "previews")
 COLLIDERS = []
 PARTS = []
 
+# These get placed in rows beside a row of smelters, so the count is a real cost.
+TRI_BUDGET = 15000
+
 TINTS = {
     "wood":  (0.30, 0.19, 0.10, 1.0),
     "iron":  (0.19, 0.19, 0.21, 1.0),
@@ -93,9 +96,15 @@ def part(obj, mat, bevel=0.012):
     # Per object, before the join. The width is small because these are 10-20cm
     # timbers - a 12mm chamfer on a 10cm post is the width of a plane's pass, which
     # is what it is imitating.
+    #
+    # One segment, not two. The second segment doubles the geometry a bevel adds and
+    # buys almost nothing at this width: a 12mm chamfer is four pixels at the distance
+    # these are seen from, and what matters is that the edge catches light at all
+    # rather than how smoothly it turns. That change alone took the barrels from 27k
+    # triangles to comfortably inside budget.
     modifier = obj.modifiers.new(name="bevel", type="BEVEL")
     modifier.width = bevel
-    modifier.segments = 2
+    modifier.segments = 1
     modifier.limit_method = "ANGLE"
     modifier.angle_limit = math.radians(40.0)
 
@@ -162,6 +171,22 @@ def cone(bottom, top, height, z, mat, sides=9, centre=(0.0, 0.0)):
     obj = bpy.context.active_object
     obj.rotation_euler = (0.0, 0.0, math.radians(jitter(8.0)))
     return part(obj, mat, bevel=0.010)
+
+
+def band(radius, height, z, mat="iron", sides=14, centre=(0.0, 0.0)):
+    """
+    A hoop, as one thin cylinder rather than a ring of blocks.
+
+    The staves sit inside it, so only its outer wall is ever seen and a solid cylinder
+    reads exactly as an iron band would. Built as blocks it was twenty-one beveled
+    boxes per hoop and three hoops a barrel - about 1,400 triangles each where this is
+    sixty, for a shape nobody can tell apart.
+    """
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=height, vertices=sides,
+                                        location=(centre[0], centre[1], z))
+    obj = bpy.context.active_object
+    obj.rotation_euler = (0.0, 0.0, math.radians(jitter(6.0)))
+    return part(obj, mat, bevel=0.006)
 
 
 def ring_count(radius, part_width, overlap=1.18):
@@ -479,15 +504,15 @@ def trough_barrels():
                 "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
 
         # Three hoops, not two, and the top one sits right under the rim where a
-        # cooper puts it. Each is a continuous band of overlapping blocks.
-        for z, r in ((top * 0.16, radius + 0.02), (top * 0.60, radius + 0.02),
-                     (top * 0.94, radius - 0.005)):
-            hoops = ring_count(r, 0.11)
-            for i in range(hoops):
-                a = (i / float(hoops)) * math.tau + math.radians(turn)
-                box((0.11, 0.11, 0.06),
-                    (x + math.cos(a) * r, math.sin(a) * r, z),
-                    "iron", rot=(0.0, 0.0, math.degrees(a)), wobble=0.3)
+        # cooper puts it.
+        # Clear of the staves, not level with them. A stave box centred at `radius` has
+        # its outer face at radius + half its width, so a band any tighter than that is
+        # buried inside the barrel and renders as nothing at all - which is exactly what
+        # happened at radius + 0.035 against a 0.085 stave.
+        outer = radius + stave / 2.0
+        for z, r in ((top * 0.16, outer + 0.022), (top * 0.60, outer + 0.022),
+                     (top * 0.94, outer - 0.010)):
+            band(r, 0.075, z, centre=(x, 0.0))
 
         box((radius * 2.0, radius * 2.0, 0.09), (x, 0.0, 0.24), "wood")   # floor
         # Heaped proud of the rim rather than sunk out of sight. These are open casks
@@ -748,6 +773,7 @@ def bounds(obj):
 
 def main():
     os.makedirs(PREVIEWS, exist_ok=True)
+    over = []
 
     for name, builder, label in VARIANTS:
         clear_scene()
@@ -768,8 +794,18 @@ def main():
         world_scene()
         render(os.path.join(PREVIEWS, name + ".png"), (620, 560))
 
-        print("VARIANT_OK %-24s tris=%-6d colliders=%d  %s" % (name, tris, boxes, label))
+        # Said out loud on every build rather than checked once by hand. A model creeps
+        # over budget one detail at a time and the cost is invisible in the render -
+        # these are placed in rows of eight, so the count is a real number and not a
+        # tidiness concern.
+        flag = "  OVER BUDGET" if tris > TRI_BUDGET else ""
+        print("VARIANT_OK %-24s tris=%-6d colliders=%d  %s%s"
+              % (name, tris, boxes, label, flag))
+        if flag:
+            over.append((name, tris))
 
+    if over:
+        print("BUDGET_FAIL " + ", ".join("%s=%d" % (n, t) for n, t in over))
     print("VARIANTS_DONE")
 
 
