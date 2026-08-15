@@ -94,6 +94,14 @@ anything to smelt. The woodrack deliberately is **not** gated that way: a charco
 Black Forest build, and an upgrade you cannot build alongside its station is one you never
 build at all.
 
+> **A piece whose materials you have never held does not appear in the hammer menu at all** —
+> not greyed out, absent. `PieceTable.UpdateAvailable` lists a piece only if it is a known
+> recipe, and `RequirementMode.IsKnown` requires every item in its cost to be in
+> `m_knownMaterial`. So on a character that has never picked up Bronze, the Trough is simply
+> missing while the Woodrack is there. That is vanilla behaviour and not a registration
+> failure — check the log for `Both upgrades added to the hammer` before hunting for a bug.
+> `TestMode` drops both to one wood, which makes them visible immediately.
+
 Modelled on vanilla's `StationExtension` — the way a chopping block upgrades a workbench —
 because that is the game's own idiom for "upgrade by building something next to it".
 `StationExtension` itself is hardwired to `CraftingStation` and a smelter is not one, so it

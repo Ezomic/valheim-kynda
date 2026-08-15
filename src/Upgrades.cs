@@ -112,12 +112,42 @@ namespace Stoker
             var span = to - from;
             if (span.sqrMagnitude < 0.0001f) return;
 
+            // Costs nothing and rules one thing out: a prefab held inactive instantiates
+            // inactive, and an inactive effect is indistinguishable from a broken one.
+            if (!_connection.activeSelf) _connection.SetActive(true);
+
             _connection.transform.position = from;
             _connection.transform.rotation = Quaternion.LookRotation(span.normalized);
             _connection.transform.localScale = new Vector3(1f, 1f, span.magnitude);
 
+            Describe(from, to, span);
+
             CancelInvoke("StopConnectionEffect");
             Invoke("StopConnectionEffect", timeout);
+        }
+
+        /// <summary>
+        /// Says what the link actually is, for the first few pokes of a session.
+        ///
+        /// Here because the effect was being created without being visible, and every
+        /// explanation for that - wrong distance, wrong end point, an inactive instance, a
+        /// prefab with no renderer on it - is a number that can simply be read rather than
+        /// guessed at.
+        /// </summary>
+        private static int _pokesDescribed;
+
+        private void Describe(Vector3 from, Vector3 to, Vector3 span)
+        {
+            if (_pokesDescribed >= 3 || _connection == null) return;
+            _pokesDescribed++;
+
+            StokerPlugin.Log.LogInfo(string.Format(
+                "Link poke {0}: {1} -> {2}, {3:0.00}m, active {4}/{5}, {6} particle "
+                + "system(s), {7} renderer(s).",
+                _pokesDescribed, from, to, span.magnitude,
+                _connection.activeSelf, _connection.activeInHierarchy,
+                _connection.GetComponentsInChildren<ParticleSystem>(true).Length,
+                _connection.GetComponentsInChildren<Renderer>(true).Length));
         }
 
         private void StopConnectionEffect()
