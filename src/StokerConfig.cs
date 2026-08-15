@@ -131,8 +131,13 @@ namespace Stoker
                 + "collision and its _icon.png the hammer icon, both matched by name - so "
                 + "dropping in a new model brings its own shape and picture with it.");
 
-            UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1f,
-                "Overall size of the trough.");
+            // 1.5, because the modelled size was measurably too small. A vanilla barrell
+            // is 0.84m across and 1.10m tall; ours were 0.57 and 0.86. At 1.5 each cask is
+            // 0.86 x 1.29, which is a real barrel sat beside a real smelter - and the
+            // smelter is 3.03 x 4.24 x 2.58, so there is no danger of crowding it.
+            UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1.5f,
+                "Overall size of the trough. Scales the collision with it, since the boxes "
+                + "are children of the piece.");
 
             // Empty means the general list, which leads with piece_chest_wood - sawn
             // planking, which is what a stave and a sled are.
@@ -170,8 +175,13 @@ namespace Stoker
                 "The OBJ loaded from beside the DLL, with its .col and _icon.png matched "
                 + "by name.");
 
-            UpgradePrefabs.Woodrack.Scale = config.Bind("Woodrack", "Scale", 1f,
-                "Overall size of the woodrack.");
+            // Same reasoning. wood_stack, vanilla's own woodpile, is 2.31 x 1.30 x 2.46;
+            // ours was 1.35 x 1.36 x 1.02, well under half its footprint. At 1.5 it is
+            // 2.03 x 2.04 x 1.53 - taller and shallower than vanilla's, which suits a
+            // roofed rack rather than a free heap.
+            UpgradePrefabs.Woodrack.Scale = config.Bind("Woodrack", "Scale", 1.5f,
+                "Overall size of the woodrack. Scales the collision with it, since the "
+                + "boxes are children of the piece.");
 
             // 25 rather than the trough's 20, because a charcoal kiln starts at 25 and this
             // is aimed at landing on a round 50. The two upgrades need different figures for
