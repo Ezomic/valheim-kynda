@@ -140,21 +140,44 @@ def box(size, location, mat, rot=(0.0, 0.0, 0.0), wobble=1.0, bevel=0.012):
     return part(obj, mat, bevel)
 
 
-def log(radius, length, location, mat="wood", axis="x", sides=7, rot=0.0, wobble=1.0):
+def log(radius, length, location, mat="wood", axis="x", sides=7, rot=0.0, wobble=1.0,
+        taper=1.0, roll=0.0):
     """
     Odd-sided on purpose. An even-sided cylinder presents a flat face to the camera
     and reads as a box; seven never does, at any rotation.
+
+    taper is the far end's radius as a fraction of the near end's. A real log is
+    thicker at the butt than at the top, and a stack of perfect cylinders is the
+    giveaway that they came out of a loop - vanilla's are visibly tapered.
+
+    roll turns the log about its own axis. This is not the same as the yaw in `rot`,
+    which tilts the log within the stack; roll changes which facet of the polygon
+    faces you, and it is the only thing that stops a wall of end grain reading as one
+    end copied twelve times. Which euler component that is depends on where the log
+    was pointed, hence the branch.
     """
-    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=length, vertices=sides,
-                                        location=(location[0] + jitter(0.005) * wobble,
-                                                  location[1] + jitter(0.005) * wobble,
-                                                  location[2] + jitter(0.005) * wobble))
+    loc = (location[0] + jitter(0.005) * wobble,
+           location[1] + jitter(0.005) * wobble,
+           location[2] + jitter(0.005) * wobble)
+
+    if abs(taper - 1.0) < 0.001:
+        bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=length, vertices=sides,
+                                            location=loc)
+    else:
+        bpy.ops.mesh.primitive_cone_add(vertices=sides, radius1=radius,
+                                        radius2=radius * taper, depth=length,
+                                        location=loc)
+
     obj = bpy.context.active_object
     rot_e = [0.0, 0.0, math.radians(rot + jitter(6.0) * wobble)]
     if axis == "x":
         rot_e[1] = math.radians(90 + jitter(1.4) * wobble)
+        rot_e[0] += math.radians(roll)
     elif axis == "y":
         rot_e[0] = math.radians(90 + jitter(1.4) * wobble)
+        rot_e[1] += math.radians(roll)
+    else:
+        rot_e[2] += math.radians(roll)
     obj.rotation_euler = rot_e
     return part(obj, mat, bevel=0.008)
 
@@ -188,8 +211,19 @@ def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
     r = radius * (0.88 + rnd() * 0.24)
     l = length * (0.98 + rnd() * 0.04)
 
+    # A full turn of roll, and a taper. Between them these are what stop a stack
+    # reading as one log instanced twelve times: the facets land somewhere different
+    # on every piece, and no two ends are quite the same size.
+    #
+    # Which end is the butt alternates too, so the thick ends are not all facing the
+    # same way down a row - that is its own kind of repeat.
+    taper = 0.78 + rnd() * 0.16
+    if rnd() < 0.5:
+        r, taper = r * taper, 1.0 / taper
+
     obj = log(r, l, location, "wood", axis=axis, sides=kind,
-              rot=rot + jitter(7.0), wobble=wobble * 0.5)
+              rot=rot + jitter(7.0), wobble=wobble * 0.5,
+              taper=taper, roll=rnd() * 360.0)
 
     # The flat-sided ones still sit at their own roll angle, because a row of
     # triangles all landing on a face is a sawtooth. That much is free - it changes
@@ -200,7 +234,7 @@ def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
         elif axis == "y":
             obj.rotation_euler[1] += math.radians(rnd() * 90.0)
 
-    return obj, r, l
+    return obj, r * max(1.0, taper), l
 
 
 def endgrain(radius, location, axis="x", mat="wood"):
