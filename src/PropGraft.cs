@@ -72,10 +72,22 @@ namespace Stoker
                 return false;
             }
 
+            // Null-checked: destroying a renderer's GameObject takes its children with it, and
+            // GetComponentsInChildren lists parents first, so a nested renderer is already
+            // destroyed when the loop reaches it and asking it for its gameObject throws. The
+            // second loop is doubly exposed, since the first may already have taken the branch
+            // a skinned renderer sat on.
             foreach (var renderer in prefab.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                if (renderer == null) continue;
                 UnityEngine.Object.DestroyImmediate(renderer.gameObject);
+            }
+
             foreach (var skinned in prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (skinned == null) continue;
                 UnityEngine.Object.DestroyImmediate(skinned.gameObject);
+            }
 
             var previous = ZNetView.m_forceDisableInit;
             ZNetView.m_forceDisableInit = true;

@@ -5,7 +5,9 @@ using HarmonyLib;
 namespace Stoker
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    [BepInProcess("valheim.exe")]
+    // No BepInProcess. It is a whitelist, and a dedicated server runs valheim_server.exe.
+    // The hopper is a registered prefab, and ZNetScene discards any ZDO whose prefab name
+    // does not resolve - so a server without it destroys every hopper already standing.
     public class StokerPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.stoker";

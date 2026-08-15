@@ -135,4 +135,4 @@ Deploys to the repo-local `testprofile\`, or build into the shared play profile 
 ## Author
 
 Stoker is an original mod by **Robbin Thijssen** (Thijssen Software).
-Copyright (c) 2026 Robbin Thijssen. See `LICENSE`.
+Copyright (c) 2026 Robbin Thijssen. MIT licensed — see `LICENSE`.
