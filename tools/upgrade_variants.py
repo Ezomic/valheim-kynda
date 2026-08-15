@@ -458,32 +458,50 @@ def trough_barrels():
     Two open-topped barrels on a sled. Round where every other trough is square, and
     the staves give it vertical banding that catches light at any angle.
     """
-    stave, radius = 0.085, 0.28
-    staves = ring_count(radius, stave)
+    stave = 0.085
 
-    for x, fill in ((-0.33, "ore"), (0.35, "coal")):
+    # The two are not clones. A pair of identical barrels reads as one asset placed
+    # twice, which is the tell that gives away a kit - so they differ in height, in
+    # girth and in how far they are turned, by about as much as two real casks would.
+    for x, radius, top, turn, fill in ((-0.33, 0.285, 0.86, 0.0, "ore"),
+                                       (0.36, 0.265, 0.78, 24.0, "coal")):
+        staves = ring_count(radius, stave)
         for i in range(staves):
-            a = (i / float(staves)) * math.tau
-            box((stave, stave, 0.58),
-                (x + math.cos(a) * radius, math.sin(a) * radius, 0.50),
+            a = (i / float(staves)) * math.tau + math.radians(turn)
+            # Staves bulge: a barrel is widest at its belly, and a straight-sided one
+            # is a bucket. Two courses with the upper set pulled in does it cheaply.
+            box((stave, stave, top * 0.62),
+                (x + math.cos(a) * radius, math.sin(a) * radius, top * 0.34),
+                "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
+            box((stave * 0.94, stave * 0.94, top * 0.42),
+                (x + math.cos(a) * (radius - 0.022), math.sin(a) * (radius - 0.022),
+                 top * 0.78),
                 "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
 
-        # Hoops as a continuous band of overlapping blocks, for the same reason.
-        for z in (0.30, 0.68):
-            hoops = ring_count(radius + 0.02, 0.11)
+        # Three hoops, not two, and the top one sits right under the rim where a
+        # cooper puts it. Each is a continuous band of overlapping blocks.
+        for z, r in ((top * 0.16, radius + 0.02), (top * 0.60, radius + 0.02),
+                     (top * 0.94, radius - 0.005)):
+            hoops = ring_count(r, 0.11)
             for i in range(hoops):
-                a = (i / float(hoops)) * math.tau
-                box((0.11, 0.11, 0.055),
-                    (x + math.cos(a) * (radius + 0.02), math.sin(a) * (radius + 0.02), z),
+                a = (i / float(hoops)) * math.tau + math.radians(turn)
+                box((0.11, 0.11, 0.06),
+                    (x + math.cos(a) * r, math.sin(a) * r, z),
                     "iron", rot=(0.0, 0.0, math.degrees(a)), wobble=0.3)
 
-        box((0.58, 0.58, 0.09), (x, 0.0, 0.26), "wood")            # barrel floor
-        heap((x, 0.0, 0.76), 0.21, 10, 0.145, fill)
+        box((radius * 2.0, radius * 2.0, 0.09), (x, 0.0, 0.24), "wood")   # floor
+        # Heaped proud of the rim rather than sunk out of sight. These are open casks
+        # and what is in them is how you tell the ore side from the coal side.
+        heap((x, 0.0, top + 0.02), radius * 0.78, 12, 0.155, fill, dome=0.42)
 
-    box((1.34, 0.78, 0.14), (0.0, 0.0, 0.17), "wood")              # sled
-    for y in (-0.30, 0.30):
-        box((1.42, 0.13, 0.13), (0.0, y, 0.065), "wood")
-    collide((0.0, 0.0, 0.42), (1.40, 0.80, 0.84))
+    # A sled with real cross members and iron at the corners, rather than one plank.
+    box((1.40, 0.80, 0.13), (0.0, 0.0, 0.175), "wood")
+    for y in (-0.31, 0.31):
+        box((1.48, 0.14, 0.14), (0.0, y, 0.07), "wood")
+    for x in (-0.60, 0.60):
+        box((0.14, 0.74, 0.12), (x, 0.0, 0.175), "wood")
+        strap(0.78, (x, 0.0, 0.245), axis="y", width=0.10)
+    collide((0.0, 0.0, 0.50), (1.46, 0.84, 1.00))
 
 
 def trough_pit():
@@ -492,19 +510,38 @@ def trough_pit():
     which makes it the one option that does not block sightlines in a packed base -
     and the one most likely to disappear next to a smelter.
     """
-    for x in (-0.72, 0.72):
-        box((0.20, 1.10, 0.30), (x, 0.0, 0.15), "stone")
-    for y in (-0.50, 0.50):
-        box((1.64, 0.20, 0.30), (0.0, y, 0.15), "stone")
-    box((1.30, 0.82, 0.10), (0.0, 0.0, 0.05), "stone")             # floor
+    # Laid as individual blocks rather than four long boxes. A continuous kerb reads
+    # as a moulded trough - a bathtub - where overlapping stones of slightly different
+    # length read as something someone set by hand, which is what the piece is.
+    def kerb(along, fixed, axis, count, span):
+        for i in range(count):
+            t = -span / 2.0 + span * (i + 0.5) / count
+            length = span / count * 1.22
+            width = 0.21 + (i % 3) * 0.02
+            height = 0.30 + (i % 2) * 0.035
+            pos = (t, fixed, height / 2.0) if axis == "x" else (fixed, t, height / 2.0)
+            size = (length, width, height) if axis == "x" else (width, length, height)
+            box(size, pos, "stone", rot=(0.0, 0.0, jitter(4.0)))
 
-    box((0.11, 0.86, 0.26), (0.0, 0.0, 0.16), "wood")              # divider plank
-    heap((-0.34, 0.0, 0.22), 0.30, 10, 0.14, "ore")
-    heap((0.34, 0.0, 0.22), 0.30, 10, 0.14, "coal")
+    kerb(None, -0.50, "x", 5, 1.66)
+    kerb(None, 0.50, "x", 5, 1.66)
+    kerb(None, -0.74, "y", 3, 1.02)
+    kerb(None, 0.74, "y", 3, 1.02)
 
-    for x in (-0.72, 0.72):                                        # kerb capping
-        box((0.26, 1.16, 0.08), (x, 0.0, 0.33), "wood")
-    collide((0.0, 0.0, 0.20), (1.70, 1.16, 0.40))
+    box((1.34, 0.86, 0.10), (0.0, 0.0, 0.05), "stone")             # floor
+
+    # Deeper heaps. At 10 lumps they sat below the kerb and the pit read as empty
+    # from standing height, which is the one thing a full pit must not do.
+    box((0.12, 0.90, 0.30), (0.0, 0.0, 0.18), "wood")              # divider plank
+    heap((-0.35, 0.0, 0.30), 0.32, 14, 0.15, "ore", dome=0.40)
+    heap((0.35, 0.0, 0.30), 0.32, 14, 0.15, "coal", dome=0.40)
+
+    for x in (-0.74, 0.74):                                        # timber capping
+        box((0.27, 1.14, 0.09), (x, 0.0, 0.345), "wood")
+    for x in (-0.74, 0.74):                                        # corner posts
+        for y in (-0.50, 0.50):
+            box((0.15, 0.15, 0.52), (x, y, 0.26), "wood")
+    collide((0.0, 0.0, 0.26), (1.74, 1.20, 0.52))
 
 
 def trough_tower():
