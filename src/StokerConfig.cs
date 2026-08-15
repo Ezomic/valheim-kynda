@@ -134,6 +134,13 @@ namespace Stoker
             UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1f,
                 "Overall size of the trough.");
 
+            // Empty means the general list, which leads with piece_chest_wood - sawn
+            // planking, which is what a stave and a sled are.
+            UpgradePrefabs.Trough.SkinDonors = config.Bind("Trough", "SkinDonors", "",
+                "Which vanilla prefab each material group borrows its surface from, as "
+                + "group=prefab pairs. Empty uses the general list. Only worth setting when "
+                + "a piece wants a different surface from the other one.");
+
             UpgradePrefabs.Trough.OreCapacity = config.Bind("Trough", "OreCapacity", 20,
                 "Extra ore a smelter or furnace holds per trough. Vanilla's 10 becomes 30.");
 
@@ -170,6 +177,16 @@ namespace Stoker
             // is aimed at landing on a round 50. The two upgrades need different figures for
             // the same reason a percentage would not do: the stations are different sizes,
             // and what matters is the number you end on.
+            // Round bark rather than sawn planking. This piece is a stack of logs, and
+            // piece_chest_wood's slice of atlas carries the chest's dark iron banding -
+            // which landed on the sawn ends and rendered them almost black. wood_wall_log
+            // is uniformly timber, and its rect is 0.424 against 0.231, so the wood group
+            // reaches the full target density here instead of clamping at 20.
+            UpgradePrefabs.Woodrack.SkinDonors = config.Bind("Woodrack", "SkinDonors",
+                "wood=wood_wall_log",
+                "Which vanilla prefab each material group borrows its surface from, as "
+                + "group=prefab pairs. Empty uses the general list.");
+
             UpgradePrefabs.Woodrack.OreCapacity = config.Bind("Woodrack", "OreCapacity", 25,
                 "Extra wood a charcoal kiln holds per woodrack. Vanilla's 25 becomes 50.");
 

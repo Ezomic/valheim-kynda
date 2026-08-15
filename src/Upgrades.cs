@@ -1,3 +1,5 @@
+// No `using System` here: this file leans on UnityEngine.Object throughout, and
+// importing System makes every bare `Object` ambiguous with System.Object.
 using System.Collections.Generic;
 using System.IO;
 using BepInEx.Configuration;
@@ -42,6 +44,38 @@ namespace Stoker
         /// </summary>
         public string LiteralName;
         public string LiteralModel;
+
+        /// <summary>
+        /// Which vanilla prefab this piece borrows each material group from, when the
+        /// general list is not what it wants. The woodrack is stacked round timber and
+        /// wants bark off wood_wall_log; the trough is sawn staves and planking and wants
+        /// piece_chest_wood. One list for both meant one of them always wore the other's
+        /// surface.
+        /// </summary>
+        public ConfigEntry<string> SkinDonors;
+
+        /// <summary>group -&gt; prefab, or null when this piece takes the general list.</summary>
+        public IDictionary<string, string> Skins
+        {
+            get
+            {
+                if (SkinDonors == null || string.IsNullOrEmpty(SkinDonors.Value)) return null;
+
+                var map = new Dictionary<string, string>(
+                    System.StringComparer.OrdinalIgnoreCase);
+                foreach (var entry in SkinDonors.Value.Split(','))
+                {
+                    var parts = entry.Split('=');
+                    if (parts.Length != 2) continue;
+
+                    var group = parts[0].Trim();
+                    var donor = parts[1].Trim();
+                    if (group.Length > 0 && donor.Length > 0) map[group] = donor;
+                }
+
+                return map.Count > 0 ? map : null;
+            }
+        }
 
         public string NameValue { get { return Name != null ? Name.Value : LiteralName; } }
         public string ModelValue { get { return Model != null ? Model.Value : LiteralModel; } }
@@ -507,7 +541,7 @@ namespace Stoker
                 if (icon != null) piece.m_icon = icon;
             }
 
-            UpgradeModel.Apply(clone, def.ModelValue);
+            UpgradeModel.Apply(clone, def.ModelValue, def.Skins);
 
             var scale = Mathf.Max(0.05f, def.ScaleValue);
             clone.transform.localScale = new Vector3(scale, scale, scale);

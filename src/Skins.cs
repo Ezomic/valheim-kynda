@@ -86,20 +86,51 @@ namespace Stoker
             PropIndex.Forget();
         }
 
-        public static Material[] Skin(string[] groups)
+        /// <summary>
+        /// The cache key. A group on its own is not enough once two pieces can ask for
+        /// different donors for the same group - the woodrack wants round bark off
+        /// wood_wall_log and the trough wants sawn planking off piece_chest_wood, and
+        /// keying on "wood" alone would hand whichever asked second the other's material,
+        /// its atlas rect and its texture size.
+        /// </summary>
+        private static string Key(string group, IDictionary<string, string> overrides)
+        {
+            string donor;
+            if (overrides != null && overrides.TryGetValue(group, out donor)
+                && !string.IsNullOrEmpty(donor))
+                return group + "|" + donor;
+
+            return group;
+        }
+
+        public static Material[] Skin(string[] groups, IDictionary<string, string> overrides)
         {
             var skins = new Material[groups.Length];
-            for (var i = 0; i < groups.Length; i++) skins[i] = For(groups[i]);
+            for (var i = 0; i < groups.Length; i++) skins[i] = For(groups[i], overrides);
             return skins;
         }
 
-        public static Material For(string group)
+        public static Material For(string group, IDictionary<string, string> overrides)
         {
+            var key = Key(group, overrides);
+
             Material cached;
-            if (Cache.TryGetValue(group, out cached)) return cached;
+            if (Cache.TryGetValue(key, out cached)) return cached;
 
             string[] donors;
-            if (!Donors.TryGetValue(group, out donors)) donors = Donors["wood"];
+            string only;
+            if (overrides != null && overrides.TryGetValue(group, out only)
+                && !string.IsNullOrEmpty(only))
+            {
+                // Named explicitly, so it is the only candidate. Falling back to the
+                // general list would silently hand back the material this piece asked
+                // not to have, and the log would say it had been honoured.
+                donors = new[] { only };
+            }
+            else if (!Donors.TryGetValue(group, out donors))
+            {
+                donors = Donors["wood"];
+            }
 
             foreach (var name in donors)
             {
@@ -118,20 +149,20 @@ namespace Stoker
                     if (!material.HasProperty("_MainTex")
                         || material.GetTexture("_MainTex") == null) continue;
 
-                    Cache[group] = material;
-                    Atlas[group] = UvRegion(renderer);
-                    TexPx[group] = Mathf.Max(1, material.GetTexture("_MainTex").width);
+                    Cache[key] = material;
+                    Atlas[key] = UvRegion(renderer);
+                    TexPx[key] = Mathf.Max(1, material.GetTexture("_MainTex").width);
 
                     StokerPlugin.Log.LogInfo(string.Format(
                         "'{0}' skinned with {1} from {2} (shader {3}), atlas {4}, {5}px.",
-                        group, material.name, name, material.shader.name,
-                        Atlas[group], TexPx[group]));
+                        key, material.name, name, material.shader.name,
+                        Atlas[key], TexPx[key]));
                     return material;
                 }
             }
 
-            StokerPlugin.Log.LogWarning("No material found for group '" + group + "'.");
-            Cache[group] = null;
+            StokerPlugin.Log.LogWarning("No material found for group '" + key + "'.");
+            Cache[key] = null;
             return null;
         }
 
@@ -222,7 +253,7 @@ namespace Stoker
         /// large for its rect is scaled down to fit rather than tiled: coarser than asked
         /// for, but continuous.
         /// </summary>
-        public static void Remap(Mesh mesh, string[] groups)
+        public static void Remap(Mesh mesh, string[] groups, IDictionary<string, string> overrides)
         {
             if (mesh == null || groups == null) return;
 
@@ -238,10 +269,12 @@ namespace Stoker
 
             for (var i = 0; i < count; i++)
             {
+                var key = Key(groups[i], overrides);
+
                 Rect rect;
                 int px;
-                if (!Atlas.TryGetValue(groups[i], out rect)) continue;
-                if (!TexPx.TryGetValue(groups[i], out px) || px <= 0) continue;
+                if (!Atlas.TryGetValue(key, out rect)) continue;
+                if (!TexPx.TryGetValue(key, out px) || px <= 0) continue;
 
                 var indices = mesh.GetTriangles(i);
                 if (indices.Length == 0) continue;
@@ -286,7 +319,7 @@ namespace Stoker
                 StokerPlugin.Log.LogInfo(string.Format(
                     "'{0}' laid out at {1:0} texels/m (wanted {2:0}), {3:0.00}x{4:0.00}m in "
                     + "a {5:0.000}x{6:0.000} rect.",
-                    groups[i], scale * px, target, span.x, span.y, rect.width, rect.height));
+                    key, scale * px, target, span.x, span.y, rect.width, rect.height));
             }
 
             mesh.uv = uv;

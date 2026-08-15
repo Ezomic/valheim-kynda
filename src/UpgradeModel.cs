@@ -19,7 +19,8 @@ namespace Stoker
         /// which case the caller keeps the donor's look rather than shipping an invisible
         /// piece.
         /// </summary>
-        public static bool Apply(GameObject prefab, string modelFile)
+        public static bool Apply(GameObject prefab, string modelFile,
+                                 IDictionary<string, string> skins)
         {
             var dir = Path.GetDirectoryName(typeof(UpgradeModel).Assembly.Location);
             if (string.IsNullOrWhiteSpace(modelFile)) return false;
@@ -52,11 +53,11 @@ namespace Stoker
             filter.sharedMesh = model.Mesh;
 
             var meshRenderer = visual.AddComponent<MeshRenderer>();
-            meshRenderer.sharedMaterials = Skins.Skin(model.Groups);
+            meshRenderer.sharedMaterials = Skins.Skin(model.Groups, skins);
 
             // Without this the mesh samples the whole texture sheet instead of the one
             // tile its material actually occupies, and picks up the neighbouring tiles.
-            Skins.Remap(model.Mesh, model.Groups);
+            Skins.Remap(model.Mesh, model.Groups, skins);
 
             // The collision sidecar sits beside the model and shares its name, so a model
             // swap in config brings the right boxes with it rather than leaving the last
