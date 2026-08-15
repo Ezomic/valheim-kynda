@@ -145,7 +145,7 @@ standing.
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `TestMode` | `false` | Hopper costs one wood, and every burning station is free to build |
+| `TestMode` | `false` | Hopper costs one wood, so it can be checked without bronze |
 | `Verbose` | `false` | Log each batched add |
 | `LogVisualCandidates` | `false` | List which grafting candidates are loaded |
 | `VisualSearch` | *(empty)* | Words to search loaded prop names for |
@@ -195,8 +195,6 @@ The hopper:
     all, and handing it one would have it refuse to work until fed coal it cannot take.
 12. Tear the hopper down and confirm the capacity drops back within about three seconds.
 13. Confirm a hopper is not a chest — it should have no inventory to open.
-14. Turn `TestMode` on and confirm smelters are free to build; turn it off and confirm the
-    real cost comes back without restarting the game.
 
 ## Author
 
