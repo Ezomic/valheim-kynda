@@ -80,6 +80,25 @@ namespace Stoker
             if (_baseFuel > 0) _smelter.m_maxFuel = Mathf.RoundToInt(_baseFuel * factor);
         }
 
+        /// <summary>
+        /// Where the link effect should end.
+        ///
+        /// Vanilla asks the CraftingStation for a GetConnectionEffectPoint, which a Smelter
+        /// has no equivalent of. Half the collider's height is close enough and adapts to a
+        /// kiln and a smelter without either being measured by hand; a link ending at the
+        /// station's origin would sink into the ground.
+        /// </summary>
+        public Vector3 ConnectionPoint
+        {
+            get
+            {
+                var collider = GetComponentInChildren<Collider>();
+                if (collider != null) return collider.bounds.center;
+
+                return transform.position + Vector3.up;
+            }
+        }
+
         /// <summary>The nearest station of the matching kind, or null.</summary>
         public static SmelterCapacity Nearest(Vector3 point, bool fuelled)
         {

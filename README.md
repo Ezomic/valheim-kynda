@@ -65,6 +65,9 @@ it tells you which station it is feeding and what that station's capacity now is
 plainly that it is feeding nothing, which is what a woodrack parked next to a smelter will
 tell you.
 
+**Looking at one also draws the link**, the same run of motes a chopping block draws to its
+workbench, so you can see at a glance which station an upgrade belongs to in a row of them.
+
 **One upgrade doubles the station's capacity. A second triples it.** Two is the limit by
 default.
 
@@ -94,7 +97,8 @@ build at all.
 Modelled on vanilla's `StationExtension` — the way a chopping block upgrades a workbench —
 because that is the game's own idiom for "upgrade by building something next to it".
 `StationExtension` itself is hardwired to `CraftingStation` and a smelter is not one, so it
-keeps its own registry, but the shape is the same.
+keeps its own registry, but the shape is the same, down to the link effect being poked from
+`GetHoverText` and torn down on a timer.
 
 Two things make this better than an upgrade level on the smelter's ZDO. Persistence comes
 free, because the upgrade *is* a placed piece — and you can see at a glance which smelters
@@ -153,6 +157,18 @@ the whole thing and pick up the neighbouring tiles. `Skins` measures the donor's
 its **largest single triangle** — not min/max across the mesh, which for `stone_wall_2x1`
 spans 71% of the sheet — and remaps clamped, never wrapped.
 
+**The link effect is the game's, and the scale is the part that matters.**
+`StationExtension.StartConnectionEffect` rotates the effect so its local +Z faces the station
+and then sets `localScale` to `(1, 1, distance)` — the stretch along Z is what turns a
+stationary puff into something that spans the gap. Ours does the same, with the prefab
+borrowed off whatever carries a `StationExtension` rather than off a named one, so it does
+not depend on the forge and workbench extensions keeping their prefab names.
+
+**Anything the donor emitted is stripped.** The model swap destroys `MeshRenderer` objects,
+and a particle system's renderer is a `ParticleSystemRenderer` — so a donor's effect would
+otherwise survive onto a piece that no longer looks remotely like it. The link is the one
+deliberate effect these pieces have.
+
 **Icons are rendered, not borrowed.** Without one, a piece keeps the donor's icon, and the
 donor is a barrel. An icon showing the wrong object is worse than a plain one, because the
 hammer menu is where you choose. `tools/upgrade_icons.py` reads the shipped `.obj` back in
@@ -181,7 +197,8 @@ netstandard 2.1 and this builds against net462.
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
 | `MaxPerStation` | `2` | Most of one kind that count for one station |
 | `CapacityPerUpgrade` | `1.0` | Capacity added per upgrade, as a multiple of the station's own. `1` doubles, `0.5` adds half |
-| `AimEffects` | `true` | Point an inherited particle effect at the station, and stop it when feeding nothing |
+| `ShowLink` | `true` | Draw the game's station-link effect to the station when you look at an upgrade |
+| `LinkHeight` | `0.8` | How far up the upgrade the link starts, in metres |
 
 ### Trough / Woodrack
 
@@ -257,8 +274,11 @@ The upgrades:
 15. Look closely at the timber: the borrowed materials should read as one clean tile, not as
     a smear of several. Banding or fragments of a neighbouring texture means the atlas remap
     picked the wrong rect for that group.
-16. Check the startup log for the line naming inherited particle systems. If it says there
-    are none, anything drifting near an upgrade belongs to the world rather than to us.
+16. **Look at an upgrade and the link should run to its station** and stop about a second
+    later. Check the log for `Link effect borrowed from ...` naming which extension it came
+    off; a warning there means no `StationExtension` was loaded to borrow from.
+17. A `Stripped inherited particle system` line means the donor was emitting something of
+    its own, which is now gone. No such line means it never was.
 
 ## Author
 

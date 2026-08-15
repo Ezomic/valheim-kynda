@@ -37,6 +37,7 @@ namespace Stoker
         private static void OnObjectDbAwake()
         {
             Skins.Invalidate();
+            UpgradeBin.ForgetConnectionPrefab();
             UpgradePrefabs.Register();
         }
 
@@ -45,6 +46,7 @@ namespace Stoker
         private static void OnObjectDbCopy()
         {
             Skins.Invalidate();
+            UpgradeBin.ForgetConnectionPrefab();
             UpgradePrefabs.Register();
         }
     }

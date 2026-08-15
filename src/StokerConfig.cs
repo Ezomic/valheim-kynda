@@ -25,7 +25,8 @@ namespace Stoker
         public static ConfigEntry<float> Range;
         public static ConfigEntry<int> MaxPerStation;
         public static ConfigEntry<float> CapacityPerUpgrade;
-        public static ConfigEntry<bool> AimEffects;
+        public static ConfigEntry<bool> ShowLink;
+        public static ConfigEntry<float> LinkHeight;
 
         public static ConfigEntry<string> PrefabSearch;
         public static ConfigEntry<bool> TestMode;
@@ -92,10 +93,14 @@ namespace Stoker
                 + "with survives. Never affects speed or fuel efficiency, only how long a "
                 + "station runs before it needs you.");
 
-            AimEffects = config.Bind("Upgrades", "AimEffects", true,
-                "Point any particle effect the piece inherited from its donor at the "
-                + "station it feeds, and stop it when it feeds nothing. Off leaves the "
-                + "donor's effect exactly as it came.");
+            ShowLink = config.Bind("Upgrades", "ShowLink", true,
+                "Draw the game's own station-link effect from an upgrade to the station it "
+                + "feeds when you look at it - the same run of motes a chopping block draws "
+                + "to its workbench. Off is silent.");
+
+            LinkHeight = config.Bind("Upgrades", "LinkHeight", 0.8f,
+                "How far up the upgrade the link starts, in metres. The default leaves it "
+                + "around the top of both pieces; at 0 it comes out of the ground.");
 
             // ------------------------------------------------------------------ the trough
 

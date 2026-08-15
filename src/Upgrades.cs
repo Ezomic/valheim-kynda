@@ -60,85 +60,118 @@ namespace Stoker
         public bool m_servesFuelled;
 
         private Piece _piece;
-        private ParticleSystem[] _effects;
-
-        /// <summary>Said once per session rather than once per placed piece.</summary>
-        private static bool _reported;
+        private GameObject _connection;
 
         private void Awake()
         {
             _piece = GetComponent<Piece>();
             All.Add(this);
-
-            // Nothing in this mod creates a particle system. Any that are here came across
-            // with the donor clone and survived the model swap, because that destroys
-            // MeshRenderer objects and a particle system's renderer is a
-            // ParticleSystemRenderer - which is not one. Rather than leave them spraying in
-            // whatever direction the donor wanted, they are pointed at the station this
-            // piece is feeding, and stopped when it is feeding nothing.
-            _effects = GetComponentsInChildren<ParticleSystem>(true);
-
-            if (!_reported)
-            {
-                _reported = true;
-                StokerPlugin.Log.LogInfo(_effects.Length == 0
-                    ? "No inherited particle systems on an upgrade - anything you can see "
-                      + "moving near one is the world's, not ours."
-                    : "Inherited particle systems on an upgrade: " + Names(_effects));
-            }
-
-            // The station cannot move, so this only has to catch it being built, destroyed
-            // or falling down. Offset from the capacity poll so the two do not share a frame.
-            if (_effects.Length > 0) InvokeRepeating("AimEffects", 1.5f, 3f);
-        }
-
-        private static string Names(ParticleSystem[] systems)
-        {
-            var names = new List<string>();
-            foreach (var system in systems)
-                if (system != null) names.Add(system.name);
-
-            return string.Join(", ", names.ToArray());
         }
 
         private void OnDestroy()
         {
+            StopConnectionEffect();
             All.Remove(this);
         }
 
+        // ------------------------------------------------------------------ the link
+
         /// <summary>
-        /// Turns the emitters to face the station this piece feeds.
+        /// The run of motes from this piece to the station it feeds - the same thing a
+        /// chopping block draws to its workbench.
         ///
-        /// LookRotation puts local +Z on the target, which is the axis Unity's cone shape
-        /// emits along - so a system left at its defaults travels towards the station. One
-        /// that emits along a different axis, or simulates in world space with a fixed
-        /// velocity, will not turn; the log names them so that is diagnosable rather than
-        /// mysterious.
+        /// Lifted from StationExtension.StartConnectionEffect rather than invented, because
+        /// the game already has one answer to "show which station this is attached to" and
+        /// a second one that looked slightly different would just read as wrong. The two
+        /// details that matter are both non-obvious: the effect is rotated so its local +Z
+        /// faces the station, and then *scaled* along Z by the distance, which is what turns
+        /// a stationary puff into something that spans the gap.
+        ///
+        /// Poked from GetHoverText, exactly as vanilla does for a non-continuous extension.
+        /// Looking at the piece is the moment you want the answer, and a base with eight
+        /// smelters in it would be a light show if every upgrade emitted all the time.
         /// </summary>
-        private void AimEffects()
+        private void PokeEffect(float timeout = 1f)
         {
-            if (!StokerConfig.AimEffects.Value) return;
+            if (!StokerConfig.ShowLink.Value) return;
 
             var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
+            if (station == null) return;
 
-            foreach (var effect in _effects)
+            var from = transform.position + Vector3.up * StokerConfig.LinkHeight.Value;
+            var to = station.ConnectionPoint;
+
+            if (_connection == null)
             {
-                if (effect == null) continue;
+                var prefab = ConnectionPrefab();
+                if (prefab == null) return;
 
-                if (station == null)
-                {
-                    // Feeding nothing, so showing nothing. An upgrade that is not attached
-                    // to anything looks identical to one that is, otherwise.
-                    if (effect.isPlaying) effect.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                    continue;
-                }
-
-                var direction = station.transform.position - effect.transform.position;
-                if (direction.sqrMagnitude > 0.0001f)
-                    effect.transform.rotation = Quaternion.LookRotation(direction.normalized);
-
-                if (!effect.isPlaying) effect.Play();
+                _connection = Instantiate(prefab, from, Quaternion.identity);
             }
+
+            var span = to - from;
+            if (span.sqrMagnitude < 0.0001f) return;
+
+            _connection.transform.position = from;
+            _connection.transform.rotation = Quaternion.LookRotation(span.normalized);
+            _connection.transform.localScale = new Vector3(1f, 1f, span.magnitude);
+
+            CancelInvoke("StopConnectionEffect");
+            Invoke("StopConnectionEffect", timeout);
+        }
+
+        private void StopConnectionEffect()
+        {
+            if (_connection == null) return;
+
+            Destroy(_connection);
+            _connection = null;
+        }
+
+        /// <summary>
+        /// The vanilla connection effect, borrowed off whichever station extension the game
+        /// has loaded.
+        ///
+        /// Found by component rather than by name - anything carrying a StationExtension
+        /// with a connection prefab will do, so this does not depend on the forge and
+        /// workbench extensions keeping their current prefab names. Cached because it is a
+        /// scan, and cleared with the rest of the borrowed art when the item list changes.
+        /// </summary>
+        private static GameObject _connectionPrefab;
+        private static bool _connectionSearched;
+
+        private static GameObject ConnectionPrefab()
+        {
+            if (_connectionSearched) return _connectionPrefab;
+            _connectionSearched = true;
+
+            var scene = ZNetScene.instance;
+            if (scene == null) return null;
+
+            foreach (var prefab in scene.m_prefabs)
+            {
+                if (prefab == null) continue;
+
+                var extension = prefab.GetComponent<StationExtension>();
+                if (extension == null || extension.m_connectionPrefab == null) continue;
+
+                _connectionPrefab = extension.m_connectionPrefab;
+                StokerPlugin.Log.LogInfo(
+                    "Link effect borrowed from " + prefab.name + " ("
+                    + _connectionPrefab.name + ").");
+                return _connectionPrefab;
+            }
+
+            StokerPlugin.Log.LogWarning(
+                "No StationExtension with a connection effect is loaded - upgrades will not "
+                + "draw a link to their station.");
+            return null;
+        }
+
+        public static void ForgetConnectionPrefab()
+        {
+            _connectionPrefab = null;
+            _connectionSearched = false;
         }
 
         /// <summary>How many upgrades of the matching kind are close enough to count.</summary>
@@ -163,6 +196,11 @@ namespace Stoker
 
         public string GetHoverText()
         {
+            // Vanilla pokes the link effect from here too, for any extension that is not
+            // continuously connected. Looking at the piece is the moment you are asking
+            // which station it belongs to.
+            PokeEffect();
+
             var name = GetHoverName();
             var station = SmelterCapacity.NearestUsing(transform.position, m_servesFuelled);
 
@@ -284,6 +322,19 @@ namespace Stoker
             // which would hand out an upgrade that really is a chest.
             foreach (var container in clone.GetComponentsInChildren<Container>(true))
                 Object.DestroyImmediate(container);
+
+            // The model swap destroys MeshRenderer objects, and a particle system's renderer
+            // is a ParticleSystemRenderer - not one of those - so anything the donor emitted
+            // would otherwise survive onto a piece that no longer looks anything like it.
+            // The link effect below is the one deliberate effect these pieces have.
+            foreach (var particles in clone.GetComponentsInChildren<ParticleSystem>(true))
+            {
+                if (particles == null) continue;
+
+                StokerPlugin.Log.LogInfo("Stripped inherited particle system '"
+                                         + particles.name + "' from " + def.PrefabName + ".");
+                Object.DestroyImmediate(particles);
+            }
 
             var piece = clone.GetComponent<Piece>();
             if (piece != null)
