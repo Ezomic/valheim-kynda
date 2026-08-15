@@ -111,7 +111,7 @@ namespace Stoker
                 + "upgrades, so it cannot be built before there is anything to smelt.");
 
             UpgradePrefabs.Trough.Model = config.Bind("Trough", "Model",
-                "stoker_trough_raised.obj",
+                "stoker_trough_barrels.obj",
                 "The OBJ loaded from beside the DLL. Its .col sidecar supplies the "
                 + "collision and its _icon.png the hammer icon, both matched by name - so "
                 + "dropping in a new model brings its own shape and picture with it.");
@@ -144,7 +144,7 @@ namespace Stoker
                 + "cannot build alongside its station is one you never build at all.");
 
             UpgradePrefabs.Woodrack.Model = config.Bind("Woodrack", "Model",
-                "stoker_kiln_woodrack.obj",
+                "stoker_rack_lean.obj",
                 "The OBJ loaded from beside the DLL, with its .col and _icon.png matched "
                 + "by name.");
 

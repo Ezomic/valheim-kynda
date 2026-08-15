@@ -152,6 +152,42 @@ def log(radius, length, location, mat="wood", axis="x", sides=7, rot=0.0, wobble
     return part(obj, mat, bevel=0.008)
 
 
+def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
+    """
+    One piece of firewood, and deliberately not the same shape as the last one.
+
+    A real woodpile is rounds, halves, quarters and square offcuts in whatever
+    diameters the tree gave. Built from identical seven-sided cylinders it reads as
+    a bundle of pipe - the tell is that every end-circle in the stack is the same
+    size, which never happens to wood.
+
+    The cross-section comes from the side count rather than from cutting anything:
+    three sides is a quarter-split billet, four a sawn offcut, five an irregular
+    split, six and seven the bark-on rounds. No booleans, and each is one primitive.
+    """
+    if kind is None:
+        kind = (3, 4, 5, 6, 7, 5, 7, 4)[int(rnd() * 8) % 8]
+
+    # Diameter varies by half again, length by a third. Both are what a stack of
+    # cut-to-length wood actually looks like, and the variation is what stops the
+    # eye finding a repeat.
+    r = radius * (0.74 + rnd() * 0.62)
+    l = length * (0.86 + rnd() * 0.28)
+
+    obj = log(r, l, location, "wood", axis=axis, sides=kind,
+              rot=rot + jitter(22.0), wobble=wobble)
+
+    # The flat-sided ones are split wood, so they sit at any roll angle rather than
+    # all landing on a face - a row of triangles all pointing up is a sawtooth.
+    if kind <= 4:
+        if axis == "x":
+            obj.rotation_euler[0] += math.radians(rnd() * 120.0)
+        elif axis == "y":
+            obj.rotation_euler[1] += math.radians(rnd() * 120.0)
+
+    return obj, r, l
+
+
 def endgrain(radius, location, axis="x", mat="wood"):
     """
     A sawn end, sat slightly proud of the log it caps.
@@ -276,8 +312,8 @@ def rack_lean():
         offset = (row % 2) * 0.07 - 0.035
         for i in range(4):
             x = -0.33 + i * 0.22
-            log(0.12, 0.62, (x, offset, z), axis="y")
-            endgrain(0.12, (x, offset - 0.32, z), axis="y")
+            _, r, l = billet(0.12, 0.62, (x, offset, z), axis="y")
+            endgrain(r, (x, offset - l / 2.0, z), axis="y")
 
     box((0.98, 0.60, 0.10), (0.0, 0.02, 0.06), "wood")            # sill the pile sits on
     collide((0.0, 0.0, 0.62), (1.30, 0.68, 1.24))
@@ -294,11 +330,11 @@ def rack_crib():
         for i in range(4):
             offset = -0.33 + i * 0.22
             if across:
-                log(0.105, 0.92, (0.0, offset, z), axis="x")
-                endgrain(0.105, (-0.47, offset, z), axis="x")
+                _, r, l = billet(0.105, 0.92, (0.0, offset, z), axis="x")
+                endgrain(r, (-l / 2.0, offset, z), axis="x")
             else:
-                log(0.105, 0.92, (offset, 0.0, z), axis="y")
-                endgrain(0.105, (offset, -0.47, z), axis="y")
+                _, r, l = billet(0.105, 0.92, (offset, 0.0, z), axis="y")
+                endgrain(r, (offset, -l / 2.0, z), axis="y")
 
     # Two stakes leaning in against the stack, which is what stops a real crib walking.
     box((0.09, 0.09, 1.24), (-0.53, 0.30, 0.60), "wood", rot=(0.0, 7.0, 0.0))
@@ -470,9 +506,9 @@ def rack_upright():
             x = -0.37 + ix * step
             y = -0.30 + iy * step
             h = 0.80 + ((ix * 5 + iy) % 5) * 0.075
-            log(radius, h, (x, y, h / 2.0 + 0.09), axis="z",
-                rot=(ix * 37 + iy * 61) % 90)
-            endgrain(radius, (x, y, h + 0.09), axis="z")
+            _, r, l = billet(radius, h, (x, y, h / 2.0 + 0.09), axis="z",
+                             rot=(ix * 37 + iy * 61) % 90)
+            endgrain(r, (x, y, l / 2.0 + h / 2.0 + 0.09), axis="z")
 
     # A corral of four low boards, overlapping at the corners rather than mitred.
     for y in (-0.42, 0.42):
