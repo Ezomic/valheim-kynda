@@ -10,9 +10,9 @@ namespace Stoker
         /// of a save - is instantiated after this, so they all get it rather than only newly
         /// placed ones.
         ///
-        /// The hopper is attempted here too, though it usually takes on the ObjectDB hook
-        /// instead: its build cost needs item prefabs, and which of the two wakes first is
-        /// not something to rely on.
+        /// The upgrades are attempted here too, though they usually take on the ObjectDB
+        /// hook instead: their build costs need item prefabs, and which of the two wakes
+        /// first is not something to rely on.
         /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ZNetScene), "Awake")]
@@ -22,24 +22,30 @@ namespace Stoker
             if (touched > 0)
                 StokerPlugin.Log.LogInfo("Capacity component added to " + touched + " station prefab(s).");
 
-            HopperPrefab.Register();
+            UpgradePrefabs.Register();
 
-            if (StokerConfig.LogVisualCandidates.Value) PropGraft.ReportCandidates();
-            PropGraft.Search(StokerConfig.VisualSearch.Value);
+            PropIndex.Search(StokerConfig.PrefabSearch.Value);
         }
 
+        /// <summary>
+        /// Borrowed materials are dropped on both of these. A local world arrives through
+        /// Awake and a server handing over its item list through CopyOtherDB; a material
+        /// held across either is a reference to a prefab that has been torn down.
+        /// </summary>
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ObjectDB), "Awake")]
         private static void OnObjectDbAwake()
         {
-            HopperPrefab.Register();
+            Skins.Invalidate();
+            UpgradePrefabs.Register();
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(ObjectDB), nameof(ObjectDB.CopyOtherDB))]
         private static void OnObjectDbCopy()
         {
-            HopperPrefab.Register();
+            Skins.Invalidate();
+            UpgradePrefabs.Register();
         }
     }
 }

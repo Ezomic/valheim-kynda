@@ -6,13 +6,13 @@ namespace Stoker
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     // No BepInProcess. It is a whitelist, and a dedicated server runs valheim_server.exe.
-    // The hopper is a registered prefab, and ZNetScene discards any ZDO whose prefab name
-    // does not resolve - so a server without it destroys every hopper already standing.
+    // The upgrades are registered prefabs, and ZNetScene discards any ZDO whose prefab name
+    // does not resolve - so a server without this mod destroys every one already standing.
     public class StokerPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.stoker";
         public const string PluginName = "Stoker";
-        public const string PluginVersion = "0.2.0";
+        public const string PluginVersion = "0.3.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
         internal static ManualLogSource Log;
@@ -39,7 +39,7 @@ namespace Stoker
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
 
             if (StokerConfig.TestMode.Value)
-                Log.LogWarning("TEST MODE: the hopper costs one wood. "
+                Log.LogWarning("TEST MODE: both upgrades cost one wood. "
                                + "Turn TestMode off in the config before playing for real.");
         }
 
@@ -49,14 +49,14 @@ namespace Stoker
         }
 
         /// <summary>
-        /// A safety net, not the main path. The hopper normally registers on ZNetScene and
+        /// A safety net, not the main path. The upgrades normally register on ZNetScene and
         /// ObjectDB waking; this covers whichever of them ran before the other was ready,
-        /// since the build cost needs ObjectDB and the prefab needs ZNetScene.
+        /// since the build costs need ObjectDB and the prefabs need ZNetScene.
         /// </summary>
         private void Update()
         {
             if (ZNetScene.instance == null || ObjectDB.instance == null) return;
-            HopperPrefab.Register();
+            UpgradePrefabs.Register();
         }
     }
 }

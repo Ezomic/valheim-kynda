@@ -18,15 +18,15 @@ So the whole mod sits on one line:
 exactly three ore. Twenty iron takes the same time and burns the same coal whether it went
 in as one load or three. You buy fewer trips, not more metal.
 
-## Status: v0.2
+## Status: v0.3
 
 | Feature | State |
 | --- | --- |
 | Add several items per press | built, runs in game, **not play-tested** |
-| Hopper piece that raises capacity | built, registers and builds, **not play-tested** |
+| Two upgrade pieces that raise capacity | built, **not yet seen in game** |
 
-"Runs in game" means the mod loads, the hopper registers and lands on the hammer, and the
-log is clean. Whether the numbers feel right over a real smelting session is untested.
+"Runs in game" means the mod loads, the pieces register and land on the hammer, and the log
+is clean. Whether the numbers feel right over a real smelting session is untested.
 
 ### Batching
 
@@ -49,18 +49,37 @@ along for free. Fireplaces are a separate class and are handled alongside.
 Batching stops early at the station's capacity or when you run out, so it can never put in
 more than pressing repeatedly would have.
 
-### The Hopper
+### The two upgrades
 
-Build a **Hopper** from the hammer's Crafting tab (20 wood, 5 bronze) within 4m of a smelter,
-kiln or furnace and that station holds **20 more ore and 40 more fuel**. A second hopper adds
-another lot. Two is the limit by default.
+Two pieces, not one, because a charcoal kiln eats wood and a smelter eats ore and coal. A
+single generic bin looked like it belonged to neither — it was a box that said "storage" and
+nothing else.
 
-The two figures differ because a smelter burns two coal for every ore it melts. Matching them
-would leave the coal side running out first, and the upgrade would only half work.
+| Piece | Cost | Serves | Raises |
+| --- | --- | --- | --- |
+| **Trough** — two bays, one of ore and one of coal, on legs | 20 wood, 5 bronze | Smelter, blast furnace | ore **+20**, fuel **+40** |
+| **Woodrack** — split logs stacked under a roof | 25 wood, 10 stone | Charcoal kiln, windmill, spinning wheel | ore **+20** |
 
-Bronze gates it behind the smelter it upgrades, so it cannot exist before there is anything
-to smelt. Look at a hopper and it tells you which station it is feeding and what that
-station's capacity now is.
+Build one from the hammer's Crafting tab within 4m of the station it serves. A second adds
+another lot; two is the limit by default. Look at one and it tells you which station it is
+feeding and what that station's capacity now is — or says plainly that it is feeding nothing,
+which is what a woodrack parked next to a smelter will tell you.
+
+The two capacity figures differ because a smelter burns two coal for every ore it melts.
+Matching them would leave the coal side running out first, and the upgrade would only half
+work.
+
+**Which piece serves which station is decided on the station's own numbers, not a list of
+names.** A station with a fuel slot takes the trough; one without takes the woodrack. That is
+the same component-level matching the capacity component uses, so a modded station lands on
+the right side without anyone naming it. It also means the windmill and spinning wheel accept
+a woodrack, which is thematically odd and mechanically correct — they are single-input
+stations, which is exactly what the rack is for.
+
+Bronze gates the trough behind the smelter it upgrades, so it cannot exist before there is
+anything to smelt. The woodrack deliberately is **not** gated that way: a charcoal kiln is a
+Black Forest build, and an upgrade you cannot build alongside its station is one you never
+build at all.
 
 Modelled on vanilla's `StationExtension` — the way a chopping block upgrades a workbench —
 because that is the game's own idiom for "upgrade by building something next to it".
@@ -107,9 +126,29 @@ cannot be found throws and takes every patch in that class with it. Kept in its 
 a future rename costs the hint and leaves the feature working.
 
 **No `BepInProcess`.** It is a whitelist, and a dedicated server runs `valheim_server.exe`.
-The hopper is a registered prefab, and `ZNetScene` discards any ZDO whose prefab name does
-not resolve — so a server without this mod would silently destroy every hopper already
-standing.
+The upgrades are registered prefabs, and `ZNetScene` discards any ZDO whose prefab name does
+not resolve — so a server without this mod would silently destroy every one already standing.
+
+**The trough's prefab is still named `stoker_hopper`.** It inherited the name from the single
+generic bin it replaced. Prefab names are permanent — `ZNetScene` keys on
+`name.GetStableHashCode()` and saved ZDOs store that hash — so renaming it would have
+destroyed every bin already placed in a world, silently. Only its display name, model and
+icon changed.
+
+**Surfaces are borrowed, and their UVs are fitted to the atlas.** Each material group in the
+OBJ — wood, iron, stone, ore, coal — takes a real material off a vanilla prefab, so texel
+density, palette and weathering come along because they are the game's own. Valheim's piece
+textures are atlases though: a material uses a strip of a sheet, so UVs running 0..1 sample
+the whole thing and pick up the neighbouring tiles. `Skins` measures the donor's rect from
+its **largest single triangle** — not min/max across the mesh, which for `stone_wall_2x1`
+spans 71% of the sheet — and remaps clamped, never wrapped.
+
+**Icons are rendered, not borrowed.** Without one, a piece keeps the donor's icon, and the
+donor is a barrel. An icon showing the wrong object is worse than a plain one, because the
+hammer menu is where you choose. `tools/upgrade_icons.py` reads the shipped `.obj` back in
+and renders a 128px transparent PNG beside it; the runtime finds it by name and reaches
+`Texture2D.LoadImage` by reflection, since `UnityEngine.ImageConversionModule` targets
+netstandard 2.1 and this builds against net462.
 
 ## Config
 
@@ -123,40 +162,48 @@ standing.
 | `SmelterItemsPerAdd` | `3` | Ore or coal per press at any Smelter-based station |
 | `FireplaceItemsPerAdd` | `3` | Logs per press at a fire |
 
-### Hopper
+### Upgrades
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `HopperEnabled` | `true` | Add the buildable hopper |
-| `HopperName` | `Hopper` | Name on the hammer and on hover |
-| `HopperCost` | `Wood:20,Bronze:5` | Build cost as `Item:Amount` pairs |
-| `HopperDonor` | `piece_chest_barrel` | Prefab cloned for its Piece/WearNTear machinery and icon |
-| `HopperRange` | `4` | How close it must be to the station it feeds |
-| `MaxHoppers` | `2` | Most that count for one station |
-| `OreCapacityPerHopper` | `20` | Extra ore capacity each |
-| `FuelCapacityPerHopper` | `40` | Extra fuel capacity each — double, because coal burns 2:1 |
-| `HopperModelFile` | `stoker_hopper.obj` | OBJ read from beside the DLL for the shape |
-| `HopperScale` | `1` | Overall size |
-| `HopperSquash` | `0.7` | Height multiplier, only applied when falling back to the donor's body |
-| `HopperVisual` | *(empty)* | Vanilla prop to wear instead of the built model |
-| `HopperVisualScale` | `1` | Size of that grafted prop |
+| `Enabled` | `true` | Add both buildable upgrades |
+| `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
+| `Range` | `4` | How close an upgrade must be to the station it feeds |
+| `MaxPerStation` | `2` | Most of one kind that count for one station |
+| `OreCapacityEach` | `20` | Extra ore capacity per upgrade |
+| `FuelCapacityEach` | `40` | Extra fuel capacity per upgrade — double, because coal burns 2:1 |
+
+### Trough / Woodrack
+
+Each piece has its own section with the same four keys.
+
+| Key | Trough | Woodrack |
+| --- | --- | --- |
+| `Name` | `Trough` | `Woodrack` |
+| `Cost` | `Wood:20,Bronze:5` | `Wood:25,Stone:10` |
+| `Model` | `stoker_trough_raised.obj` | `stoker_kiln_woodrack.obj` |
+| `Scale` | `1` | `1` |
+
+`Model` carries its own collision and icon: the `.col` sidecar and the `_icon.png` are
+matched by filename, so dropping in a new model brings its shape and its picture with it.
+The `assets\` folder holds the rejected variants too — `stoker_trough_stone.obj`,
+`stoker_smelter_orecart.obj` and the rest — so trying one is a config line and a relaunch,
+not a rebuild. A variant with no rendered icon falls back to the donor's, with a warning.
 
 ### Diagnostics
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `TestMode` | `false` | Hopper costs one wood, so it can be checked without bronze |
+| `TestMode` | `false` | Both upgrades cost one wood, so they can be checked without bronze |
 | `Verbose` | `false` | Log each batched add |
-| `LogVisualCandidates` | `false` | List which grafting candidates are loaded |
-| `VisualSearch` | *(empty)* | Words to search loaded prop names for |
+| `PrefabSearch` | *(empty)* | Words to search loaded prefab names for, when hunting a material donor |
 
 `SmelterItemsPerAdd` or `FireplaceItemsPerAdd` set to `1` restores vanilla behaviour for
 either.
 
-The two diagnostics at the bottom were the scaffolding for choosing a prop to graft, and
-both default off: either one indexes every loaded object carrying a mesh — close to two
-thousand — and the search then writes a few hundred names into a log shared with every other
-mod. Turn them on while picking, off again afterwards.
+`PrefabSearch` defaults off because it indexes every loaded object carrying a mesh — close to
+two thousand — and then writes a few hundred names into a log shared with every other mod.
+Genuinely useful while hunting for a prefab to borrow a material from, pure cost afterwards.
 
 **A value already in the `.cfg` beats a new default in code.** BepInEx writes every entry to
 disk on first run, so changing a default here does nothing on a machine that has already run
@@ -184,17 +231,24 @@ Batching:
 7. A charcoal kiln batches wood.
 8. Check the log at startup for a missing-members error.
 
-The hopper:
+The upgrades:
 
-9. **It appears on the hammer's Crafting tab** — check the log for a
-   `Hopper donor ... does not exist` warning if it does not.
-10. Build one by a smelter: the ore cap should rise by exactly 20 and the fuel cap by 40
-    over whatever that station started with. Read the before/after off the smelter's own
+9. **Both appear on the hammer's Crafting tab, each with its own icon** — a rack of logs and
+   a two-bay trough, not two barrels. A barrel means the `_icon.png` was not found; the log
+   says which file it wanted.
+10. Build a trough by a smelter: the ore cap should rise by exactly 20 and the fuel cap by
+    40 over whatever that station started with. Read the before/after off the smelter's own
     hover text rather than assuming vanilla's figures.
-11. **A charcoal kiln should gain ore capacity but no fuel slot.** A kiln has no fuel at
-    all, and handing it one would have it refuse to work until fed coal it cannot take.
-12. Tear the hopper down and confirm the capacity drops back within about three seconds.
-13. Confirm a hopper is not a chest — it should have no inventory to open.
+11. Build a woodrack by a charcoal kiln: ore capacity up 20, and **still no fuel slot**. A
+    kiln has no fuel at all, and handing it one would have it refuse to work until fed coal
+    it cannot take.
+12. **A woodrack beside a smelter should do nothing**, and say so on hover — and a trough
+    beside a kiln likewise. Each piece only counts for the kind of station it serves.
+13. Tear one down and confirm the capacity drops back within about three seconds.
+14. Confirm neither is a chest — they should have no inventory to open.
+15. Look closely at the timber: the borrowed materials should read as one clean tile, not as
+    a smear of several. Banding or fragments of a neighbouring texture means the atlas remap
+    picked the wrong rect for that group.
 
 ## Author
 

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Stoker
 {
     /// <summary>
-    /// Raises a station's capacity for each hopper built beside it.
+    /// Raises a station's capacity for each matching upgrade built beside it.
     ///
     /// Capacity only. M_secPerProduct and m_fuelPerProduct are never touched, so an upgraded
     /// smelter takes exactly as long and burns exactly as much coal per bar as a bare one -
@@ -25,13 +25,13 @@ namespace Stoker
             if (_smelter == null) { enabled = false; return; }
 
             // Captured before anything is applied, and never rewritten. Recomputing from the
-            // current values instead would add a hopper's worth of capacity every tick.
+            // current values instead would add an upgrade's worth of capacity every tick.
             _baseOre = _smelter.m_maxOre;
             _baseFuel = _smelter.m_maxFuel;
 
             All.Add(this);
 
-            // Polled rather than pushed: a hopper can be built, destroyed or fall down at
+            // Polled rather than pushed: an upgrade can be built, destroyed or fall down at
             // any time, and a station that quietly kept capacity from a bin that burned down
             // would be a duplication bug rather than a cosmetic one.
             InvokeRepeating("Recompute", 1f, 3f);
@@ -42,16 +42,24 @@ namespace Stoker
             All.Remove(this);
         }
 
+        /// <summary>
+        /// A station with a fuel slot takes the trough; one without takes the woodrack.
+        /// Decided on the station's own numbers rather than a list of prefab names, so a
+        /// modded station lands on the right side without anyone naming it.
+        /// </summary>
+        private bool Fuelled { get { return _baseFuel > 0; } }
+
         private void Recompute()
         {
             if (_smelter == null) return;
 
-            var level = StokerConfig.HopperEnabled.Value
-                ? Mathf.Min(Hopper.CountNear(transform.position), Mathf.Max(0, StokerConfig.MaxHoppers.Value))
+            var level = StokerConfig.Enabled.Value
+                ? Mathf.Min(UpgradeBin.CountNear(transform.position, Fuelled),
+                            Mathf.Max(0, StokerConfig.MaxPerStation.Value))
                 : 0;
 
-            var oreBonus  = level * Mathf.Max(0, StokerConfig.OreCapacityPerHopper.Value);
-            var fuelBonus = level * Mathf.Max(0, StokerConfig.FuelCapacityPerHopper.Value);
+            var oreBonus  = level * Mathf.Max(0, StokerConfig.OreCapacityEach.Value);
+            var fuelBonus = level * Mathf.Max(0, StokerConfig.FuelCapacityEach.Value);
 
             // Only raise a cap the station already has. A charcoal kiln has no fuel slot at
             // all - giving it one would have it refuse to work until fed coal it cannot take.
@@ -59,10 +67,14 @@ namespace Stoker
             if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + fuelBonus;
         }
 
-        /// <summary>The station a hopper at this point is helping, for its hover text.</summary>
-        public static string NearestUsing(Vector3 point)
+        /// <summary>
+        /// The station an upgrade at this point is helping, for its hover text. Only
+        /// stations of the matching kind count, so a woodrack beside a smelter correctly
+        /// reports that it is feeding nothing rather than claiming the smelter.
+        /// </summary>
+        public static string NearestUsing(Vector3 point, bool fuelled)
         {
-            var range = StokerConfig.HopperRange.Value;
+            var range = StokerConfig.Range.Value;
 
             SmelterCapacity best = null;
             var bestDistance = float.MaxValue;
@@ -70,6 +82,7 @@ namespace Stoker
             foreach (var capacity in All)
             {
                 if (capacity == null || capacity._smelter == null) continue;
+                if (capacity.Fuelled != fuelled) continue;
 
                 var distance = Vector3.Distance(capacity.transform.position, point);
                 if (distance > range || distance >= bestDistance) continue;

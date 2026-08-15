@@ -177,7 +177,7 @@ namespace Stoker
             // darken creases, it would tell the shader whole faces are something they are
             // not - which is a candidate for the black facets on the altar. So it is a
             // setting now, and off means plain white.
-            // Always plain white here. The hopper carries no baked occlusion, and the
+            // Always plain white here. These models carry no baked occlusion, and the
             // warning above is the reason it never will: Valheim's piece shaders use the
             // vertex colour channel for their own purposes, so handing them a shading bake
             // does not darken creases, it lies to the shader about the surface.

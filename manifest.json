@@ -1,9 +1,9 @@
 {
   "name": "Stoker",
   "author": "Robbin Thijssen",
-  "version_number": "0.2.0",
+  "version_number": "0.3.0",
   "website_url": "",
-  "description": "Load smelters, kilns and fires several at a time, and build a hopper to make them hold more.",
+  "description": "Load smelters, kilns and fires several at a time, and build upgrades to make them hold more.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2333"
   ]
