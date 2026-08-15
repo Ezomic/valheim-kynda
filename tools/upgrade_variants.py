@@ -350,17 +350,54 @@ def bay(centre, inner, depth, mat, fill, wall=0.09, count=9, lump=0.15):
          count, lump, fill)
 
 
+def contents(centre, radius, mat, depth=0.26, count=7, lump=0.16, sides=11):
+    """
+    A container filled to just under its rim, rather than a few lumps in the middle.
+
+    Seen from above the old heap left the barrel obviously empty: its lumps landed
+    within half a spread of the centre, so eight of them covered under half the mouth
+    and you looked straight past them at the floor. Scattering more would have fixed
+    the hole and cost about a thousand triangles a barrel, for a mound of confetti.
+
+    So the bulk is one squat cylinder filling the whole mouth, and the lumps only
+    break its surface. Few large parts beat many small ones, and only the top of a
+    full container is ever seen - everything below it is paid for and hidden.
+
+    The disc runs a little wide on purpose. Flush with the inner face of the staves
+    leaves a hairline of daylight between contents and wall wherever the jitter pushed
+    a stave outwards; tucked under them there is nothing to see through.
+    """
+    cx, cy, cz = centre
+
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, vertices=sides,
+                                        location=(cx, cy, cz - depth / 2.0))
+    obj = bpy.context.active_object
+    obj.rotation_euler = (0.0, 0.0, math.radians(jitter(9.0)))
+    part(obj, mat, bevel=0.008, projection="cylinder", radius=radius)
+
+    # Sat on the disc rather than replacing it, and pulled in from the wall so the
+    # rim reads as the edge of the contents instead of lumps balanced on it.
+    heap((cx, cy, cz + lump * 0.16), radius * 0.66, count, lump, mat, dome=0.30)
+
+
 def heap(centre, spread, count, size, mat, dome=0.55):
     """
     A mound, not a scatter. Lumps overlap their neighbours and sit lower towards the
     edges, so the silhouette is one shape - small lumps spread at a constant height
     read as confetti sitting on the model, and the tell is air around each one.
+
+    spread is the radius the lumps reach, which is what every caller assumed it was
+    and what it was not: the offsets run -0.5 to 0.5, so a heap asked for a 22cm
+    radius covered 11cm and a barrel came out visibly empty around its edge.
     """
     for _ in range(count):
-        fx = rnd() - 0.5
-        fy = rnd() - 0.5
+        fx = (rnd() - 0.5) * 2.0
+        fy = (rnd() - 0.5) * 2.0
         w = rnd()
-        radial = min(1.0, (fx * fx + fy * fy) ** 0.5 * 2.0)
+        # Already 0..1 at the edge now that the offsets are, so the doubling that
+        # compensated for the half-width offsets has to come back out - left in, every
+        # lump past the halfway mark sank by the full dome and the mound had a crater.
+        radial = min(1.0, (fx * fx + fy * fy) ** 0.5)
         s = size * (0.85 + w * 0.45)
         box((s, s, s * 0.7),
             (centre[0] + fx * spread,
@@ -386,7 +423,11 @@ def rack_lean():
     """
     for x in (-0.52, 0.52):
         box((0.13, 0.15, 1.16), (x, 0.0, 0.58), "wood")
-        box((0.16, 0.18, 0.10), (x, 0.0, 0.03), "wood")           # sole plate
+        # The sole plate runs well below the origin. Vanilla buries far more than looks
+        # sensible - wood_stack and barrell both sit 58cm into the ground - because
+        # terrain is never flat, and a piece this wide will always have one corner over
+        # a dip. This reached 2cm down and perched visibly on any slope.
+        box((0.16, 0.18, 0.52), (x, 0.0, -0.12), "wood")          # sole plate
 
     # Roof: two overlapping planks, sloped, oversailing the posts at the low edge.
     box((1.34, 0.62, 0.07), (0.0, -0.14, 1.16), "wood", rot=(-13.0, 0.0, 0.0))
@@ -651,15 +692,22 @@ def trough_barrels():
                      (top * 0.94, outer - 0.010)):
             band(r, 0.075, z, sides=11, centre=(x, 0.0))
 
-        box((radius * 2.0, radius * 2.0, 0.09), (x, 0.0, 0.24), "wood")   # floor
-        # Heaped proud of the rim rather than sunk out of sight. These are open casks
-        # and what is in them is how you tell the ore side from the coal side.
-        heap((x, 0.0, top + 0.02), radius * 0.78, 8, 0.175, fill, dome=0.42)
+        # Full to just under the rim. These are open casks and what is in them is how
+        # you tell the ore side from the coal side - which only works if looking into
+        # one shows the contents rather than the floor. Tucked under the staves, so
+        # there is no seam of daylight between the material and the wall.
+        contents((x, 0.0, top * 0.94), radius - stave * 0.25, fill)
 
     # A sled with real cross members and iron at the corners, rather than one plank.
     box((1.40, 0.80, 0.13), (0.0, 0.0, 0.175), "wood")
+    # The runners carry on below the origin, which is the whole of what stops a piece
+    # looking like it is hovering. Vanilla buries a great deal more than feels
+    # reasonable - wood_stack and barrell both sit 58cm into the ground, blackwood_stack
+    # 33 - because ground is never flat and a footprint this wide will always have a
+    # corner over a dip. Ours reached 1cm below the origin and perched on the high side
+    # of every slope.
     for y in (-0.31, 0.31):
-        box((1.48, 0.14, 0.14), (0.0, y, 0.07), "wood")
+        box((1.48, 0.14, 0.52), (0.0, y, -0.12), "wood")
     for x in (-0.60, 0.60):
         box((0.14, 0.74, 0.12), (x, 0.0, 0.175), "wood")
         strap(0.78, (x, 0.0, 0.245), axis="y", width=0.10)
