@@ -29,6 +29,7 @@ namespace Stoker
 
         public static ConfigEntry<string> PrefabSearch;
         public static ConfigEntry<bool> TestMode;
+        public static ConfigEntry<bool> VariantMode;
 
         /// <summary>
         /// The real costs are gated behind the stations they upgrade, which is a whole
@@ -40,7 +41,7 @@ namespace Stoker
 
         public static string CostNow(UpgradeDef def)
         {
-            return TestMode.Value ? TestCost : def.Cost.Value;
+            return TestMode.Value || def.Cost == null ? TestCost : def.Cost.Value;
         }
 
         public static void Bind(ConfigFile config)
@@ -51,6 +52,18 @@ namespace Stoker
 
             Verbose = config.Bind("Diagnostics", "Verbose", false,
                 "Log each batched add and why it stopped.");
+
+            // For judging models against each other in the game's own light rather than
+            // against a memory of the last one. Every variant is a registered prefab, so
+            // anything built from one is a real ZDO keyed on a name that stops resolving
+            // the moment this goes off - and ZNetScene discards those silently. Hence the
+            // warning in the log rather than only here.
+            VariantMode = config.Bind("Diagnostics", "VariantMode", false,
+                "Put every candidate model on the hammer as its own piece at one wood "
+                + "each, named 'var: ...', so they can be built side by side and compared. "
+                + "DESTRUCTIVE WHEN TURNED OFF: anything built from a variant vanishes with "
+                + "it, because its prefab name stops existing. Build them somewhere you do "
+                + "not mind losing.");
 
             // Off by default. It indexes every loaded object carrying a mesh - close to two
             // thousand of them - and then writes a few hundred names into a log shared with

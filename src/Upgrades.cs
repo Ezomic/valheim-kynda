@@ -37,6 +37,17 @@ namespace Stoker
         public ConfigEntry<float> Scale;
 
         /// <summary>
+        /// Set instead of the config entries above on a comparison variant, which exists
+        /// for one session and does not deserve six settings in the file.
+        /// </summary>
+        public string LiteralName;
+        public string LiteralModel;
+
+        public string NameValue { get { return Name != null ? Name.Value : LiteralName; } }
+        public string ModelValue { get { return Model != null ? Model.Value : LiteralModel; } }
+        public float ScaleValue { get { return Scale != null ? Scale.Value : 1f; } }
+
+        /// <summary>
         /// How much each of these adds, in items, to the station it serves.
         ///
         /// Per piece rather than one figure for the mod, because the two cannot share one.
@@ -305,6 +316,77 @@ namespace Stoker
             return fuelled ? Trough : Woodrack;
         }
 
+        // ------------------------------------------------------------------ variants
+
+        private static List<UpgradeDef> _variants;
+
+        /// <summary>
+        /// One buildable piece per model file, so every candidate can stand in a row and be
+        /// compared in the game's own light at the same time of day.
+        ///
+        /// A config line and a relaunch per look is the alternative, and it compares a model
+        /// against a memory of the last one rather than against the model itself. This is
+        /// the same reason the design renders are a contact sheet and not one image at a
+        /// time.
+        ///
+        /// Every one of these is a registered prefab, so anything built from them is a real
+        /// ZDO keyed on a name that stops existing the moment VariantMode goes off - and
+        /// ZNetScene discards a ZDO whose prefab name will not resolve, silently. Build them
+        /// somewhere you do not mind losing.
+        /// </summary>
+        private static List<UpgradeDef> Variants()
+        {
+            if (_variants != null) return _variants;
+
+            _variants = new List<UpgradeDef>();
+            if (!StokerConfig.VariantMode.Value) return _variants;
+
+            var dir = Path.GetDirectoryName(typeof(UpgradePrefabs).Assembly.Location);
+
+            foreach (var path in Directory.GetFiles(dir, "stoker_*.obj"))
+            {
+                var stem = Path.GetFileNameWithoutExtension(path);
+                var lower = stem.ToLowerInvariant();
+
+                var isTrough = lower.Contains("trough");
+                if (!isTrough && !lower.Contains("rack")) continue;
+
+                _variants.Add(new UpgradeDef
+                {
+                    // Prefixed so a variant can never collide with a real piece's name, and
+                    // so the throwaway ones are obvious in a ZDO dump.
+                    PrefabName = "stoker_var_" + stem,
+                    LiteralName = Pretty(stem),
+                    LiteralModel = stem + ".obj",
+                    Description = "Comparison variant. Not a real piece - turn VariantMode "
+                                  + "off and it stops existing.",
+                    ServesFuelled = isTrough,
+                    OreCapacity = isTrough ? Trough.OreCapacity : Woodrack.OreCapacity,
+                    FuelCapacity = isTrough ? Trough.FuelCapacity : null,
+                });
+            }
+
+            if (_variants.Count > 0)
+                StokerPlugin.Log.LogWarning(
+                    "VARIANT MODE: " + _variants.Count + " comparison piece(s) on the hammer "
+                    + "at one wood each. Anything built from them is destroyed when "
+                    + "VariantMode goes off.");
+
+            return _variants;
+        }
+
+        /// <summary>stoker_trough_bench -> "var: trough bench", which sorts together.</summary>
+        private static string Pretty(string stem)
+        {
+            return "var: " + stem.Replace("stoker_", "").Replace("_", " ");
+        }
+
+        private static IEnumerable<UpgradeDef> Active()
+        {
+            foreach (var def in All) yield return def;
+            foreach (var def in Variants()) yield return def;
+        }
+
         private static GameObject _holder;
         private static bool _addedToHammer;
 
@@ -314,7 +396,7 @@ namespace Stoker
             {
                 if (ZNetScene.instance == null) return false;
 
-                foreach (var def in All)
+                foreach (var def in Active())
                     if (ZNetScene.instance.GetPrefab(def.PrefabName) == null) return false;
 
                 return true;
@@ -329,7 +411,7 @@ namespace Stoker
 
             if (ZNetScene.instance == null || ObjectDB.instance == null) return false;
 
-            foreach (var def in All)
+            foreach (var def in Active())
             {
                 if (def.Prefab == null) def.Prefab = Build(def);
                 if (def.Prefab == null) return false;
@@ -407,7 +489,7 @@ namespace Stoker
             var piece = clone.GetComponent<Piece>();
             if (piece != null)
             {
-                piece.m_name = def.Name.Value;
+                piece.m_name = def.NameValue;
                 piece.m_description = def.Description;
                 piece.m_resources = Requirements(StokerConfig.CostNow(def));
 
@@ -425,9 +507,9 @@ namespace Stoker
                 if (icon != null) piece.m_icon = icon;
             }
 
-            UpgradeModel.Apply(clone, def.Model.Value);
+            UpgradeModel.Apply(clone, def.ModelValue);
 
-            var scale = Mathf.Max(0.05f, def.Scale.Value);
+            var scale = Mathf.Max(0.05f, def.ScaleValue);
             clone.transform.localScale = new Vector3(scale, scale, scale);
 
             var bin = clone.GetComponent<UpgradeBin>() ?? clone.AddComponent<UpgradeBin>();
@@ -449,7 +531,7 @@ namespace Stoker
         private static Sprite LoadIcon(UpgradeDef def)
         {
             var dir = Path.GetDirectoryName(typeof(UpgradePrefabs).Assembly.Location);
-            var model = def.Model.Value;
+            var model = def.ModelValue;
             if (string.IsNullOrEmpty(model)) return null;
 
             var path = Path.Combine(dir, Path.GetFileNameWithoutExtension(model) + "_icon.png");
@@ -571,7 +653,7 @@ namespace Stoker
         {
             var scene = ZNetScene.instance;
 
-            foreach (var def in All)
+            foreach (var def in Active())
             {
                 if (def.Prefab == null || scene.GetPrefab(def.PrefabName) != null) continue;
 
@@ -605,7 +687,7 @@ namespace Stoker
             var table = drop.m_itemData.m_shared.m_buildPieces;
             if (table == null || table.m_pieces == null) return;
 
-            foreach (var def in All)
+            foreach (var def in Active())
             {
                 if (def.Prefab == null) return;
                 if (!table.m_pieces.Contains(def.Prefab)) table.m_pieces.Add(def.Prefab);
