@@ -55,19 +55,29 @@ Two pieces, not one, because a charcoal kiln eats wood and a smelter eats ore an
 single generic bin looked like it belonged to neither — it was a box that said "storage" and
 nothing else.
 
-| Piece | Cost | Serves | Raises |
+| Piece | Cost | Serves |
+| --- | --- | --- |
+| **Trough** — two bays, one of ore and one of coal, on legs | 20 wood, 5 bronze | Smelter, blast furnace |
+| **Woodrack** — split logs stacked under a roof | 25 wood, 10 stone | Charcoal kiln, windmill, spinning wheel |
+
+Build one from the hammer's Crafting tab within 4m of the station it serves. Look at one and
+it tells you which station it is feeding and what that station's capacity now is — or says
+plainly that it is feeding nothing, which is what a woodrack parked next to a smelter will
+tell you.
+
+**One upgrade doubles the station's capacity. A second triples it.** Two is the limit by
+default.
+
+| Station | Bare | One upgrade | Two |
 | --- | --- | --- | --- |
-| **Trough** — two bays, one of ore and one of coal, on legs | 20 wood, 5 bronze | Smelter, blast furnace | ore **+20**, fuel **+40** |
-| **Woodrack** — split logs stacked under a roof | 25 wood, 10 stone | Charcoal kiln, windmill, spinning wheel | ore **+20** |
+| Charcoal kiln | 25 wood | **50** | 75 |
+| Smelter | 10 ore, 20 coal | **20, 40** | 30, 60 |
 
-Build one from the hammer's Crafting tab within 4m of the station it serves. A second adds
-another lot; two is the limit by default. Look at one and it tells you which station it is
-feeding and what that station's capacity now is — or says plainly that it is feeding nothing,
-which is what a woodrack parked next to a smelter will tell you.
-
-The two capacity figures differ because a smelter burns two coal for every ore it melts.
-Matching them would leave the coal side running out first, and the upgrade would only half
-work.
+A multiple rather than a flat amount, because a flat one cannot be round for two stations of
+different sizes: +20 turned the kiln's 25 into 45 and the smelter's 10 into 30. It also
+removes the separate ore and fuel figures this used to need — a smelter holds twice as much
+coal as ore because it burns two coal per ore, and scaling both by the same factor keeps that
+ratio for free instead of relying on two numbers being kept in step by hand.
 
 **Which piece serves which station is decided on the station's own numbers, not a list of
 names.** A station with a fuel slot takes the trough; one without takes the woodrack. That is
@@ -170,8 +180,8 @@ netstandard 2.1 and this builds against net462.
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
 | `MaxPerStation` | `2` | Most of one kind that count for one station |
-| `OreCapacityEach` | `20` | Extra ore capacity per upgrade |
-| `FuelCapacityEach` | `40` | Extra fuel capacity per upgrade — double, because coal burns 2:1 |
+| `CapacityPerUpgrade` | `1.0` | Capacity added per upgrade, as a multiple of the station's own. `1` doubles, `0.5` adds half |
+| `AimEffects` | `true` | Point an inherited particle effect at the station, and stop it when feeding nothing |
 
 ### Trough / Woodrack
 
@@ -236,12 +246,10 @@ The upgrades:
 9. **Both appear on the hammer's Crafting tab, each with its own icon** — a rack of logs and
    a two-bay trough, not two barrels. A barrel means the `_icon.png` was not found; the log
    says which file it wanted.
-10. Build a trough by a smelter: the ore cap should rise by exactly 20 and the fuel cap by
-    40 over whatever that station started with. Read the before/after off the smelter's own
-    hover text rather than assuming vanilla's figures.
-11. Build a woodrack by a charcoal kiln: ore capacity up 20, and **still no fuel slot**. A
-    kiln has no fuel at all, and handing it one would have it refuse to work until fed coal
-    it cannot take.
+10. Build a trough by a smelter: it should read **ore 20, fuel 40** — doubled from 10 and 20.
+11. Build a woodrack by a charcoal kiln: it should read **ore 50**, doubled from 25, and
+    **still no fuel slot**. A kiln has no fuel at all, and handing it one would have it
+    refuse to work until fed coal it cannot take.
 12. **A woodrack beside a smelter should do nothing**, and say so on hover — and a trough
     beside a kiln likewise. Each piece only counts for the kind of station it serves.
 13. Tear one down and confirm the capacity drops back within about three seconds.
@@ -249,6 +257,8 @@ The upgrades:
 15. Look closely at the timber: the borrowed materials should read as one clean tile, not as
     a smear of several. Banding or fragments of a neighbouring texture means the atlas remap
     picked the wrong rect for that group.
+16. Check the startup log for the line naming inherited particle systems. If it says there
+    are none, anything drifting near an upgrade belongs to the world rather than to us.
 
 ## Author
 

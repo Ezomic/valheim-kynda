@@ -6,7 +6,7 @@ namespace Stoker
     /// <summary>
     /// Raises a station's capacity for each matching upgrade built beside it.
     ///
-    /// Capacity only. M_secPerProduct and m_fuelPerProduct are never touched, so an upgraded
+    /// Capacity only. m_secPerProduct and m_fuelPerProduct are never touched, so an upgraded
     /// smelter takes exactly as long and burns exactly as much coal per bar as a bare one -
     /// it simply goes longer between visits. That is the line the whole mod sits on, and it
     /// is the reason this is a convenience rather than a power increase.
@@ -49,6 +49,18 @@ namespace Stoker
         /// </summary>
         private bool Fuelled { get { return _baseFuel > 0; } }
 
+        /// <summary>
+        /// A multiple of what the station already holds, not a flat amount added to it.
+        ///
+        /// A flat figure cannot be round for two stations of different sizes: +20 turned a
+        /// charcoal kiln's 25 into 45 and a smelter's 10 into 30. Multiplying gives 50 and
+        /// 20 - round wherever vanilla's own number was round, which is everywhere.
+        ///
+        /// It also removes the split ore/fuel figures this used to need. A smelter holds 10
+        /// ore and 20 coal because it burns two coal per ore; scaling both by the same
+        /// factor keeps that ratio for free, where two separate numbers had to be kept in
+        /// step by hand and got it wrong the moment a station had different proportions.
+        /// </summary>
         private void Recompute()
         {
             if (_smelter == null) return;
@@ -58,21 +70,18 @@ namespace Stoker
                             Mathf.Max(0, StokerConfig.MaxPerStation.Value))
                 : 0;
 
-            var oreBonus  = level * Mathf.Max(0, StokerConfig.OreCapacityEach.Value);
-            var fuelBonus = level * Mathf.Max(0, StokerConfig.FuelCapacityEach.Value);
+            var factor = 1f + level * Mathf.Max(0f, StokerConfig.CapacityPerUpgrade.Value);
 
             // Only raise a cap the station already has. A charcoal kiln has no fuel slot at
             // all - giving it one would have it refuse to work until fed coal it cannot take.
-            if (_baseOre > 0) _smelter.m_maxOre = _baseOre + oreBonus;
-            if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + fuelBonus;
+            // Multiplying keeps that automatically, since zero times anything is zero, but
+            // the guard stays because it also documents why.
+            if (_baseOre > 0) _smelter.m_maxOre = Mathf.RoundToInt(_baseOre * factor);
+            if (_baseFuel > 0) _smelter.m_maxFuel = Mathf.RoundToInt(_baseFuel * factor);
         }
 
-        /// <summary>
-        /// The station an upgrade at this point is helping, for its hover text. Only
-        /// stations of the matching kind count, so a woodrack beside a smelter correctly
-        /// reports that it is feeding nothing rather than claiming the smelter.
-        /// </summary>
-        public static string NearestUsing(Vector3 point, bool fuelled)
+        /// <summary>The nearest station of the matching kind, or null.</summary>
+        public static SmelterCapacity Nearest(Vector3 point, bool fuelled)
         {
             var range = StokerConfig.Range.Value;
 
@@ -91,6 +100,17 @@ namespace Stoker
                 bestDistance = distance;
             }
 
+            return best;
+        }
+
+        /// <summary>
+        /// The station an upgrade at this point is helping, for its hover text. Only
+        /// stations of the matching kind count, so a woodrack beside a smelter correctly
+        /// reports that it is feeding nothing rather than claiming the smelter.
+        /// </summary>
+        public static string NearestUsing(Vector3 point, bool fuelled)
+        {
+            var best = Nearest(point, fuelled);
             if (best == null) return null;
 
             var smelter = best._smelter;

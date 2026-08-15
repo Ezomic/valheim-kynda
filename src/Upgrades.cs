@@ -60,16 +60,85 @@ namespace Stoker
         public bool m_servesFuelled;
 
         private Piece _piece;
+        private ParticleSystem[] _effects;
+
+        /// <summary>Said once per session rather than once per placed piece.</summary>
+        private static bool _reported;
 
         private void Awake()
         {
             _piece = GetComponent<Piece>();
             All.Add(this);
+
+            // Nothing in this mod creates a particle system. Any that are here came across
+            // with the donor clone and survived the model swap, because that destroys
+            // MeshRenderer objects and a particle system's renderer is a
+            // ParticleSystemRenderer - which is not one. Rather than leave them spraying in
+            // whatever direction the donor wanted, they are pointed at the station this
+            // piece is feeding, and stopped when it is feeding nothing.
+            _effects = GetComponentsInChildren<ParticleSystem>(true);
+
+            if (!_reported)
+            {
+                _reported = true;
+                StokerPlugin.Log.LogInfo(_effects.Length == 0
+                    ? "No inherited particle systems on an upgrade - anything you can see "
+                      + "moving near one is the world's, not ours."
+                    : "Inherited particle systems on an upgrade: " + Names(_effects));
+            }
+
+            // The station cannot move, so this only has to catch it being built, destroyed
+            // or falling down. Offset from the capacity poll so the two do not share a frame.
+            if (_effects.Length > 0) InvokeRepeating("AimEffects", 1.5f, 3f);
+        }
+
+        private static string Names(ParticleSystem[] systems)
+        {
+            var names = new List<string>();
+            foreach (var system in systems)
+                if (system != null) names.Add(system.name);
+
+            return string.Join(", ", names.ToArray());
         }
 
         private void OnDestroy()
         {
             All.Remove(this);
+        }
+
+        /// <summary>
+        /// Turns the emitters to face the station this piece feeds.
+        ///
+        /// LookRotation puts local +Z on the target, which is the axis Unity's cone shape
+        /// emits along - so a system left at its defaults travels towards the station. One
+        /// that emits along a different axis, or simulates in world space with a fixed
+        /// velocity, will not turn; the log names them so that is diagnosable rather than
+        /// mysterious.
+        /// </summary>
+        private void AimEffects()
+        {
+            if (!StokerConfig.AimEffects.Value) return;
+
+            var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
+
+            foreach (var effect in _effects)
+            {
+                if (effect == null) continue;
+
+                if (station == null)
+                {
+                    // Feeding nothing, so showing nothing. An upgrade that is not attached
+                    // to anything looks identical to one that is, otherwise.
+                    if (effect.isPlaying) effect.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    continue;
+                }
+
+                var direction = station.transform.position - effect.transform.position;
+                if (direction.sqrMagnitude > 0.0001f)
+                    effect.transform.rotation = Quaternion.LookRotation(direction.normalized);
+
+                if (!effect.isPlaying) effect.Play();
+            }
         }
 
         /// <summary>How many upgrades of the matching kind are close enough to count.</summary>

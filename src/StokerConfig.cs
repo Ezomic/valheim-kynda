@@ -24,8 +24,8 @@ namespace Stoker
         public static ConfigEntry<string> Donor;
         public static ConfigEntry<float> Range;
         public static ConfigEntry<int> MaxPerStation;
-        public static ConfigEntry<int> OreCapacityEach;
-        public static ConfigEntry<int> FuelCapacityEach;
+        public static ConfigEntry<float> CapacityPerUpgrade;
+        public static ConfigEntry<bool> AimEffects;
 
         public static ConfigEntry<string> PrefabSearch;
         public static ConfigEntry<bool> TestMode;
@@ -79,18 +79,23 @@ namespace Stoker
                 "Most upgrades of one kind that will count for one station. Keeps it a "
                 + "decision rather than something you stack until capacity stops mattering.");
 
-            // Split rather than one number, because a smelter eats two coal for every ore.
-            // A single figure either starves the fuel side or overfills the ore side, and
-            // the whole point of the upgrade is that one filling lasts a sensible while.
-            OreCapacityEach = config.Bind("Upgrades", "OreCapacityEach", 20,
-                "Extra ore capacity per upgrade, added to whatever the station already "
-                + "holds. Never affects speed or fuel efficiency - only how long a station "
-                + "runs before it needs you.");
+            // A multiple of the station's own capacity, not a flat amount. A flat figure
+            // cannot be round for two stations of different sizes - +20 turned a charcoal
+            // kiln's 25 into 45 and a smelter's 10 into 30 - and it needed separate ore and
+            // fuel numbers kept in step by hand to preserve the 2:1 coal ratio that the
+            // station's own base values already encode.
+            CapacityPerUpgrade = config.Bind("Upgrades", "CapacityPerUpgrade", 1.0f,
+                "How much capacity each upgrade adds, as a multiple of what the station "
+                + "already holds. 1 doubles it - a charcoal kiln goes 25 to 50, a smelter "
+                + "10 ore and 20 coal to 20 and 40 - and a second upgrade triples it. 0.5 "
+                + "adds half. Ore and fuel scale together, so the ratio a station was built "
+                + "with survives. Never affects speed or fuel efficiency, only how long a "
+                + "station runs before it needs you.");
 
-            FuelCapacityEach = config.Bind("Upgrades", "FuelCapacityEach", 40,
-                "Extra fuel capacity per upgrade. Twice the ore figure by default, because "
-                + "a smelter burns two coal for every ore it melts - matching them means "
-                + "the coal side runs out first and the upgrade only half works.");
+            AimEffects = config.Bind("Upgrades", "AimEffects", true,
+                "Point any particle effect the piece inherited from its donor at the "
+                + "station it feeds, and stop it when it feeds nothing. Off leaves the "
+                + "donor's effect exactly as it came.");
 
             // ------------------------------------------------------------------ the trough
 
