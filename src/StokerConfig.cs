@@ -83,16 +83,23 @@ namespace Stoker
                 "Size of the grafted prop. Props are modelled at their own scale, so "
                 + "expect to tune this per prop rather than once.");
 
-            VisualSearch = config.Bind("Diagnostics", "VisualSearch",
-                "crate,sack,barrel,basket,cart,pile,bucket,ore,coal,wood,stack,anvil,forge",
+            // Both default off. They were the scaffolding for picking a prop to graft, and
+            // they are not free: either one builds an index of every loaded GameObject
+            // carrying a mesh - close to two thousand of them - and the search then writes
+            // a few hundred prop names into a log shared with every other mod. Useful
+            // exactly once, while choosing; pure cost on every world load after that.
+            VisualSearch = config.Bind("Diagnostics", "VisualSearch", "",
                 "Comma-separated words. Every loaded prop whose name contains one is listed "
                 + "in the log, so a real name can be picked instead of guessed at. Empty "
-                + "turns it off.");
+                + "turns it off. Worth a line like "
+                + "crate,sack,barrel,pile,stack while choosing a prop for HopperVisual, and "
+                + "worth emptying again afterwards - it scans every loaded object.");
 
-            LogVisualCandidates = config.Bind("Diagnostics", "LogVisualCandidates", true,
+            LogVisualCandidates = config.Bind("Diagnostics", "LogVisualCandidates", false,
                 "List which of the candidate props are actually loaded at startup. They "
                 + "are not all guaranteed - some are location dressing that only exists "
-                + "while such a location is streamed in.");
+                + "while such a location is streamed in. Builds the same index VisualSearch "
+                + "does, so leave it off unless you are picking a prop.");
 
             HopperScale = config.Bind("Hopper", "HopperScale", 1f,
                 "Overall size of the hopper.");

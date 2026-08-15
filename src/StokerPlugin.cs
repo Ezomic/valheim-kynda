@@ -12,7 +12,7 @@ namespace Stoker
     {
         public const string PluginGuid = "ezomic.valheim.stoker";
         public const string PluginName = "Stoker";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "0.2.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
         internal static ManualLogSource Log;
@@ -24,11 +24,17 @@ namespace Stoker
             Log = Logger;
             StokerConfig.Bind(Config);
 
-            BatchAdd.Verify();
-
             _harmony = new Harmony(PluginGuid);
-            _harmony.PatchAll(typeof(BatchAdd));
             _harmony.PatchAll(typeof(ScenePatches));
+
+            // Verify says out loud which reflected members have gone missing; the postfixes
+            // themselves each re-check, so a false answer costs batching and nothing else.
+            // The hint is only worth advertising when the thing it advertises works.
+            if (BatchAdd.Verify())
+            {
+                _harmony.PatchAll(typeof(BatchAdd));
+                HoverHint.Apply(_harmony);
+            }
 
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
 

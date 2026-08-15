@@ -79,15 +79,23 @@ namespace Stoker
             return Mathf.Max(0, perAdd - 1);
         }
 
-        /// <summary>The hint appended to a station's hover text, or nothing when off.</summary>
+        /// <summary>
+        /// The hint appended to a station's hover text, or nothing when batching is off.
+        ///
+        /// Formatted as the game formats its own key prompts - a yellow bold key in square
+        /// brackets on its own line - rather than as a parenthetical, so it reads as one
+        /// more thing the station can do instead of as a mod announcing itself. With no
+        /// modifier bound there is no key to name, so it states the multiplier instead.
+        /// </summary>
         internal static string BatchHint(int perAdd)
         {
-            var key = StokerConfig.BatchModifier.Value;
             if (perAdd <= 1) return "";
 
+            var key = StokerConfig.BatchModifier.Value;
+
             return key == KeyCode.None
-                ? "  (x" + perAdd + ")"
-                : "  (" + key + " for x" + perAdd + ")";
+                ? "\n<color=grey>x" + perAdd + " per press</color>"
+                : "\n[<color=yellow><b>" + key + "</b></color>] x" + perAdd;
         }
 
         // ------------------------------------------------------------------ smelter fuel

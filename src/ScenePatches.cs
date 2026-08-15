@@ -24,6 +24,12 @@ namespace Stoker
 
             HopperPrefab.Register();
 
+            // Here rather than in Awake because it edits Piece.m_resources on the prefabs,
+            // which do not exist until the scene does. Called unconditionally: it puts the
+            // real costs back when TestMode is off, so it has to run in both directions
+            // rather than only when testing.
+            FreeStations.Apply();
+
             if (StokerConfig.LogVisualCandidates.Value) PropGraft.ReportCandidates();
             PropGraft.Search(StokerConfig.VisualSearch.Value);
         }
