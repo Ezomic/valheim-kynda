@@ -393,6 +393,12 @@ namespace Stoker
                 // These upgrade a smelter, so they belong on the same hammer tab as one.
                 piece.m_category = Piece.PieceCategory.Crafting;
 
+                // The star in the corner of the build menu icon. It is not part of the icon
+                // art - Hud builds each slot from a prefab carrying an "upgrade" child and
+                // does m_upgrade.SetActive(piece.m_isUpgrade) - so it is a flag rather than
+                // something to draw, and these are exactly what it means by an upgrade.
+                piece.m_isUpgrade = true;
+
                 var icon = LoadIcon(def);
                 if (icon != null) piece.m_icon = icon;
             }

@@ -177,6 +177,11 @@ and a particle system's renderer is a `ParticleSystemRenderer` — so a donor's 
 otherwise survive onto a piece that no longer looks remotely like it. The link is the one
 deliberate effect these pieces have.
 
+**The star on the build-menu icon is a flag, not art.** `Hud` builds each menu slot from a
+prefab carrying an `"upgrade"` child and does `m_upgrade.SetActive(piece.m_isUpgrade)`, so
+matching vanilla's station upgrades meant setting `Piece.m_isUpgrade`, not compositing a star
+into the rendered PNG. Worth knowing before painting one on.
+
 **Icons are rendered, not borrowed.** Without one, a piece keeps the donor's icon, and the
 donor is a barrel. An icon showing the wrong object is worse than a plain one, because the
 hammer menu is where you choose. `tools/upgrade_icons.py` reads the shipped `.obj` back in
