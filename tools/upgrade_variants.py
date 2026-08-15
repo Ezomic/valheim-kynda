@@ -155,6 +155,27 @@ def strap(length, location, mat="iron", axis="x", thickness=0.028, width=0.10, r
     return box(size, location, mat, rot=(0.0, 0.0, rot), wobble=0.6, bevel=0.006)
 
 
+def cone(bottom, top, height, z, mat, sides=9, centre=(0.0, 0.0)):
+    """Odd-sided, so it never presents a flat face and reads as round from anywhere."""
+    bpy.ops.mesh.primitive_cone_add(vertices=sides, radius1=bottom, radius2=top,
+                                    depth=height, location=(centre[0], centre[1], z))
+    obj = bpy.context.active_object
+    obj.rotation_euler = (0.0, 0.0, math.radians(jitter(8.0)))
+    return part(obj, mat, bevel=0.010)
+
+
+def ring_count(radius, part_width, overlap=1.18):
+    """
+    How many parts a ring of this radius needs before they touch.
+
+    Picked counts are how the first round two ended up as a colonnade and a cage:
+    eleven 17cm logs around a 50cm radius cover 1.87m of a 3.14m circumference, so
+    almost half of it is daylight. Overlap is not a nicety here - a ring of separate
+    uprights reads as a fence around nothing, never as a stack of anything.
+    """
+    return max(5, int(math.ceil(2.0 * math.pi * radius * overlap / part_width)))
+
+
 def bay(centre, inner, depth, mat, fill, wall=0.09, count=9, lump=0.15):
     """
     An open container: four thin walls and a floor, with the heap sunk inside so the
@@ -347,6 +368,164 @@ def trough_scuttle():
     collide((0.0, 0.0, 0.48), (1.10, 0.90, 0.96))
 
 
+# --------------------------------------------------------------------------- round two
+#
+# The first six are all rectangular masses roughly a metre across, which means that
+# from twenty metres they are one shape with different detail on it. These six each
+# take a silhouette none of those had - triangular, round, ground-hugging, tall -
+# because silhouette is the only thing that survives distance, and two designs sharing
+# an outline are one design.
+
+
+def rack_aframe():
+    """
+    Two leaning faces of logs meeting at a ridge. Triangular from every side, which
+    nothing else here is, and it needs no frame - the lean is what holds it.
+    """
+    for side in (-1, 1):
+        for row in range(5):
+            t = row / 4.0
+            x = side * (0.46 - t * 0.34)
+            z = 0.16 + t * 0.86
+            for i in range(3):
+                y = -0.26 + i * 0.26
+                log(0.105, 0.58, (x, y, z), axis="y", rot=side * -16.0)
+                endgrain(0.105, (x, y - 0.29, z), axis="y")
+
+    box((0.16, 0.72, 0.12), (0.0, 0.0, 1.06), "wood")              # ridge cap
+    for y in (-0.34, 0.34):                                        # ground rails
+        box((1.12, 0.12, 0.11), (0.0, y, 0.055), "wood")
+    collide((0.0, 0.0, 0.54), (1.10, 0.80, 1.08))
+
+
+def rack_rick():
+    """
+    A round rick - logs stacked on end in a ring, drawn in towards the top and hooded
+    with turf. Circular in plan, domed in profile, and the only piece here with no
+    straight vertical edge anywhere.
+    """
+    for ring, (radius, z, height, r) in enumerate((
+            (0.48, 0.32, 0.64, 0.095), (0.38, 0.78, 0.38, 0.090), (0.22, 1.02, 0.24, 0.085))):
+        count = ring_count(radius, r * 2.0)
+        for i in range(count):
+            a = (i / float(count)) * math.tau + ring * 0.4
+            log(r, height, (math.cos(a) * radius, math.sin(a) * radius, z),
+                axis="z", rot=math.degrees(a))
+            endgrain(r, (math.cos(a) * radius, math.sin(a) * radius, z + height / 2.0),
+                     axis="z")
+
+    # A turf cone that oversails the top ring. Two stacked slabs read as a chimney
+    # block sitting on the stack rather than as something covering it, and the whole
+    # point of a rick's hood is that it sheds rain over the edge.
+    cone(0.40, 0.13, 0.30, 1.20, "stone")
+    box((1.18, 1.18, 0.12), (0.0, 0.0, 0.06), "stone", rot=(0.0, 0.0, 12.0))   # base pad
+    collide((0.0, 0.0, 0.60), (1.14, 1.14, 1.20))
+
+
+def rack_upright():
+    """
+    Logs stood on end in a low timber corral, the way a woodshed is actually filled
+    when the wood is going to be split again. Reads as a mass of vertical lines rather
+    than horizontal ones, which is the opposite of every other rack here.
+    """
+    # Packed on a grid tighter than the log diameter, not scattered on a circle. The
+    # first attempt put fourteen posts on two rings and left daylight between all of
+    # them, which reads as a few stakes standing in a box rather than as a corral with
+    # wood in it. A container has to look full or it looks abandoned.
+    radius, step = 0.085, 0.148
+    for ix in range(6):
+        for iy in range(5):
+            x = -0.37 + ix * step
+            y = -0.30 + iy * step
+            h = 0.80 + ((ix * 5 + iy) % 5) * 0.075
+            log(radius, h, (x, y, h / 2.0 + 0.09), axis="z",
+                rot=(ix * 37 + iy * 61) % 90)
+            endgrain(radius, (x, y, h + 0.09), axis="z")
+
+    # A corral of four low boards, overlapping at the corners rather than mitred.
+    for y in (-0.42, 0.42):
+        box((1.06, 0.09, 0.46), (0.0, y, 0.25), "wood")
+    for x in (-0.50, 0.50):
+        box((0.09, 0.94, 0.46), (x, 0.0, 0.25), "wood")
+    for x in (-0.50, 0.50):
+        for y in (-0.42, 0.42):
+            box((0.14, 0.14, 0.62), (x, y, 0.31), "wood")          # corner posts
+    collide((0.0, 0.0, 0.50), (1.14, 1.00, 1.00))
+
+
+def trough_barrels():
+    """
+    Two open-topped barrels on a sled. Round where every other trough is square, and
+    the staves give it vertical banding that catches light at any angle.
+    """
+    stave, radius = 0.085, 0.28
+    staves = ring_count(radius, stave)
+
+    for x, fill in ((-0.33, "ore"), (0.35, "coal")):
+        for i in range(staves):
+            a = (i / float(staves)) * math.tau
+            box((stave, stave, 0.58),
+                (x + math.cos(a) * radius, math.sin(a) * radius, 0.50),
+                "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
+
+        # Hoops as a continuous band of overlapping blocks, for the same reason.
+        for z in (0.30, 0.68):
+            hoops = ring_count(radius + 0.02, 0.11)
+            for i in range(hoops):
+                a = (i / float(hoops)) * math.tau
+                box((0.11, 0.11, 0.055),
+                    (x + math.cos(a) * (radius + 0.02), math.sin(a) * (radius + 0.02), z),
+                    "iron", rot=(0.0, 0.0, math.degrees(a)), wobble=0.3)
+
+        box((0.58, 0.58, 0.09), (x, 0.0, 0.26), "wood")            # barrel floor
+        heap((x, 0.0, 0.76), 0.21, 10, 0.145, fill)
+
+    box((1.34, 0.78, 0.14), (0.0, 0.0, 0.17), "wood")              # sled
+    for y in (-0.30, 0.30):
+        box((1.42, 0.13, 0.13), (0.0, y, 0.065), "wood")
+    collide((0.0, 0.0, 0.42), (1.40, 0.80, 0.84))
+
+
+def trough_pit():
+    """
+    A stone-kerbed pit, barely above the ground. Almost no vertical silhouette at all,
+    which makes it the one option that does not block sightlines in a packed base -
+    and the one most likely to disappear next to a smelter.
+    """
+    for x in (-0.72, 0.72):
+        box((0.20, 1.10, 0.30), (x, 0.0, 0.15), "stone")
+    for y in (-0.50, 0.50):
+        box((1.64, 0.20, 0.30), (0.0, y, 0.15), "stone")
+    box((1.30, 0.82, 0.10), (0.0, 0.0, 0.05), "stone")             # floor
+
+    box((0.11, 0.86, 0.26), (0.0, 0.0, 0.16), "wood")              # divider plank
+    heap((-0.34, 0.0, 0.22), 0.30, 10, 0.14, "ore")
+    heap((0.34, 0.0, 0.22), 0.30, 10, 0.14, "coal")
+
+    for x in (-0.72, 0.72):                                        # kerb capping
+        box((0.26, 1.16, 0.08), (x, 0.0, 0.33), "wood")
+    collide((0.0, 0.0, 0.20), (1.70, 1.16, 0.40))
+
+
+def trough_tower():
+    """
+    A tall standing bin fed from the top and drawn from a chute at the bottom. The only
+    piece taller than it is wide, so it breaks a skyline where the rest sit under it.
+    """
+    bay((0.0, 0.0, 1.08), (0.56, 0.52), 0.42, "wood", "coal", wall=0.09, count=9)
+
+    box((0.74, 0.70, 0.70), (0.0, 0.0, 0.62), "wood")              # body
+    box((0.66, 0.34, 0.30), (0.0, -0.42, 0.34), "wood", rot=(28.0, 0.0, 0.0))  # chute
+    box((0.58, 0.20, 0.06), (0.0, -0.56, 0.22), "iron", rot=(28.0, 0.0, 0.0))
+
+    for z in (0.44, 0.78):
+        strap(0.78, (0.0, 0.0, z), axis="y", width=0.11, thickness=0.030)
+    for x in (-0.34, 0.34):                                        # feet
+        box((0.15, 0.62, 0.28), (x, 0.05, 0.14), "wood")
+    box((0.92, 0.86, 0.10), (0.0, 0.0, 0.05), "stone")
+    collide((0.0, 0.0, 0.66), (0.82, 0.78, 1.32))
+
+
 # --------------------------------------------------------------------------- export
 
 VARIANTS = [
@@ -356,6 +535,13 @@ VARIANTS = [
     ("stoker_trough_bench",   trough_bench,   "TROUGH - Bench"),
     ("stoker_trough_hod",     trough_hod,     "TROUGH - Stone hod"),
     ("stoker_trough_scuttle", trough_scuttle, "TROUGH - Scuttle"),
+
+    ("stoker_rack_aframe",    rack_aframe,    "WOODRACK - A-frame"),
+    ("stoker_rack_rick",      rack_rick,      "WOODRACK - Round rick"),
+    ("stoker_rack_upright",   rack_upright,   "WOODRACK - Upright corral"),
+    ("stoker_trough_barrels", trough_barrels, "TROUGH - Twin barrels"),
+    ("stoker_trough_pit",     trough_pit,     "TROUGH - Kerbed pit"),
+    ("stoker_trough_tower",   trough_tower,   "TROUGH - Standing bin"),
 ]
 
 
