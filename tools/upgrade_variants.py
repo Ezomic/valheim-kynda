@@ -18,9 +18,13 @@ The other three changes, all from the same diagnosis:
 
   - Members overlap far more, and there are fewer of them. A heap of small parts
     reads as noise at four metres; the eye wants a few large forms with real joins.
-  - Every timber gets end-grain: a slightly proud, slightly rotated cap, because a
-    sawn end catching light differently from the length is most of what says "cut
-    from a tree" rather than "extruded".
+  - Every timber gets end-grain - but painted, not modelled. This used to be a extra
+    disc stuck slightly proud of each log, on the theory that a flat cap catching
+    light differently from the curved length is what says "cut from a tree". It was
+    a workaround for the real problem, which was that our sawn ends were sampling
+    bark. Now the caps are their own material group aimed at the donor's painted
+    end-grain disc, which is how vanilla has always done it, and the extra discs are
+    gone - about a third of the geometry in a woodpile, for a job the texture does.
   - Iron is strapping over timber rather than a frame around it. Vanilla's metal sits
     on top of wood and is bolted through it.
 
@@ -46,14 +50,21 @@ SHIPPED = ("stoker_rack_lean", "stoker_trough_barrels")
 COLLIDERS = []
 PARTS = []
 
-# Measured off the game, not picked. Ripping the build set put vanilla's pieces between
-# 468 and 3,523 triangles: piece_chest_wood 468, barrell 552, charcoal_kiln 768,
-# stone_wall_2x1 1,296, piece_chest_barrel 2,022, wood_stack 2,112 per state, and the
-# smelter itself - by far the largest thing we stand next to - 3,523.
+# Measured off the game, not picked - and measured a second time, because the first
+# figures counted whole prefabs rather than the mesh you actually look at. A ripped
+# prefab carries its Worn and Broken states, its destruction chunks and its add-ore
+# spheres; the number that matters is the one renderer under New/.
 #
-# So 3,500 is the ceiling, on the principle that an upgrade should never out-detail the
-# station it serves. The old 10k was picked from nothing and let the barrels sit at
-# 6,412, nearly twice the smelter, for two casks that vanilla draws in 552 each.
+# By that measure vanilla is much less uniform than the first pass suggested. The
+# smelter is 609 triangles for a 3 x 4.2 x 2.6m machine, and the charcoal kiln is one
+# unreadable mesh of similar weight - but woodpiles, which is what these pieces are,
+# run 1,088 for blackwood_stack, 1,960 for wood_fine_stack and 2,112 for wood_stack,
+# and piece_artisanstation is 10,027 on its own.
+#
+# So the ceiling stays at 3,500 and the rack's 1,972 sits squarely inside the family it
+# belongs to. What the correction rules out is the conclusion that nearly went in here -
+# that these models are too dense and should be made cruder. They are not; the smelter
+# is simply a cheap mesh, and one cheap neighbour is not the standard.
 TRI_BUDGET = 3500
 
 TINTS = {
@@ -269,17 +280,6 @@ def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
     return obj, r * max(1.0, taper), l
 
 
-def endgrain(radius, location, axis="x", mat="wood"):
-    """
-    A sawn end, sat slightly proud of the log it caps.
-
-    Cheap and worth it: a flat disc catching light differently from the curved length
-    is most of what says a timber was cut rather than extruded, and it is what makes
-    a stack of logs read as a stack from across a clearing.
-    """
-    return log(radius * 1.04, 0.035, location, mat, axis=axis, sides=7, wobble=0.4)
-
-
 def strap(length, location, mat="iron", axis="x", thickness=0.028, width=0.10, rot=0.0):
     """Iron over timber, not a frame around it - vanilla bolts its metal on top."""
     size = ((length, width, thickness) if axis == "x"
@@ -393,8 +393,7 @@ def rack_lean():
         offset = (row % 2) * 0.07 - 0.035
         for i in range(4):
             x = -0.33 + i * 0.22
-            _, r, l = billet(0.12, 0.62, (x, offset, z), axis="y")
-            endgrain(r, (x, offset - l / 2.0, z), axis="y")
+            billet(0.12, 0.62, (x, offset, z), axis="y")
 
     box((0.98, 0.60, 0.10), (0.0, 0.02, 0.06), "wood")            # sill the pile sits on
     collide((0.0, 0.0, 0.62), (1.30, 0.68, 1.24))
@@ -411,11 +410,9 @@ def rack_crib():
         for i in range(4):
             offset = -0.33 + i * 0.22
             if across:
-                _, r, l = billet(0.105, 0.92, (0.0, offset, z), axis="x")
-                endgrain(r, (-l / 2.0, offset, z), axis="x")
+                billet(0.105, 0.92, (0.0, offset, z), axis="x")
             else:
-                _, r, l = billet(0.105, 0.92, (offset, 0.0, z), axis="y")
-                endgrain(r, (offset, -l / 2.0, z), axis="y")
+                billet(0.105, 0.92, (offset, 0.0, z), axis="y")
 
     # Two stakes leaning in against the stack, which is what stops a real crib walking.
     box((0.09, 0.09, 1.24), (-0.53, 0.30, 0.60), "wood", rot=(0.0, 7.0, 0.0))
@@ -446,7 +443,6 @@ def rack_barrow():
         for i in range(3):
             x = -0.26 + i * 0.26
             log(0.105, 0.56, (x, 0.02 + row * 0.05, z), axis="y")
-            endgrain(0.105, (x, -0.27 + row * 0.05, z), axis="y")
     collide((0.0, 0.0, 0.50), (1.34, 0.80, 1.00))
 
 
@@ -539,7 +535,6 @@ def rack_aframe():
             for i in range(3):
                 y = -0.26 + i * 0.26
                 log(0.105, 0.58, (x, y, z), axis="y", rot=side * -16.0)
-                endgrain(0.105, (x, y - 0.29, z), axis="y")
 
     box((0.16, 0.72, 0.12), (0.0, 0.0, 1.06), "wood")              # ridge cap
     for y in (-0.34, 0.34):                                        # ground rails
@@ -560,8 +555,6 @@ def rack_rick():
             a = (i / float(count)) * math.tau + ring * 0.4
             log(r, height, (math.cos(a) * radius, math.sin(a) * radius, z),
                 axis="z", rot=math.degrees(a))
-            endgrain(r, (math.cos(a) * radius, math.sin(a) * radius, z + height / 2.0),
-                     axis="z")
 
     # A turf cone that oversails the top ring. Two stacked slabs read as a chimney
     # block sitting on the stack rather than as something covering it, and the whole
@@ -587,9 +580,8 @@ def rack_upright():
             x = -0.37 + ix * step
             y = -0.30 + iy * step
             h = 0.80 + ((ix * 5 + iy) % 5) * 0.075
-            _, r, l = billet(radius, h, (x, y, h / 2.0 + 0.09), axis="z",
+            billet(radius, h, (x, y, h / 2.0 + 0.09), axis="z",
                              rot=(ix * 37 + iy * 61) % 90)
-            endgrain(r, (x, y, l / 2.0 + h / 2.0 + 0.09), axis="z")
 
     # A corral of four low boards, overlapping at the corners rather than mitred.
     for y in (-0.42, 0.42):
