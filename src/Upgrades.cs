@@ -62,16 +62,32 @@ namespace Stoker
         private Piece _piece;
         private GameObject _connection;
 
+        /// <summary>False on a placement ghost, which is a copy of the prefab with no ZDO.</summary>
+        private bool _placed;
+
         private void Awake()
         {
             _piece = GetComponent<Piece>();
+
+            // Vanilla's StationExtension.Awake gates its whole registration on exactly this
+            // check, and the reason is the placement ghost: the translucent copy following
+            // your cursor is a real instance of the prefab with every component awake on it,
+            // and the only thing separating it from a placed piece is that it has no ZDO.
+            //
+            // Without the guard it registers as a real upgrade - so it draws its own link
+            // from wherever the cursor happens to be, and counts towards the capacity of
+            // whatever station it is currently floating near, before you have built anything.
+            var nview = GetComponent<ZNetView>();
+            _placed = nview != null && nview.GetZDO() != null;
+            if (!_placed) return;
+
             All.Add(this);
         }
 
         private void OnDestroy()
         {
             StopConnectionEffect();
-            All.Remove(this);
+            if (_placed) All.Remove(this);
         }
 
         // ------------------------------------------------------------------ the link
@@ -93,7 +109,7 @@ namespace Stoker
         /// </summary>
         private void PokeEffect(float timeout = 1f)
         {
-            if (!StokerConfig.ShowLink.Value) return;
+            if (!_placed || !StokerConfig.ShowLink.Value) return;
 
             var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
             if (station == null) return;
