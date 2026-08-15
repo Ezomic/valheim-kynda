@@ -210,16 +210,10 @@ namespace Stoker
                 var donor = PropIndex.Find(name);
                 if (donor == null) continue;
 
-                foreach (var renderer in donor.GetComponentsInChildren<MeshRenderer>(true))
+                var renderer = MainRenderer(donor);
+                if (renderer != null)
                 {
                     var material = renderer.sharedMaterial;
-                    if (material == null || material.shader == null) continue;
-
-                    // A material with no albedo renders flat and grey, which looks like a
-                    // bug rather than a choice.
-                    if (!material.HasProperty("_MainTex")
-                        || material.GetTexture("_MainTex") == null) continue;
-
                     var sheet = material.GetTexture("_MainTex");
 
                     Rect side, cap;
@@ -234,9 +228,11 @@ namespace Stoker
                     Atlas[key] = patch;
                     TexPx[key] = Mathf.Max(1, sheet.width);
 
+                    // The renderer is named because which one was measured is the thing
+                    // that went wrong last time and the thing a wrong rect points at.
                     StokerPlugin.Log.LogInfo(string.Format(
-                        "'{0}' skinned with {1} from {2} (shader {3}), atlas {4}, {5}px.",
-                        key, material.name, name, material.shader.name,
+                        "'{0}' skinned with {1} from {2}/{3} (shader {4}), atlas {5}, {6}px.",
+                        key, material.name, name, renderer.name, material.shader.name,
                         Atlas[key], TexPx[key]));
                     return material;
                 }
@@ -380,6 +376,59 @@ namespace Stoker
             foreach (var rect in merged)
             {
                 if (rect.width * rect.height > best.width * best.height) best = rect;
+            }
+
+            return best;
+        }
+
+        /// <summary>
+        /// The renderer that is actually the object: the one carrying the most readable
+        /// geometry.
+        ///
+        /// This used to take the first renderer with an albedo, which is wrong on almost
+        /// every vanilla prefab. They carry a Worn and a Broken copy of the visual, a
+        /// scatter of destruction chunks, and sometimes a lower LOD - and which of those
+        /// GetComponentsInChildren hands back first is an accident of the hierarchy. On
+        /// wood_wall_log the winner had UVs covering a slice 0.151 wide where the wall's
+        /// own bark field is 0.424, so the woodrack was fitted to a third of the texture
+        /// it should have had and came out at 15 texels per metre.
+        ///
+        /// Readability is part of the test rather than a separate check. A chunk whose
+        /// mesh was built with Read/Write off cannot be measured at all, and picking one
+        /// silently falls back to treating the whole sheet as the material's - the worst
+        /// answer available, and indistinguishable in the log from a good one.
+        /// </summary>
+        private static MeshRenderer MainRenderer(GameObject donor)
+        {
+            MeshRenderer best = null;
+            var most = 0;
+
+            foreach (var renderer in donor.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var material = renderer.sharedMaterial;
+                if (material == null || material.shader == null) continue;
+
+                // A material with no albedo renders flat and grey, which looks like a bug
+                // rather than a choice.
+                if (!material.HasProperty("_MainTex")
+                    || material.GetTexture("_MainTex") == null) continue;
+
+                var filter = renderer.GetComponent<MeshFilter>();
+                var mesh = filter != null ? filter.sharedMesh : null;
+                if (mesh == null) continue;
+
+                int count;
+                try
+                {
+                    if (!mesh.isReadable) continue;
+                    count = mesh.triangles.Length;
+                }
+                catch { continue; }
+
+                if (count <= most) continue;
+
+                most = count;
+                best = renderer;
             }
 
             return best;
