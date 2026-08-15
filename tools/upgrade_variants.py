@@ -168,22 +168,30 @@ def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
     if kind is None:
         kind = (3, 4, 5, 6, 7, 5, 7, 4)[int(rnd() * 8) % 8]
 
-    # Diameter varies by half again, length by a third. Both are what a stack of
-    # cut-to-length wood actually looks like, and the variation is what stops the
-    # eye finding a repeat.
-    r = radius * (0.74 + rnd() * 0.62)
-    l = length * (0.86 + rnd() * 0.28)
+    # Diameter moves a little, length barely at all.
+    #
+    # The first attempt varied diameter by half again and length by a third, and the
+    # result read as a heap rather than a stack. The reason is that the ends of a
+    # stacked woodpile sit in a roughly flat plane - that plane is the whole signal
+    # that says someone put the wood there on purpose. Vary the lengths and it breaks
+    # up, and then no amount of nice end-grain reads as anything but rubble.
+    #
+    # So the variety lives in the cross-section, where it costs nothing, and the
+    # silhouette of the stack stays clean.
+    r = radius * (0.88 + rnd() * 0.24)
+    l = length * (0.98 + rnd() * 0.04)
 
     obj = log(r, l, location, "wood", axis=axis, sides=kind,
-              rot=rot + jitter(22.0), wobble=wobble)
+              rot=rot + jitter(7.0), wobble=wobble * 0.5)
 
-    # The flat-sided ones are split wood, so they sit at any roll angle rather than
-    # all landing on a face - a row of triangles all pointing up is a sawtooth.
+    # The flat-sided ones still sit at their own roll angle, because a row of
+    # triangles all landing on a face is a sawtooth. That much is free - it changes
+    # which facet catches the light without moving anything.
     if kind <= 4:
         if axis == "x":
-            obj.rotation_euler[0] += math.radians(rnd() * 120.0)
+            obj.rotation_euler[0] += math.radians(rnd() * 90.0)
         elif axis == "y":
-            obj.rotation_euler[1] += math.radians(rnd() * 120.0)
+            obj.rotation_euler[1] += math.radians(rnd() * 90.0)
 
     return obj, r, l
 
