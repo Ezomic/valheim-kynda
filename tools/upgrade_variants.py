@@ -104,7 +104,18 @@ def collide(centre, size):
     COLLIDERS.append((centre, size))
 
 
-def part(obj, mat, bevel=0.012):
+def part(obj, mat, bevel=0.012, projection="cube", radius=0.0):
+    """
+    projection decides how this part gets unwrapped later, and it matters more than it
+    sounds. A cube projection maps a surface flat from whichever axis it faces most,
+    which is right for a plank and wrong for a log: the bark does not wrap round the
+    circumference, there is no grain running along the length, and the far side of the
+    cylinder gets the same stretched sample as the near side. Vanilla's logs are
+    cylindrically unwrapped, which is where their detail down the length comes from.
+
+    radius is kept because a cylinder projection normalises the wrap to 0..1 whatever
+    the log's girth, and the density pass downstream assumes UVs are in metres.
+    """
     obj.data.materials.append(material(mat))
 
     # Per object, before the join. The width is small because these are 10-20cm
@@ -122,7 +133,7 @@ def part(obj, mat, bevel=0.012):
     modifier.limit_method = "ANGLE"
     modifier.angle_limit = math.radians(40.0)
 
-    PARTS.append(obj)
+    PARTS.append((obj, projection, radius))
     return obj
 
 
@@ -179,7 +190,7 @@ def log(radius, length, location, mat="wood", axis="x", sides=7, rot=0.0, wobble
     else:
         rot_e[2] += math.radians(roll)
     obj.rotation_euler = rot_e
-    return part(obj, mat, bevel=0.008)
+    return part(obj, mat, bevel=0.008, projection="cylinder", radius=radius)
 
 
 def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
@@ -262,7 +273,7 @@ def cone(bottom, top, height, z, mat, sides=9, centre=(0.0, 0.0)):
                                     depth=height, location=(centre[0], centre[1], z))
     obj = bpy.context.active_object
     obj.rotation_euler = (0.0, 0.0, math.radians(jitter(8.0)))
-    return part(obj, mat, bevel=0.010)
+    return part(obj, mat, bevel=0.010, projection="cylinder", radius=max(bottom, top))
 
 
 def band(radius, height, z, mat="iron", sides=14, centre=(0.0, 0.0)):
@@ -278,7 +289,7 @@ def band(radius, height, z, mat="iron", sides=14, centre=(0.0, 0.0)):
                                         location=(centre[0], centre[1], z))
     obj = bpy.context.active_object
     obj.rotation_euler = (0.0, 0.0, math.radians(jitter(6.0)))
-    return part(obj, mat, bevel=0.006)
+    return part(obj, mat, bevel=0.006, projection="cylinder", radius=radius)
 
 
 def ring_count(radius, part_width, overlap=1.18):
@@ -724,7 +735,7 @@ def finish(name):
     whole change buys nothing. The join bakes the locations afterwards, geometry
     unaffected.
     """
-    for obj in PARTS:
+    for obj, projection, radius in PARTS:
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
@@ -734,12 +745,31 @@ def finish(name):
         for modifier in list(obj.modifiers):
             bpy.ops.object.modifier_apply(modifier=modifier.name)
 
-        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+        # Scale only, and rotation held back until after the unwrap. Every primitive is
+        # built axis-aligned - cylinders along local Z - and both projections want that:
+        # a cylinder projection needs to know where the axis is, and a cube projection on
+        # an already-rotated box skews every face.
+        bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
-        bpy.ops.uv.cube_project(cube_size=1.0, correct_aspect=True, scale_to_bounds=False)
+        if projection == "cylinder":
+            bpy.ops.uv.cylinder_project(direction="ALIGN_TO_OBJECT", align="POLAR_ZX",
+                                        correct_aspect=True, scale_to_bounds=False)
+        else:
+            bpy.ops.uv.cube_project(cube_size=1.0, correct_aspect=True,
+                                    scale_to_bounds=False)
         bpy.ops.object.mode_set(mode="OBJECT")
+
+        # A cylinder projection wraps 0..1 around the circumference whatever the girth,
+        # so a 12cm log and a 30cm barrel would claim the same metre of texture. Scaled
+        # back to real units, because the density pass measures UV span in metres.
+        if projection == "cylinder" and radius > 0.0:
+            circumference = 2.0 * math.pi * radius
+            for loop in obj.data.uv_layers.active.data:
+                loop.uv[0] *= circumference
+
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
     bpy.ops.object.select_all(action="SELECT")
     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
