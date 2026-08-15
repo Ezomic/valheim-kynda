@@ -21,16 +21,31 @@ namespace Stoker
     internal static class Skins
     {
         /// <summary>
-        /// Prefabs to lift each group's material from, best first.
+        /// Prefabs to lift each group's material from, best first, ordered by measurement
+        /// rather than by guess.
         ///
         /// ore and coal earn their place from the trough, whose two bays are the entire
         /// point of it - one heaped with ore, one with coal. Falling back to wood, which
         /// is what an unlisted group used to do, made them two identical tubs of nothing.
+        /// Ripping the build set showed
+        /// vanilla splits into two texel-density families: structural blocks - beam, pole,
+        /// door, floor - run 165 to 224 texels/m and use nearly their whole sheet, while
+        /// props, piles and furniture run 24 to 54 off a tight rect. These pieces are
+        /// props, so the second family is the one to borrow from.
+        ///
+        /// wood_wall used to lead this list and does not exist. A name that does not
+        /// resolve is skipped in silence, so the wood group had been quietly falling
+        /// through to wood_beam - a structural block whose material covers 96% of its
+        /// sheet, and the single worst donor available at 119 texels/m against a target
+        /// of about 30.
         /// </summary>
         private static readonly Dictionary<string, string[]> Donors =
             new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
             {
-                { "wood",  new[] { "wood_wall", "wood_beam", "piece_chest_wood" } },
+                // 29 texels/m, one material, 468 triangles. wood_wall_log second because
+                // it is round bark-on timber at 54 - the right surface for split billets
+                // when the piece is mostly logs.
+                { "wood",  new[] { "piece_chest_wood", "wood_wall_log", "darkwood_beam" } },
                 { "iron",  new[] { "piece_artisanstation", "forge", "piece_cauldron" } },
                 { "stone", new[] { "stone_wall_2x1", "piece_stonecutter", "smelter" } },
                 { "coal",  new[] { "coal_pile", "Coal", "charcoal_kiln" } },
@@ -51,6 +66,14 @@ namespace Stoker
             new Dictionary<string, Rect>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// The donor texture's width in pixels, which is half of what decides how coarse
+        /// our surface ends up. Vanilla's are tiny - 64 and 128 mostly, 256 at the largest
+        /// - so the same slice of sheet means very different things on different donors.
+        /// </summary>
+        private static readonly Dictionary<string, int> TexPx =
+            new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
         /// Dropped on both ObjectDB.Awake and CopyOtherDB - a local world arrives through
         /// the first, a server handing over its item list through the second. Held across
         /// either, these are references to prefabs that have been torn down.
@@ -59,6 +82,7 @@ namespace Stoker
         {
             Cache.Clear();
             Atlas.Clear();
+            TexPx.Clear();
             PropIndex.Forget();
         }
 
@@ -96,10 +120,12 @@ namespace Stoker
 
                     Cache[group] = material;
                     Atlas[group] = UvRegion(renderer);
+                    TexPx[group] = Mathf.Max(1, material.GetTexture("_MainTex").width);
 
                     StokerPlugin.Log.LogInfo(string.Format(
-                        "'{0}' skinned with {1} from {2} (shader {3}), atlas {4}.",
-                        group, material.name, name, material.shader.name, Atlas[group]));
+                        "'{0}' skinned with {1} from {2} (shader {3}), atlas {4}, {5}px.",
+                        group, material.name, name, material.shader.name,
+                        Atlas[group], TexPx[group]));
                     return material;
                 }
             }
@@ -175,12 +201,26 @@ namespace Stoker
         }
 
         /// <summary>
-        /// Squeezes each submesh's UVs into its material's slice of the atlas.
+        /// Places each submesh's UVs inside its material's slice of the atlas, at a texel
+        /// density chosen rather than inherited.
+        ///
+        /// This used to stretch the group's UVs to fill the rect, which made density an
+        /// accident of two things nobody picked: how big the donor's slice happened to be
+        /// and how big our model happened to be. Measured in game that gave 119 texels per
+        /// metre on wood, 70 on iron and 11 on stone - an eleven-fold spread inside one
+        /// piece, against a vanilla range of 24 to 54.
+        ///
+        /// Our exported UVs are already in metres, because the Blender pass cube-projects
+        /// at a cube size of 1. So the wanted scale is simply target-texels divided by the
+        /// donor's texture width, and the only complication is that the result has to fit
+        /// the rect.
         ///
         /// Clamped, never wrapped. Repeat() here was the bug Stow paid for: it wraps per
         /// vertex, so a face crossing 1.0 got vertices at 0.9 and 0.2 and the GPU
         /// interpolated backwards across the whole tile between them - smeared diagonal
-        /// banding that made a square model look crooked.
+        /// banding that made a square model look crooked. That is also why a group too
+        /// large for its rect is scaled down to fit rather than tiled: coarser than asked
+        /// for, but continuous.
         /// </summary>
         public static void Remap(Mesh mesh, string[] groups)
         {
@@ -190,26 +230,63 @@ namespace Stoker
             if (uv == null || uv.Length == 0) return;
 
             var count = Mathf.Min(groups.Length, mesh.subMeshCount);
+            var target = Mathf.Max(1f, StokerConfig.TexelsPerMetre.Value);
 
             // A vertex on the seam between two groups appears in both submeshes, and
-            // mapping it twice would squeeze it into a rectangle inside a rectangle.
+            // mapping it twice would place it relative to an already-placed position.
             var done = new bool[uv.Length];
 
             for (var i = 0; i < count; i++)
             {
                 Rect rect;
+                int px;
                 if (!Atlas.TryGetValue(groups[i], out rect)) continue;
-                if (rect.width >= 0.999f && rect.height >= 0.999f) continue;
+                if (!TexPx.TryGetValue(groups[i], out px) || px <= 0) continue;
 
-                foreach (var index in mesh.GetTriangles(i))
+                var indices = mesh.GetTriangles(i);
+                if (indices.Length == 0) continue;
+
+                // The group's own extent, in metres. Per group rather than per mesh: a
+                // handful of small stone footings and a metre of timber want different
+                // scales to land on the same density, which is the whole point.
+                var min = new Vector2(float.MaxValue, float.MaxValue);
+                var max = new Vector2(float.MinValue, float.MinValue);
+                foreach (var index in indices)
+                {
+                    if (index < 0 || index >= uv.Length) continue;
+                    min = Vector2.Min(min, uv[index]);
+                    max = Vector2.Max(max, uv[index]);
+                }
+
+                var span = max - min;
+                if (span.x <= 0f || span.y <= 0f) continue;
+
+                // Wanted, then reduced until it fits. Uniform on both axes so the texture
+                // is not stretched in one direction, which reads as smeared grain.
+                var scale = target / px;
+                scale = Mathf.Min(scale, rect.width / span.x);
+                scale = Mathf.Min(scale, rect.height / span.y);
+
+                // Centred in the rect, so a group that does fit is sampling the middle of
+                // the tile rather than pressed against its edge where the neighbour bleeds.
+                var centre = (min + max) * 0.5f;
+                var offset = new Vector2(rect.x + rect.width * 0.5f, rect.y + rect.height * 0.5f)
+                             - centre * scale;
+
+                foreach (var index in indices)
                 {
                     if (index < 0 || index >= uv.Length || done[index]) continue;
                     done[index] = true;
 
                     uv[index] = new Vector2(
-                        rect.x + Mathf.Clamp01(uv[index].x) * rect.width,
-                        rect.y + Mathf.Clamp01(uv[index].y) * rect.height);
+                        Mathf.Clamp(uv[index].x * scale + offset.x, rect.xMin, rect.xMax),
+                        Mathf.Clamp(uv[index].y * scale + offset.y, rect.yMin, rect.yMax));
                 }
+
+                StokerPlugin.Log.LogInfo(string.Format(
+                    "'{0}' laid out at {1:0} texels/m (wanted {2:0}), {3:0.00}x{4:0.00}m in "
+                    + "a {5:0.000}x{6:0.000} rect.",
+                    groups[i], scale * px, target, span.x, span.y, rect.width, rect.height));
             }
 
             mesh.uv = uv;

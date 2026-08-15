@@ -24,6 +24,7 @@ namespace Stoker
         public static ConfigEntry<string> Donor;
         public static ConfigEntry<float> Range;
         public static ConfigEntry<int> MaxPerStation;
+        public static ConfigEntry<float> TexelsPerMetre;
         public static ConfigEntry<bool> ShowLink;
         public static ConfigEntry<float> LinkHeight;
 
@@ -91,6 +92,20 @@ namespace Stoker
             MaxPerStation = config.Bind("Upgrades", "MaxPerStation", 2,
                 "Most upgrades of one kind that will count for one station. Keeps it a "
                 + "decision rather than something you stack until capacity stops mattering.");
+
+            // Measured off the game rather than picked. Ripping the build set showed
+            // vanilla runs two families: structural blocks - beam, pole, door, floor - at
+            // 165 to 224 texels/m using nearly their whole sheet, and props, piles and
+            // furniture at 24 to 54 off a tight rect. wood_stack is 28, barrell 29,
+            // piece_chest_wood 42, wood_wall_log 54. These pieces are props, so 35 sits in
+            // the middle of the family they belong to.
+            TexelsPerMetre = config.Bind("Upgrades", "TexelsPerMetre", 35f,
+                "How coarse the borrowed texture is drawn, in texels per metre. Vanilla's "
+                + "props and piles run 24 to 54; its structural pieces run far finer and "
+                + "are the wrong thing to match. Higher is finer and eventually reads as "
+                + "flat colour, because the grain becomes smaller than a pixel on screen. "
+                + "A group too big for its donor's slice of the atlas is drawn coarser "
+                + "than this rather than tiled - the log says when.");
 
             ShowLink = config.Bind("Upgrades", "ShowLink", true,
                 "Draw the game's own station-link effect from an upgrade to the station it "

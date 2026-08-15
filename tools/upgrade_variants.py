@@ -35,19 +35,26 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(ROOT, "assets")
 PREVIEWS = os.path.join(ASSETS, "previews")
+SHELF = os.path.join(ASSETS, "variants")   # not VARIANTS - that name is the model list below
+
+# The two that ship. Everything else is written to assets/variants/, which the csproj
+# does not copy - the convention for a rejected design, so it stays buildable and
+# stops being deployed. Without this, re-running the script quietly un-shelves the
+# whole set back into the build menu.
+SHIPPED = ("stoker_rack_lean", "stoker_trough_barrels")
 
 COLLIDERS = []
 PARTS = []
 
-# A hard ceiling, not a target. These get placed in rows beside a row of smelters, so
-# the count is multiplied by however many stations a base has - eight upgraded ones is
-# sixteen of these in view at once. 10k leaves that under 160k, which is the sort of
-# number a single vanilla building piece cluster costs.
+# Measured off the game, not picked. Ripping the build set put vanilla's pieces between
+# 468 and 3,523 triangles: piece_chest_wood 468, barrell 552, charcoal_kiln 768,
+# stone_wall_2x1 1,296, piece_chest_barrel 2,022, wood_stack 2,112 per state, and the
+# smelter itself - by far the largest thing we stand next to - 3,523.
 #
-# Nothing in the current set is close: the heaviest is the rick at 7,312. The limit
-# exists to stop the next detail being added without anyone noticing the cost, which is
-# how the barrels reached 27,000 in the first place.
-TRI_BUDGET = 10000
+# So 3,500 is the ceiling, on the principle that an upgrade should never out-detail the
+# station it serves. The old 10k was picked from nothing and let the barrels sit at
+# 6,412, nearly twice the smelter, for two casks that vanilla draws in 552 each.
+TRI_BUDGET = 3500
 
 TINTS = {
     "wood":  (0.30, 0.19, 0.10, 1.0),
@@ -534,7 +541,7 @@ def trough_barrels():
     Two open-topped barrels on a sled. Round where every other trough is square, and
     the staves give it vertical banding that catches light at any angle.
     """
-    stave = 0.085
+    stave = 0.115
 
     # The two are not clones. A pair of identical barrels reads as one asset placed
     # twice, which is the tell that gives away a kit - so they differ in height, in
@@ -546,13 +553,16 @@ def trough_barrels():
             a = (i / float(staves)) * math.tau + math.radians(turn)
             # Staves bulge: a barrel is widest at its belly, and a straight-sided one
             # is a bucket. Two courses with the upper set pulled in does it cheaply.
-            box((stave, stave, top * 0.62),
-                (x + math.cos(a) * radius, math.sin(a) * radius, top * 0.34),
+            # Full height in one course. When this was two courses the lower one only
+            # reached 65% of the way up, and dropping the upper one left the top hoop and
+            # the contents floating in the air above an open-ended tube.
+            box((stave, stave, top * 0.99),
+                (x + math.cos(a) * radius, math.sin(a) * radius, top * 0.5),
                 "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
-            box((stave * 0.94, stave * 0.94, top * 0.42),
-                (x + math.cos(a) * (radius - 0.022), math.sin(a) * (radius - 0.022),
-                 top * 0.78),
-                "wood", rot=(0.0, 0.0, math.degrees(a)), wobble=0.5)
+            # One course, not two. The second was there to bulge the belly, and at 28
+            # texels/m - what vanilla draws a barrel at - the bulge is under a pixel of
+            # shading while costing half the model. The hoops carry the roundness.
+            pass
 
         # Three hoops, not two, and the top one sits right under the rim where a
         # cooper puts it.
@@ -563,12 +573,12 @@ def trough_barrels():
         outer = radius + stave / 2.0
         for z, r in ((top * 0.16, outer + 0.022), (top * 0.60, outer + 0.022),
                      (top * 0.94, outer - 0.010)):
-            band(r, 0.075, z, centre=(x, 0.0))
+            band(r, 0.075, z, sides=11, centre=(x, 0.0))
 
         box((radius * 2.0, radius * 2.0, 0.09), (x, 0.0, 0.24), "wood")   # floor
         # Heaped proud of the rim rather than sunk out of sight. These are open casks
         # and what is in them is how you tell the ore side from the coal side.
-        heap((x, 0.0, top + 0.02), radius * 0.78, 12, 0.155, fill, dome=0.42)
+        heap((x, 0.0, top + 0.02), radius * 0.78, 8, 0.175, fill, dome=0.42)
 
     # A sled with real cross members and iron at the corners, rather than one plank.
     box((1.40, 0.80, 0.13), (0.0, 0.0, 0.175), "wood")
@@ -711,15 +721,21 @@ def tint():
             bsdf.inputs["Roughness"].default_value = 0.85
 
 
+def out_dir(name):
+    return ASSETS if name in SHIPPED else SHELF
+
+
 def export(obj, name):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    d = out_dir(name)
+    os.makedirs(d, exist_ok=True)
     # Blender is Z-up, Unity is Y-up.
-    bpy.ops.wm.obj_export(filepath=os.path.join(ASSETS, name + ".obj"),
+    bpy.ops.wm.obj_export(filepath=os.path.join(d, name + ".obj"),
                           export_selected_objects=True, export_materials=True,
                           forward_axis="Z", up_axis="Y")
-    write_col(os.path.join(ASSETS, name + ".col"))
+    write_col(os.path.join(d, name + ".col"))
 
 
 def world_scene():
@@ -836,7 +852,7 @@ def main():
 
         centre, size = bounds(obj)
         icon_scene(centre, size)
-        render(os.path.join(ASSETS, name + "_icon.png"), (128, 128))
+        render(os.path.join(out_dir(name), name + "_icon.png"), (128, 128))
 
         clear_scene()
         builder()
@@ -849,7 +865,9 @@ def main():
         # over budget one detail at a time and the cost is invisible in the render -
         # these are placed in rows of eight, so the count is a real number and not a
         # tidiness concern.
-        flag = "  OVER BUDGET" if tris > TRI_BUDGET else ""
+        # Only what ships has to meet the budget. A shelved design is not costing
+        # anyone frames, and failing it loudly would train the eye to ignore the line.
+        flag = "  OVER BUDGET" if (tris > TRI_BUDGET and name in SHIPPED) else ""
         print("VARIANT_OK %-24s tris=%-6d colliders=%d  %s%s"
               % (name, tris, boxes, label, flag))
         if flag:
