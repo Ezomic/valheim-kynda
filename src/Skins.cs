@@ -87,16 +87,48 @@ namespace Stoker
         }
 
         /// <summary>
+        /// The suffix a model puts on a group to mean "the flat sawn end of this, not the
+        /// length of it".
+        ///
+        /// Vanilla never models end grain, it paints it: every timber donor keeps two or
+        /// three hand-drawn log-end discs in a corner of its sheet, away from the side
+        /// grain, and UVs its cap faces onto one. Ours had no way to ask for that - a
+        /// group got one rectangle and every face went into it - so our sawn ends were
+        /// sampling bark, and a stack of logs read as extruded tube however carefully it
+        /// was modelled. This is the group that gets aimed at the disc instead.
+        /// </summary>
+        private const string EndSuffix = "_end";
+
+        private static bool IsEnd(string group)
+        {
+            return group != null && group.Length > EndSuffix.Length
+                   && group.EndsWith(EndSuffix, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// The material group an end group belongs to. A sawn end is the same timber as
+        /// the log, off the same donor and the same material - only the corner of the
+        /// sheet differs, so everything except the rectangle is looked up under this.
+        /// </summary>
+        private static string Base(string group)
+        {
+            return IsEnd(group) ? group.Substring(0, group.Length - EndSuffix.Length) : group;
+        }
+
+        /// <summary>
         /// The cache key. A group on its own is not enough once two pieces can ask for
         /// different donors for the same group - the woodrack wants round bark off
         /// wood_wall_log and the trough wants sawn planking off piece_chest_wood, and
         /// keying on "wood" alone would hand whichever asked second the other's material,
         /// its atlas rect and its texture size.
+        ///
+        /// The end suffix stays in the key. Same material, same donor, different
+        /// rectangle - so they cannot share an entry.
         /// </summary>
         private static string Key(string group, IDictionary<string, string> overrides)
         {
             string donor;
-            if (overrides != null && overrides.TryGetValue(group, out donor)
+            if (overrides != null && overrides.TryGetValue(Base(group), out donor)
                 && !string.IsNullOrEmpty(donor))
                 return group + "|" + donor;
 
@@ -117,9 +149,11 @@ namespace Stoker
             Material cached;
             if (Cache.TryGetValue(key, out cached)) return cached;
 
+            var family = Base(group);
+
             string[] donors;
             string only;
-            if (overrides != null && overrides.TryGetValue(group, out only)
+            if (overrides != null && overrides.TryGetValue(family, out only)
                 && !string.IsNullOrEmpty(only))
             {
                 // Named explicitly, so it is the only candidate. Falling back to the
@@ -127,7 +161,7 @@ namespace Stoker
                 // not to have, and the log would say it had been honoured.
                 donors = new[] { only };
             }
-            else if (!Donors.TryGetValue(group, out donors))
+            else if (!Donors.TryGetValue(family, out donors))
             {
                 donors = Donors["wood"];
             }
@@ -149,8 +183,11 @@ namespace Stoker
                     if (!material.HasProperty("_MainTex")
                         || material.GetTexture("_MainTex") == null) continue;
 
+                    Rect side, cap;
+                    Regions(renderer, out side, out cap);
+
                     Cache[key] = material;
-                    Atlas[key] = UvRegion(renderer);
+                    Atlas[key] = IsEnd(group) ? cap : side;
                     TexPx[key] = Mathf.Max(1, material.GetTexture("_MainTex").width);
 
                     StokerPlugin.Log.LogInfo(string.Format(
@@ -167,40 +204,61 @@ namespace Stoker
         }
 
         /// <summary>
-        /// The slice of texture one face of the donor uses.
+        /// The two slices of texture a donor uses: the field its broad faces sit on, and
+        /// the patch its end faces sit on.
         ///
-        /// Deliberately one face, not the whole mesh. Measuring min/max across every vertex
-        /// gives a rectangle spanning every tile the donor touches - for stone_wall_2x1
-        /// that was 71% of the sheet - and squeezing our coordinates into that still walks
-        /// across tile boundaries.
+        /// Both are measured from one single face, not from the whole mesh. Measuring
+        /// min/max across every vertex gives a rectangle spanning every tile the donor
+        /// touches - for stone_wall_2x1 that was 71% of the sheet - and squeezing our
+        /// coordinates into that still walks across tile boundaries. The largest single
+        /// triangle is used because area is a good proxy for "a plain wall face" rather
+        /// than a trim detail, and a triangle cannot straddle two tiles without the donor
+        /// itself looking wrong.
         ///
-        /// The largest single triangle is used because area is a good proxy for "a plain
-        /// wall face" rather than a trim detail, and a triangle cannot straddle two tiles
-        /// without the donor itself looking wrong.
+        /// The cap is found by area, not by name or by hardcoded rectangle. Triangles are
+        /// bucketed by which axis their normal points along, and the axis carrying the
+        /// least total surface is the ends: a log, a plank and a barrel are all long in
+        /// two directions and short in the third, so the faces looking down the short one
+        /// are the cut ones. Measured against the rips this picks the painted disc exactly
+        /// on every timber donor there is - wood_wall_log 9% of its surface, wood_stack
+        /// 9%, barrell 24% - and each time the winning rectangle lands on the corner of
+        /// the sheet where the discs are drawn.
+        ///
+        /// The alternative was a table of rectangles per donor, which would have been just
+        /// as accurate today and silently wrong the first time a donor was swapped in
+        /// config for one nobody had measured.
         /// </summary>
-        private static Rect UvRegion(Renderer renderer)
+        private static void Regions(Renderer renderer, out Rect side, out Rect cap)
         {
             var whole = new Rect(0f, 0f, 1f, 1f);
+            side = whole;
+            cap = whole;
 
             var filter = renderer != null ? renderer.GetComponent<MeshFilter>() : null;
             var mesh = filter != null ? filter.sharedMesh : null;
-            if (mesh == null) return whole;
+            if (mesh == null) return;
 
+            Vector3[] verts;
             Vector2[] uv;
             int[] tris;
             try
             {
                 // Imported meshes are frequently upload-only; reading them then throws.
-                if (!mesh.isReadable) return whole;
+                if (!mesh.isReadable) return;
+                verts = mesh.vertices;
                 uv = mesh.uv;
                 tris = mesh.triangles;
             }
-            catch { return whole; }
+            catch { return; }
 
-            if (uv == null || uv.Length == 0 || tris == null || tris.Length < 3) return whole;
+            if (uv == null || uv.Length == 0 || tris == null || tris.Length < 3) return;
+            if (verts == null || verts.Length == 0) return;
 
-            var bestArea = 0f;
-            var best = whole;
+            // Per dominant normal axis: how much surface it carries, and the biggest single
+            // triangle's rect on it.
+            var surface = new float[3];
+            var bestArea = new float[3];
+            var best = new[] { whole, whole, whole };
 
             for (var i = 0; i + 2 < tris.Length; i += 3)
             {
@@ -208,6 +266,21 @@ namespace Stoker
                 var b = tris[i + 1];
                 var c = tris[i + 2];
                 if (a >= uv.Length || b >= uv.Length || c >= uv.Length) continue;
+                if (a >= verts.Length || b >= verts.Length || c >= verts.Length) continue;
+
+                // Geometric, not the shading normal. A smooth-shaded cylinder's stored
+                // normals lean around the curve, but the face itself still points squarely
+                // out of the side - and it is the face we are classifying.
+                var cross = Vector3.Cross(verts[b] - verts[a], verts[c] - verts[a]);
+                var length = cross.magnitude;
+                if (length <= 1e-9f) continue;
+
+                var n = cross / length;
+                var axis = Mathf.Abs(n.x) >= Mathf.Abs(n.y) && Mathf.Abs(n.x) >= Mathf.Abs(n.z)
+                    ? 0
+                    : (Mathf.Abs(n.y) >= Mathf.Abs(n.z) ? 1 : 2);
+
+                surface[axis] += length * 0.5f;
 
                 var minX = Mathf.Min(uv[a].x, Mathf.Min(uv[b].x, uv[c].x));
                 var maxX = Mathf.Max(uv[a].x, Mathf.Max(uv[b].x, uv[c].x));
@@ -222,13 +295,43 @@ namespace Stoker
                 if (width > 1f || height > 1f) continue;
 
                 var area = width * height;
-                if (area <= bestArea) continue;
+                if (area <= bestArea[axis]) continue;
 
-                bestArea = area;
-                best = new Rect(minX, minY, width, height);
+                bestArea[axis] = area;
+                best[axis] = new Rect(minX, minY, width, height);
             }
 
-            return bestArea > 0f ? best : whole;
+            var total = surface[0] + surface[1] + surface[2];
+            if (total <= 0f) return;
+
+            var least = 0;
+            var most = 0;
+            for (var i = 1; i < 3; i++)
+            {
+                if (surface[i] < surface[least]) least = i;
+                if (surface[i] > surface[most]) most = i;
+            }
+
+            if (bestArea[most] > 0f) side = best[most];
+
+            // A donor whose thinnest axis still carries a third of its surface is not a
+            // timber - it is a box, and its "ends" are just more of the same wall. Aiming
+            // sawn ends at a rectangle picked off a cube would be a confident guess at
+            // nothing, so it falls back to the side field, which is at least the surface
+            // the piece is made of.
+            var share = surface[least] / total;
+            if (share <= 0.30f && bestArea[least] > 0f)
+            {
+                cap = best[least];
+            }
+            else
+            {
+                cap = side;
+                StokerPlugin.Log.LogInfo(string.Format(
+                    "{0} has no separate end patch - its thinnest axis is {1:0}% of its "
+                    + "surface. Sawn ends will use the side grain.",
+                    renderer.name, share * 100f));
+            }
         }
 
         /// <summary>
@@ -278,6 +381,34 @@ namespace Stoker
 
                 var indices = mesh.GetTriangles(i);
                 if (indices.Length == 0) continue;
+
+                // An end group is not density-fitted, because a sawn end is not a tiling
+                // surface - it is one painted disc that has to land on one cut face,
+                // whole and once. The model already gave every cap its own copy of the
+                // unit square, so the whole job here is to put that square on the disc.
+                //
+                // Density does still come out right, incidentally: a 24cm log end drawn
+                // across an 18x12 texel disc is 75 texels/m, coarse enough to sit in the
+                // same family as everything around it.
+                if (IsEnd(groups[i]))
+                {
+                    foreach (var index in indices)
+                    {
+                        if (index < 0 || index >= uv.Length || done[index]) continue;
+                        done[index] = true;
+
+                        uv[index] = new Vector2(
+                            rect.x + Mathf.Clamp01(uv[index].x) * rect.width,
+                            rect.y + Mathf.Clamp01(uv[index].y) * rect.height);
+                    }
+
+                    StokerPlugin.Log.LogInfo(string.Format(
+                        "'{0}' aimed at the end-grain patch at {1:0.000},{2:0.000} "
+                        + "{3:0.000}x{4:0.000} ({5} texels across).",
+                        key, rect.x, rect.y, rect.width, rect.height,
+                        Mathf.RoundToInt(rect.width * px)));
+                    continue;
+                }
 
                 // The group's own extent, in metres. Per group rather than per mesh: a
                 // handful of small stone footings and a metre of timber want different

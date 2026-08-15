@@ -57,6 +57,11 @@ PARTS = []
 TRI_BUDGET = 3500
 
 TINTS = {
+    # Lighter than the bark it caps, because that is what a sawn end is and because the
+    # preview is otherwise blind to the split: the renders use flat tints and no
+    # texture, so a cap moved to its own group looks identical until it is given its own
+    # colour. In game the difference comes from the donor's painted disc, not from here.
+    "wood_end": (0.52, 0.36, 0.20, 1.0),
     "wood":  (0.30, 0.19, 0.10, 1.0),
     "iron":  (0.19, 0.19, 0.21, 1.0),
     "stone": (0.42, 0.41, 0.38, 1.0),
@@ -104,7 +109,7 @@ def collide(centre, size):
     COLLIDERS.append((centre, size))
 
 
-def part(obj, mat, bevel=0.012, projection="cube", radius=0.0):
+def part(obj, mat, bevel=0.012, projection="cube", radius=0.0, ends=False):
     """
     projection decides how this part gets unwrapped later, and it matters more than it
     sounds. A cube projection maps a surface flat from whichever axis it faces most,
@@ -115,6 +120,22 @@ def part(obj, mat, bevel=0.012, projection="cube", radius=0.0):
 
     radius is kept because a cylinder projection normalises the wrap to 0..1 whatever
     the log's girth, and the density pass downstream assumes UVs are in metres.
+
+    ends splits the flat caps into their own material group, and it is the single
+    biggest thing separating these models from vanilla's.
+
+    Vanilla does not model end grain, it paints it. Ripping the donors showed the same
+    layout on every one: the sheet is mostly side grain, and off in a corner sit two or
+    three hand-drawn log-end discs - rings, a dark core, a lighter sapwood edge. The
+    mesh then UVs its cap faces onto a disc and its side faces onto the bark. On
+    wood_wall_log the discs are at u 0.604..0.748, v 0.641..0.969; on the woodpile at
+    u 0.647..0.714, v 0.636..0.716; on the barrel at u 0.629..0.733, v 0.677..0.820.
+
+    We had no way to reach any of that, because a group only ever got one rectangle and
+    every face of it was packed into that rectangle. So our sawn ends were sampling
+    bark - which is why a stack of logs read as a bundle of extruded tubes however well
+    it was modelled. The caps go in a separate group so the runtime can aim them
+    somewhere else.
     """
     obj.data.materials.append(material(mat))
 
@@ -133,7 +154,7 @@ def part(obj, mat, bevel=0.012, projection="cube", radius=0.0):
     modifier.limit_method = "ANGLE"
     modifier.angle_limit = math.radians(40.0)
 
-    PARTS.append((obj, projection, radius))
+    PARTS.append((obj, projection, radius, (mat + "_end") if ends else None))
     return obj
 
 
@@ -190,7 +211,7 @@ def log(radius, length, location, mat="wood", axis="x", sides=7, rot=0.0, wobble
     else:
         rot_e[2] += math.radians(roll)
     obj.rotation_euler = rot_e
-    return part(obj, mat, bevel=0.008, projection="cylinder", radius=radius)
+    return part(obj, mat, bevel=0.008, projection="cylinder", radius=radius, ends=True)
 
 
 def billet(radius, length, location, axis="x", rot=0.0, wobble=1.0, kind=None):
@@ -713,6 +734,62 @@ VARIANTS = [
 ]
 
 
+def split_caps(obj, end_mat):
+    """
+    Moves a cylinder's two flat ends into their own material group, and gives each one
+    its own copy of the unit square.
+
+    Called while the part is still axis-aligned, which is what makes finding the caps a
+    one-line test: every primitive here is built along local Z, so a cap is any polygon
+    whose normal is near enough parallel to it. The bevel's chamfer ring sits at about
+    45 degrees and stays with the sides, which is right - a chamfer is the arris of the
+    cut, not the cut face.
+
+    The UVs are rebuilt from position rather than taken from the projection. A cylinder
+    projection smears its caps into a pole, and in any case what is wanted here is not a
+    projection at all: the donor's disc is one painted feature that has to land on one
+    sawn end, whole, once. So each loop is placed by where it sits across the cap -
+    centre of the face to centre of the square, rim to edge - and the runtime scales
+    that unit square onto whichever rectangle the donor keeps its discs in.
+
+    Per face, not per group. Fitting the group as a whole would stretch a single disc
+    across all twelve ends of a stack, which is the same mistake in a new place.
+    """
+    mesh = obj.data
+    if len(mesh.materials) == 0:
+        return
+
+    slot = len(mesh.materials)
+    mesh.materials.append(material(end_mat))
+
+    uv = mesh.uv_layers.active.data
+    caps = []
+    for poly in mesh.polygons:
+        if abs(poly.normal.z) < 0.85:
+            continue
+        poly.material_index = slot
+        caps.append(poly)
+
+    if not caps:
+        return
+
+    for poly in caps:
+        # The cap's own radius, not the log's. A tapered log's two ends differ, and
+        # sharing one radius would leave the narrow end drawn inside a disc sized for
+        # the wide one - a ring of bark around every other end.
+        cx = sum(mesh.vertices[v].co.x for v in poly.vertices) / len(poly.vertices)
+        cy = sum(mesh.vertices[v].co.y for v in poly.vertices) / len(poly.vertices)
+        reach = max(math.hypot(mesh.vertices[v].co.x - cx,
+                               mesh.vertices[v].co.y - cy) for v in poly.vertices)
+        if reach <= 0.0:
+            continue
+
+        for loop in poly.loop_indices:
+            co = mesh.vertices[mesh.loops[loop].vertex_index].co
+            uv[loop].uv = (0.5 + 0.5 * (co.x - cx) / reach,
+                           0.5 + 0.5 * (co.y - cy) / reach)
+
+
 def finish(name):
     """
     Bevel, unwrap and join - and the unwrap happens per part, before the join.
@@ -735,7 +812,7 @@ def finish(name):
     whole change buys nothing. The join bakes the locations afterwards, geometry
     unaffected.
     """
-    for obj, projection, radius in PARTS:
+    for obj, projection, radius, end_mat in PARTS:
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
@@ -768,6 +845,9 @@ def finish(name):
             circumference = 2.0 * math.pi * radius
             for loop in obj.data.uv_layers.active.data:
                 loop.uv[0] *= circumference
+
+        if end_mat:
+            split_caps(obj, end_mat)
 
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 
