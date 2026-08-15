@@ -24,7 +24,6 @@ namespace Stoker
         public static ConfigEntry<string> Donor;
         public static ConfigEntry<float> Range;
         public static ConfigEntry<int> MaxPerStation;
-        public static ConfigEntry<float> CapacityPerUpgrade;
         public static ConfigEntry<bool> ShowLink;
         public static ConfigEntry<float> LinkHeight;
 
@@ -80,19 +79,6 @@ namespace Stoker
                 "Most upgrades of one kind that will count for one station. Keeps it a "
                 + "decision rather than something you stack until capacity stops mattering.");
 
-            // A multiple of the station's own capacity, not a flat amount. A flat figure
-            // cannot be round for two stations of different sizes - +20 turned a charcoal
-            // kiln's 25 into 45 and a smelter's 10 into 30 - and it needed separate ore and
-            // fuel numbers kept in step by hand to preserve the 2:1 coal ratio that the
-            // station's own base values already encode.
-            CapacityPerUpgrade = config.Bind("Upgrades", "CapacityPerUpgrade", 1.0f,
-                "How much capacity each upgrade adds, as a multiple of what the station "
-                + "already holds. 1 doubles it - a charcoal kiln goes 25 to 50, a smelter "
-                + "10 ore and 20 coal to 20 and 40 - and a second upgrade triples it. 0.5 "
-                + "adds half. Ore and fuel scale together, so the ratio a station was built "
-                + "with survives. Never affects speed or fuel efficiency, only how long a "
-                + "station runs before it needs you.");
-
             ShowLink = config.Bind("Upgrades", "ShowLink", true,
                 "Draw the game's own station-link effect from an upgrade to the station it "
                 + "feeds when you look at it - the same run of motes a chopping block draws "
@@ -120,6 +106,17 @@ namespace Stoker
             UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1f,
                 "Overall size of the trough.");
 
+            UpgradePrefabs.Trough.OreCapacity = config.Bind("Trough", "OreCapacity", 20,
+                "Extra ore a smelter or furnace holds per trough. Vanilla's 10 becomes 30.");
+
+            // Twice the ore figure, because a smelter burns two coal for every ore it melts.
+            // Matching them would leave the coal side empty with a third of the ore still in
+            // the hopper, which is the upgrade only half working.
+            UpgradePrefabs.Trough.FuelCapacity = config.Bind("Trough", "FuelCapacity", 40,
+                "Extra coal a smelter or furnace holds per trough. Vanilla's 20 becomes 60. "
+                + "Twice the ore figure on purpose - a smelter burns two coal per ore, so "
+                + "matching them would run the fuel out before the ore.");
+
             // ------------------------------------------------------------------ the rack
 
             UpgradePrefabs.Woodrack.Name = config.Bind("Woodrack", "Name", "Woodrack",
@@ -140,6 +137,16 @@ namespace Stoker
 
             UpgradePrefabs.Woodrack.Scale = config.Bind("Woodrack", "Scale", 1f,
                 "Overall size of the woodrack.");
+
+            // 25 rather than the trough's 20, because a charcoal kiln starts at 25 and this
+            // is aimed at landing on a round 50. The two upgrades need different figures for
+            // the same reason a percentage would not do: the stations are different sizes,
+            // and what matters is the number you end on.
+            UpgradePrefabs.Woodrack.OreCapacity = config.Bind("Woodrack", "OreCapacity", 25,
+                "Extra wood a charcoal kiln holds per woodrack. Vanilla's 25 becomes 50.");
+
+            // No fuel entry. This one only ever serves stations with no fuel slot, so it
+            // would be a setting that could never do anything.
 
             // ------------------------------------------------------------------ batching
 

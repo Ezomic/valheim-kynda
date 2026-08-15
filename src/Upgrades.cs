@@ -36,6 +36,22 @@ namespace Stoker
         public ConfigEntry<string> Model;
         public ConfigEntry<float> Scale;
 
+        /// <summary>
+        /// How much each of these adds, in items, to the station it serves.
+        ///
+        /// Per piece rather than one figure for the mod, because the two cannot share one.
+        /// A charcoal kiln holds 25 and wants to land on 50; a smelter holds 10 and wants to
+        /// land on 30. That is +25 and +20, and no single rule - flat or proportional -
+        /// produces both. Multiplying gave the kiln its 50 and left the smelter at 20.
+        /// </summary>
+        public ConfigEntry<int> OreCapacity;
+
+        /// <summary>
+        /// Null on an upgrade that only ever serves stations with no fuel slot, where it
+        /// would be a config entry that can never do anything.
+        /// </summary>
+        public ConfigEntry<int> FuelCapacity;
+
         public string Description;
 
         /// <summary>True for the trough, false for the woodrack.</summary>
@@ -282,6 +298,12 @@ namespace Stoker
         };
 
         public static readonly UpgradeDef[] All = { Trough, Woodrack };
+
+        /// <summary>The upgrade that serves stations of this kind.</summary>
+        public static UpgradeDef For(bool fuelled)
+        {
+            return fuelled ? Trough : Woodrack;
+        }
 
         private static GameObject _holder;
         private static bool _addedToHammer;

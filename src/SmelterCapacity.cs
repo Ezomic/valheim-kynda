@@ -50,16 +50,12 @@ namespace Stoker
         private bool Fuelled { get { return _baseFuel > 0; } }
 
         /// <summary>
-        /// A multiple of what the station already holds, not a flat amount added to it.
+        /// A flat amount, taken from whichever upgrade serves this kind of station.
         ///
-        /// A flat figure cannot be round for two stations of different sizes: +20 turned a
-        /// charcoal kiln's 25 into 45 and a smelter's 10 into 30. Multiplying gives 50 and
-        /// 20 - round wherever vanilla's own number was round, which is everywhere.
-        ///
-        /// It also removes the split ore/fuel figures this used to need. A smelter holds 10
-        /// ore and 20 coal because it burns two coal per ore; scaling both by the same
-        /// factor keeps that ratio for free, where two separate numbers had to be kept in
-        /// step by hand and got it wrong the moment a station had different proportions.
+        /// Per piece rather than one figure for the mod, and not a proportion either. The
+        /// numbers wanted are a charcoal kiln landing on 50 from 25 and a smelter landing on
+        /// 30 from 10 - that is +25 and +20, and no single rule gives both. Doubling gave
+        /// the kiln its 50 and left the smelter at 20.
         /// </summary>
         private void Recompute()
         {
@@ -70,14 +66,17 @@ namespace Stoker
                             Mathf.Max(0, StokerConfig.MaxPerStation.Value))
                 : 0;
 
-            var factor = 1f + level * Mathf.Max(0f, StokerConfig.CapacityPerUpgrade.Value);
+            var def = UpgradePrefabs.For(Fuelled);
+
+            var oreBonus = level * Mathf.Max(0, def.OreCapacity.Value);
+            var fuelBonus = def.FuelCapacity != null
+                ? level * Mathf.Max(0, def.FuelCapacity.Value)
+                : 0;
 
             // Only raise a cap the station already has. A charcoal kiln has no fuel slot at
             // all - giving it one would have it refuse to work until fed coal it cannot take.
-            // Multiplying keeps that automatically, since zero times anything is zero, but
-            // the guard stays because it also documents why.
-            if (_baseOre > 0) _smelter.m_maxOre = Mathf.RoundToInt(_baseOre * factor);
-            if (_baseFuel > 0) _smelter.m_maxFuel = Mathf.RoundToInt(_baseFuel * factor);
+            if (_baseOre > 0) _smelter.m_maxOre = _baseOre + oreBonus;
+            if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + fuelBonus;
         }
 
         /// <summary>

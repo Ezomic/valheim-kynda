@@ -22,11 +22,11 @@ in as one load or three. You buy fewer trips, not more metal.
 
 | Feature | State |
 | --- | --- |
-| Add several items per press | built, runs in game, **not play-tested** |
-| Two upgrade pieces that raise capacity | built, **not yet seen in game** |
+| Add several items per press | **works in game** |
+| Two upgrade pieces that raise capacity | **work in game**; models being revisited |
 
-"Runs in game" means the mod loads, the pieces register and land on the hammer, and the log
-is clean. Whether the numbers feel right over a real smelting session is untested.
+Both features have been used in a real session. What is unsettled is the art: the trough and
+the woodrack read acceptably at 128px and less well at eye height, and are being reworked.
 
 ### Batching
 
@@ -68,19 +68,21 @@ tell you.
 **Looking at one also draws the link**, the same run of motes a chopping block draws to its
 workbench, so you can see at a glance which station an upgrade belongs to in a row of them.
 
-**One upgrade doubles the station's capacity. A second triples it.** Two is the limit by
-default.
+Two is the limit per station by default.
 
 | Station | Bare | One upgrade | Two |
 | --- | --- | --- | --- |
 | Charcoal kiln | 25 wood | **50** | 75 |
-| Smelter | 10 ore, 20 coal | **20, 40** | 30, 60 |
+| Smelter | 10 ore, 20 coal | **30, 60** | 50, 100 |
 
-A multiple rather than a flat amount, because a flat one cannot be round for two stations of
-different sizes: +20 turned the kiln's 25 into 45 and the smelter's 10 into 30. It also
-removes the separate ore and fuel figures this used to need — a smelter holds twice as much
-coal as ore because it burns two coal per ore, and scaling both by the same factor keeps that
-ratio for free instead of relying on two numbers being kept in step by hand.
+**Each piece carries its own figure**, rather than the mod having one. The kiln holds 25 and
+should land on 50; the smelter holds 10 and should land on 30. That is +25 and +20, and no
+single rule gives both — a flat amount misses one end, and doubling gave the kiln its 50 but
+left the smelter at 20.
+
+The trough's coal figure is twice its ore figure because a smelter burns two coal for every
+ore it melts. Matching them would leave the coal gone with a third of the ore still waiting,
+which is the upgrade only half working.
 
 **Which piece serves which station is decided on the station's own numbers, not a list of
 names.** A station with a fuel slot takes the trough; one without takes the woodrack. That is
@@ -209,7 +211,7 @@ netstandard 2.1 and this builds against net462.
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
 | `MaxPerStation` | `2` | Most of one kind that count for one station |
-| `CapacityPerUpgrade` | `1.0` | Capacity added per upgrade, as a multiple of the station's own. `1` doubles, `0.5` adds half |
+| `OreCapacity` / `FuelCapacity` | per piece | Extra items each upgrade adds — see the Trough / Woodrack sections |
 | `ShowLink` | `true` | Draw the game's station-link effect to the station when you look at an upgrade |
 | `LinkHeight` | `0.8` | How far up the upgrade the link starts, in metres |
 
@@ -223,6 +225,8 @@ Each piece has its own section with the same four keys.
 | `Cost` | `Wood:20,Bronze:5` | `Wood:25,Stone:10` |
 | `Model` | `stoker_trough_raised.obj` | `stoker_kiln_woodrack.obj` |
 | `Scale` | `1` | `1` |
+| `OreCapacity` | `20` | `25` |
+| `FuelCapacity` | `40` | *(none — its stations have no fuel slot)* |
 
 `Model` carries its own collision and icon: the `.col` sidecar and the `_icon.png` are
 matched by filename, so dropping in a new model brings its shape and its picture with it.
