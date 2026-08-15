@@ -54,7 +54,21 @@ namespace Stoker
         /// </summary>
         public ConfigEntry<string> SkinDonors;
 
-        /// <summary>group -&gt; prefab, or null when this piece takes the general list.</summary>
+        /// <summary>
+        /// group -&gt; prefab, or null when this piece takes the general list.
+        ///
+        /// An entry with no group - a bare prefab name - covers the whole piece, and that
+        /// is now the normal way to write one. Every vanilla piece is a single material on
+        /// a single submesh: barrell, wood_stack, piece_chest_wood, wood_wall_log, the
+        /// smelter, the charcoal kiln, all of them. They manage it by painting everything
+        /// the object is made of onto one sheet - piece_chest_barrel's is 64 pixels split
+        /// down the middle, wood on the left and grey metal on the right, with the modelled
+        /// hoops mapped onto the metal half.
+        ///
+        /// Naming a donor per group was how this piece ended up wearing four different
+        /// objects' palettes at once, none of which were painted to sit together. One
+        /// donor, and the groups reach different patches of its sheet instead.
+        /// </summary>
         public IDictionary<string, string> Skins
         {
             get
@@ -66,6 +80,16 @@ namespace Stoker
                 foreach (var entry in SkinDonors.Value.Split(','))
                 {
                     var parts = entry.Split('=');
+
+                    if (parts.Length == 1)
+                    {
+                        var whole = parts[0].Trim();
+                        // Fully qualified: this class has a Skins property of its own, and
+                        // it would otherwise shadow the static class being reached for.
+                        if (whole.Length > 0) map[Stoker.Skins.Everything] = whole;
+                        continue;
+                    }
+
                     if (parts.Length != 2) continue;
 
                     var group = parts[0].Trim();

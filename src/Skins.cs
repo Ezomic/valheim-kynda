@@ -99,6 +99,48 @@ namespace Stoker
         /// </summary>
         private const string EndSuffix = "_end";
 
+        /// <summary>
+        /// The pseudo-group a piece uses to say "this donor covers all of me".
+        ///
+        /// Not a real group name, and deliberately one no model could produce - a material
+        /// called * would have to come out of Blender, and it cannot.
+        /// </summary>
+        public const string Everything = "*";
+
+        /// <summary>
+        /// Groups a whole-piece donor does not cover.
+        ///
+        /// These are not what the piece is made of, they are what is sitting in it, and
+        /// vanilla treats them the same way: a smelter is one material, smeltermat, and
+        /// then its ore heap is a separate renderer wearing a separate material called
+        /// blackhole. The charcoal kiln does the same. So a heap of copper keeping its own
+        /// surface is not the mistake that four palettes on one cask was - it is the one
+        /// place vanilla itself reaches for a second material.
+        /// </summary>
+        private static readonly HashSet<string> Contents =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ore", "coal" };
+
+        /// <summary>
+        /// The donor this group should come off: the one named for the group, else the
+        /// one named for the whole piece, else nothing and the general list is used.
+        /// </summary>
+        private static string Named(string group, IDictionary<string, string> overrides)
+        {
+            if (overrides == null) return null;
+
+            var family = Base(group);
+
+            string donor;
+            if (overrides.TryGetValue(family, out donor) && !string.IsNullOrEmpty(donor))
+                return donor;
+
+            if (Contents.Contains(family)) return null;
+
+            return overrides.TryGetValue(Everything, out donor) && !string.IsNullOrEmpty(donor)
+                ? donor
+                : null;
+        }
+
         private static bool IsEnd(string group)
         {
             return group != null && group.Length > EndSuffix.Length
@@ -127,12 +169,8 @@ namespace Stoker
         /// </summary>
         private static string Key(string group, IDictionary<string, string> overrides)
         {
-            string donor;
-            if (overrides != null && overrides.TryGetValue(Base(group), out donor)
-                && !string.IsNullOrEmpty(donor))
-                return group + "|" + donor;
-
-            return group;
+            var donor = Named(group, overrides);
+            return string.IsNullOrEmpty(donor) ? group : group + "|" + donor;
         }
 
         public static Material[] Skin(string[] groups, IDictionary<string, string> overrides)
@@ -150,11 +188,10 @@ namespace Stoker
             if (Cache.TryGetValue(key, out cached)) return cached;
 
             var family = Base(group);
+            var only = Named(group, overrides);
 
             string[] donors;
-            string only;
-            if (overrides != null && overrides.TryGetValue(family, out only)
-                && !string.IsNullOrEmpty(only))
+            if (!string.IsNullOrEmpty(only))
             {
                 // Named explicitly, so it is the only candidate. Falling back to the
                 // general list would silently hand back the material this piece asked
@@ -183,12 +220,19 @@ namespace Stoker
                     if (!material.HasProperty("_MainTex")
                         || material.GetTexture("_MainTex") == null) continue;
 
+                    var sheet = material.GetTexture("_MainTex");
+
                     Rect side, cap;
                     Regions(renderer, out side, out cap);
 
+                    Rect patch;
+                    if (IsEnd(group)) patch = cap;
+                    else if (IsMetal(family)) patch = MetalRegion(sheet, name, side);
+                    else patch = side;
+
                     Cache[key] = material;
-                    Atlas[key] = IsEnd(group) ? cap : side;
-                    TexPx[key] = Mathf.Max(1, material.GetTexture("_MainTex").width);
+                    Atlas[key] = patch;
+                    TexPx[key] = Mathf.Max(1, sheet.width);
 
                     StokerPlugin.Log.LogInfo(string.Format(
                         "'{0}' skinned with {1} from {2} (shader {3}), atlas {4}, {5}px.",
@@ -201,6 +245,175 @@ namespace Stoker
             StokerPlugin.Log.LogWarning("No material found for group '" + key + "'.");
             Cache[key] = null;
             return null;
+        }
+
+        private static bool IsMetal(string family)
+        {
+            return string.Equals(family, "iron", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Where the grey is on a donor's sheet.
+        ///
+        /// Vanilla puts a piece's metal on the same texture as its wood rather than on a
+        /// second material. piece_chest_barrel is the clearest case: 64 pixels split down
+        /// the middle, brown timber on the left and grey steel on the right, and its
+        /// modelled hoops are UV'd onto the right half. One material, two substances.
+        ///
+        /// So the metal is found the way a person would find it - by looking for the part
+        /// of the picture with no colour in it. Saturation separates the two cleanly and
+        /// nothing else does: brightness does not, because weathered timber and dark iron
+        /// overlap, and position does not, because no two sheets agree on a layout.
+        ///
+        /// Read through a RenderTexture, which is what makes this possible at all. Valheim
+        /// ships its textures compressed and non-readable, so GetPixels throws on almost
+        /// all of them, but anything can be blitted to a render target and read back from
+        /// there. Same route the devkit's ripper takes, and the reason it never fails on a
+        /// texture the way it does on a mesh.
+        /// </summary>
+        private static Rect MetalRegion(Texture sheet, string donor, Rect fallback)
+        {
+            if (sheet == null) return fallback;
+
+            // 64 is plenty. Vanilla's sheets are 64 to 256 and this is looking for a
+            // half-of-the-image sized block, not for detail.
+            var w = Mathf.Clamp(sheet.width, 8, 64);
+            var h = Mathf.Clamp(sheet.height, 8, 64);
+
+            Color[] pixels;
+            RenderTexture rt = null;
+            var previous = RenderTexture.active;
+            Texture2D readable = null;
+
+            try
+            {
+                rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32,
+                                                RenderTextureReadWrite.sRGB);
+                Graphics.Blit(sheet, rt);
+                RenderTexture.active = rt;
+
+                readable = new Texture2D(w, h, TextureFormat.ARGB32, false);
+                readable.ReadPixels(new Rect(0f, 0f, w, h), 0, 0);
+                readable.Apply();
+                pixels = readable.GetPixels();
+            }
+            catch (Exception e)
+            {
+                StokerPlugin.Log.LogWarning(
+                    "Could not read " + donor + "'s sheet to find its metal: " + e.Message);
+                return fallback;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (rt != null) RenderTexture.ReleaseTemporary(rt);
+                if (readable != null) UnityEngine.Object.Destroy(readable);
+            }
+
+            if (pixels == null || pixels.Length < w * h) return fallback;
+
+            // Columns first, then rows inside the winning columns. Averaging rows across
+            // the whole sheet would mix the brown half back in and flatten the signal -
+            // on a left/right split every row looks equally middling.
+            var columns = new float[w];
+            var overall = 0f;
+            for (var x = 0; x < w; x++)
+            {
+                var sum = 0f;
+                for (var y = 0; y < h; y++) sum += Saturation(pixels[y * w + x]);
+                columns[x] = sum / h;
+                overall += columns[x];
+            }
+            overall /= w;
+
+            int x0, x1;
+            if (!Run(columns, overall, out x0, out x1)) return Grey(donor, fallback);
+
+            var rows = new float[h];
+            for (var y = 0; y < h; y++)
+            {
+                var sum = 0f;
+                for (var x = x0; x <= x1; x++) sum += Saturation(pixels[y * w + x]);
+                rows[y] = sum / (x1 - x0 + 1);
+            }
+
+            int y0, y1;
+            if (!Run(rows, overall, out y0, out y1)) { y0 = 0; y1 = h - 1; }
+
+            // Pulled in by a pixel on every side. A rect flush against the boundary
+            // samples the neighbouring half wherever the GPU filters across the seam,
+            // which on a 64 pixel sheet is a visible brown fringe along every hoop.
+            var rect = new Rect((x0 + 1f) / w, (y0 + 1f) / h,
+                                Mathf.Max(1f, x1 - x0 - 1f) / w,
+                                Mathf.Max(1f, y1 - y0 - 1f) / h);
+
+            StokerPlugin.Log.LogInfo(string.Format(
+                "{0}'s metal is the {1}x{2} px block at {3:0.000},{4:0.000} - saturation "
+                + "{5:0.00} against {6:0.00} across the sheet.",
+                donor, x1 - x0 + 1, y1 - y0 + 1, rect.x, rect.y,
+                Mean(columns, x0, x1), overall));
+
+            return rect;
+        }
+
+        /// <summary>
+        /// The longest unbroken run of slices carrying markedly less colour than the sheet
+        /// as a whole, or false when there is no such thing.
+        ///
+        /// Two tests, and both are needed. Half the mean catches the split on a sheet that
+        /// really is part metal; the absolute ceiling stops a donor with no metal at all
+        /// from confidently handing back whichever quarter of its timber happens to be
+        /// least saturated. A sheet of nothing but wood has to be able to say no.
+        /// </summary>
+        private static bool Run(float[] slices, float overall, out int from, out int to)
+        {
+            from = 0;
+            to = -1;
+
+            var ceiling = Mathf.Min(overall * 0.5f, 0.18f);
+
+            var bestFrom = 0;
+            var bestTo = -1;
+            var runFrom = -1;
+
+            for (var i = 0; i < slices.Length; i++)
+            {
+                if (slices[i] <= ceiling)
+                {
+                    if (runFrom < 0) runFrom = i;
+                    if (i - runFrom > bestTo - bestFrom) { bestFrom = runFrom; bestTo = i; }
+                }
+                else runFrom = -1;
+            }
+
+            // Two slices is noise, not a region.
+            if (bestTo - bestFrom < 2) return false;
+
+            from = bestFrom;
+            to = bestTo;
+            return true;
+        }
+
+        private static float Saturation(Color c)
+        {
+            var max = Mathf.Max(c.r, Mathf.Max(c.g, c.b));
+            var min = Mathf.Min(c.r, Mathf.Min(c.g, c.b));
+            return max <= 0.0001f ? 0f : (max - min) / max;
+        }
+
+        private static float Mean(float[] slices, int from, int to)
+        {
+            var sum = 0f;
+            for (var i = from; i <= to; i++) sum += slices[i];
+            return sum / Mathf.Max(1, to - from + 1);
+        }
+
+        private static Rect Grey(string donor, Rect fallback)
+        {
+            StokerPlugin.Log.LogInfo(
+                donor + " has no unsaturated block - it is all one substance, so metal "
+                + "parts will wear the same surface as the rest of it.");
+            return fallback;
         }
 
         /// <summary>

@@ -139,12 +139,22 @@ namespace Stoker
                 "Overall size of the trough. Scales the collision with it, since the boxes "
                 + "are children of the piece.");
 
-            // Empty means the general list, which leads with piece_chest_wood - sawn
-            // planking, which is what a stave and a sled are.
-            UpgradePrefabs.Trough.SkinDonors = config.Bind("Trough", "SkinDonors", "",
-                "Which vanilla prefab each material group borrows its surface from, as "
-                + "group=prefab pairs. Empty uses the general list. Only worth setting when "
-                + "a piece wants a different surface from the other one.");
+            // One donor for the whole cask, and piece_chest_barrel because it is one: a
+            // barrel of the same size, built the same way, whose 64px sheet carries brown
+            // timber on the left and grey steel on the right. The staves take the timber,
+            // the hoops take the steel, and both come off one material - which is what
+            // every vanilla piece does and what this one was not doing. Before this the
+            // wood came from piece_chest_wood and the hoops from piece_artisanstation, so
+            // one small cask wore two objects' palettes that were never painted together.
+            UpgradePrefabs.Trough.SkinDonors = config.Bind("Trough", "SkinDonors",
+                "piece_chest_barrel",
+                "Which vanilla prefab this piece borrows its surface from. A bare prefab "
+                + "name covers the whole piece, which is the usual case and matches how "
+                + "vanilla builds a piece - one texture carrying every substance it is "
+                + "made of. group=prefab pairs override a single group. Empty uses the "
+                + "general list. Ore and coal keep their own surfaces either way: they "
+                + "are what is in the piece rather than what it is made of, and vanilla "
+                + "gives a smelter's ore heap its own material too.");
 
             UpgradePrefabs.Trough.OreCapacity = config.Bind("Trough", "OreCapacity", 20,
                 "Extra ore a smelter or furnace holds per trough. Vanilla's 10 becomes 30.");
@@ -192,10 +202,15 @@ namespace Stoker
             // which landed on the sawn ends and rendered them almost black. wood_wall_log
             // is uniformly timber, and its rect is 0.424 against 0.231, so the wood group
             // reaches the full target density here instead of clamping at 20.
+            // Bare, so it covers the piece rather than only its wood group - though the
+            // rack has nothing but wood now, which is the point. wood_wall_log is round
+            // bark-on timber with real sawn-end discs painted in the corner of its sheet,
+            // and a woodrack is a stack of logs.
             UpgradePrefabs.Woodrack.SkinDonors = config.Bind("Woodrack", "SkinDonors",
-                "wood=wood_wall_log",
-                "Which vanilla prefab each material group borrows its surface from, as "
-                + "group=prefab pairs. Empty uses the general list.");
+                "wood_wall_log",
+                "Which vanilla prefab this piece borrows its surface from. A bare prefab "
+                + "name covers the whole piece; group=prefab pairs override a single "
+                + "group. Empty uses the general list.");
 
             UpgradePrefabs.Woodrack.OreCapacity = config.Bind("Woodrack", "OreCapacity", 25,
                 "Extra wood a charcoal kiln holds per woodrack. Vanilla's 25 becomes 50.");

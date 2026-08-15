@@ -375,15 +375,26 @@ def rack_lean():
     """
     A lean-to against nothing: two heavy posts, a sloped plank roof, logs stacked deep
     underneath. The roof slope is the whole silhouette - a flat lid reads as a crate.
+
+    All timber, and that is the point rather than an omission. Every vanilla piece is
+    one material on one submesh, and vanilla's own woodpiles - wood_stack,
+    blackwood_stack, wood_core_stack, wood_fine_stack - carry no metal and no stone at
+    all. This had a stone footing under each post and an iron strap across the roof, so
+    three of the game's textures met on one small prop, none of them painted to sit
+    beside the others. The footings are timber sole plates now, which is what actually
+    keeps a rack's posts out of the mud, and the strap is gone.
     """
     for x in (-0.52, 0.52):
         box((0.13, 0.15, 1.16), (x, 0.0, 0.58), "wood")
-        box((0.16, 0.18, 0.10), (x, 0.0, 0.03), "stone")          # footing pad
+        box((0.16, 0.18, 0.10), (x, 0.0, 0.03), "wood")           # sole plate
 
     # Roof: two overlapping planks, sloped, oversailing the posts at the low edge.
     box((1.34, 0.62, 0.07), (0.0, -0.14, 1.16), "wood", rot=(-13.0, 0.0, 0.0))
     box((1.34, 0.52, 0.06), (0.0, 0.30, 1.24), "wood", rot=(-13.0, 0.0, 0.0))
-    strap(1.30, (0.0, 0.06, 1.21), axis="x")
+    # A batten holding the two roof planks together, in the same timber. This was an
+    # iron strap, and an iron strap is a whole second texture for one thin band.
+    box((1.30, 0.12, 0.05), (0.0, 0.06, 1.23), "wood", rot=(-13.0, 0.0, 0.0),
+        wobble=0.6, bevel=0.006)
 
     # Logs along Y, so the sawn ends face the front. Along X they were seen purely
     # side-on and read as smooth pipes: the end grain is the whole reason a woodpile
@@ -598,6 +609,13 @@ def trough_barrels():
     """
     Two open-topped barrels on a sled. Round where every other trough is square, and
     the staves give it vertical banding that catches light at any angle.
+
+    The hoops stay modelled rather than being deleted in favour of painted ones, which
+    was the other way to make this one material. piece_chest_barrel settles it: 2,022
+    triangles, one material, and its sheet is 64 pixels split down the middle with brown
+    timber on the left and grey steel on the right. Vanilla models its hoops and puts
+    the metal on the same texture as the wood. So the geometry was never the problem -
+    the problem was reaching for a second donor to skin it with.
     """
     stave = 0.115
 
