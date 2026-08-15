@@ -669,12 +669,43 @@ VARIANTS = [
 
 
 def finish(name):
-    # Apply every bevel before joining. After the join the modifier would work on the
-    # intersections between overlapping parts, which produces spikes rather than edges.
+    """
+    Bevel, unwrap and join - and the unwrap happens per part, before the join.
+
+    Projecting the joined model gave every group a UV span equal to the whole model,
+    because a cube projection maps world position straight to UV. The runtime scales
+    a group's UVs to fit its donor's slice of the atlas, so a span that large forced
+    it far coarser than asked: the ore heaps measured 6 texels per metre against a
+    target of 35, purely because the two heaps sit 0.74m apart. Each lump is 15cm and
+    needs 15cm worth of texture, not 74.
+
+    Two details make it work, and both are easy to get wrong:
+
+    Scale is applied first. A box's mesh data is a unit cube with its real size living
+    in the object's scale, so projecting before applying would hand a 13cm post and a
+    90cm plank identical UVs.
+
+    Location is deliberately not applied. Leave it on and every part's UVs carry its
+    world position, the group's span becomes the model's bounding box again, and this
+    whole change buys nothing. The join bakes the locations afterwards, geometry
+    unaffected.
+    """
     for obj in PARTS:
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
         bpy.context.view_layer.objects.active = obj
+
+        # Before the join: after it the modifier would work on the intersections
+        # between overlapping parts and produce spikes rather than edges.
         for modifier in list(obj.modifiers):
             bpy.ops.object.modifier_apply(modifier=modifier.name)
+
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.uv.cube_project(cube_size=1.0, correct_aspect=True, scale_to_bounds=False)
+        bpy.ops.object.mode_set(mode="OBJECT")
 
     bpy.ops.object.select_all(action="SELECT")
     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
@@ -685,11 +716,6 @@ def finish(name):
     # join() adopts the first object's transform and rewrites every other vertex into
     # its local space, so the transform has to be applied before anything is measured.
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
-
-    bpy.ops.object.mode_set(mode="EDIT")
-    bpy.ops.mesh.select_all(action="SELECT")
-    bpy.ops.uv.cube_project(cube_size=1.0, correct_aspect=True, scale_to_bounds=False)
-    bpy.ops.object.mode_set(mode="OBJECT")
 
     mesh = obj.data
     bm = bmesh.new()
@@ -849,6 +875,12 @@ def main():
         export(obj, name)
         tris = len(obj.data.polygons)
         boxes = len(COLLIDERS)
+
+        # tint() before the icon, not just before the preview. Without it the icon
+        # renders every material at Blender's default near-white and both pieces came
+        # out as pale blobs beside vanilla's coloured ones - the classic tell that the
+        # surface is unpainted rather than that the lighting is hot.
+        tint()
 
         centre, size = bounds(obj)
         icon_scene(centre, size)
