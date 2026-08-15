@@ -39,8 +39,15 @@ PREVIEWS = os.path.join(ASSETS, "previews")
 COLLIDERS = []
 PARTS = []
 
-# These get placed in rows beside a row of smelters, so the count is a real cost.
-TRI_BUDGET = 15000
+# A hard ceiling, not a target. These get placed in rows beside a row of smelters, so
+# the count is multiplied by however many stations a base has - eight upgraded ones is
+# sixteen of these in view at once. 10k leaves that under 160k, which is the sort of
+# number a single vanilla building piece cluster costs.
+#
+# Nothing in the current set is close: the heaviest is the rick at 7,312. The limit
+# exists to stop the next detail being added without anyone noticing the cost, which is
+# how the barrels reached 27,000 in the first place.
+TRI_BUDGET = 10000
 
 TINTS = {
     "wood":  (0.30, 0.19, 0.10, 1.0),
