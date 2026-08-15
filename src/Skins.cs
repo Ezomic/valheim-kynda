@@ -247,6 +247,144 @@ namespace Stoker
             return null;
         }
 
+        /// <summary>
+        /// The submesh's vertices split into connected parts - one per log, plank or hoop.
+        ///
+        /// Connectivity is through shared vertex indices, which is exactly right for our
+        /// models: every part is built and unwrapped as its own object and only joined at
+        /// the end, so no two parts ever share a vertex. The seams a UV projection creates
+        /// split a part further, and that is fine - the pieces of one log all want the same
+        /// treatment anyway, and they get it because they are the same size.
+        /// </summary>
+        private static List<List<int>> Islands(int[] indices, Vector2[] uv)
+        {
+            // Union-find over the vertices this submesh touches. Flat arrays over a
+            // dictionary because this runs once per group at registration and the vertex
+            // count is in the thousands.
+            var parent = new Dictionary<int, int>();
+
+            for (var i = 0; i < indices.Length; i++)
+            {
+                var v = indices[i];
+                if (v >= 0 && v < uv.Length && !parent.ContainsKey(v)) parent[v] = v;
+            }
+
+            for (var i = 0; i + 2 < indices.Length; i += 3)
+            {
+                var a = indices[i];
+                var b = indices[i + 1];
+                var c = indices[i + 2];
+                if (!parent.ContainsKey(a) || !parent.ContainsKey(b) || !parent.ContainsKey(c))
+                    continue;
+
+                Join(parent, a, b);
+                Join(parent, a, c);
+            }
+
+            // Snapshot the keys. Find compresses paths as it goes, and .NET Framework's
+            // Dictionary bumps its version even when a value is overwritten rather than
+            // added - so walking parent.Keys directly throws part way through.
+            var keys = new List<int>(parent.Keys);
+
+            var groups = new Dictionary<int, List<int>>();
+            foreach (var v in keys)
+            {
+                var root = Find(parent, v);
+
+                List<int> island;
+                if (!groups.TryGetValue(root, out island))
+                {
+                    island = new List<int>();
+                    groups[root] = island;
+                }
+                island.Add(v);
+            }
+
+            return new List<List<int>>(groups.Values);
+        }
+
+        private static int Find(Dictionary<int, int> parent, int v)
+        {
+            while (parent[v] != v)
+            {
+                parent[v] = parent[parent[v]];
+                v = parent[v];
+            }
+            return v;
+        }
+
+        private static void Join(Dictionary<int, int> parent, int a, int b)
+        {
+            var ra = Find(parent, a);
+            var rb = Find(parent, b);
+            if (ra != rb) parent[ra] = rb;
+        }
+
+        /// <summary>
+        /// The bounding rectangle of the largest group of triangles whose own rectangles
+        /// touch each other - which is the shape of one painted feature on the sheet.
+        ///
+        /// Merging by overlap is what separates a field from a detail. A painted area is
+        /// covered by many triangles that necessarily abut, so they collapse into one
+        /// rectangle the size of the area; something painted off on its own - a log-end
+        /// disc, a knot, a strip of banding - has nothing adjoining it and stays separate.
+        /// No threshold to tune and no assumption about where a donor keeps things.
+        ///
+        /// Repeated until nothing more merges, because merging is transitive: three strips
+        /// side by side only become one field if the pass that joins the first two then
+        /// gets a chance to see the third.
+        /// </summary>
+        private static Rect Cluster(List<Rect> rects)
+        {
+            var none = new Rect(0f, 0f, 0f, 0f);
+            if (rects == null || rects.Count == 0) return none;
+
+            var merged = new List<Rect>(rects);
+
+            // Touching, not merely overlapping. Two strips of one painted field share an
+            // edge exactly, and floating point means "exactly" is not something to wait
+            // for - a hair under half a texel on the smallest sheet vanilla ships.
+            const float touch = 1f / 128f;
+
+            bool changed;
+            var guard = 0;
+            do
+            {
+                changed = false;
+                guard++;
+
+                for (var i = 0; i < merged.Count && !changed; i++)
+                {
+                    for (var j = i + 1; j < merged.Count; j++)
+                    {
+                        var a = merged[i];
+                        var b = merged[j];
+
+                        if (a.xMin > b.xMax + touch || b.xMin > a.xMax + touch) continue;
+                        if (a.yMin > b.yMax + touch || b.yMin > a.yMax + touch) continue;
+
+                        var x0 = Mathf.Min(a.xMin, b.xMin);
+                        var y0 = Mathf.Min(a.yMin, b.yMin);
+                        merged[i] = new Rect(x0, y0,
+                            Mathf.Max(a.xMax, b.xMax) - x0,
+                            Mathf.Max(a.yMax, b.yMax) - y0);
+                        merged.RemoveAt(j);
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+            while (changed && guard < 4096);
+
+            var best = none;
+            foreach (var rect in merged)
+            {
+                if (rect.width * rect.height > best.width * best.height) best = rect;
+            }
+
+            return best;
+        }
+
         private static bool IsMetal(string family)
         {
             return string.Equals(family, "iron", StringComparison.OrdinalIgnoreCase);
@@ -420,13 +558,26 @@ namespace Stoker
         /// The two slices of texture a donor uses: the field its broad faces sit on, and
         /// the patch its end faces sit on.
         ///
-        /// Both are measured from one single face, not from the whole mesh. Measuring
-        /// min/max across every vertex gives a rectangle spanning every tile the donor
-        /// touches - for stone_wall_2x1 that was 71% of the sheet - and squeezing our
-        /// coordinates into that still walks across tile boundaries. The largest single
-        /// triangle is used because area is a good proxy for "a plain wall face" rather
-        /// than a trim detail, and a triangle cannot straddle two tiles without the donor
-        /// itself looking wrong.
+        /// Neither is the whole mesh's extent and neither is one triangle. Both of those
+        /// were tried and both are wrong in opposite directions.
+        ///
+        /// Min/max across every vertex gives a rectangle spanning every tile the donor
+        /// touches - on stone_wall_2x1 that was 71% of the sheet - and squeezing our
+        /// coordinates into that still walks across tile boundaries.
+        ///
+        /// The largest single triangle, which is what this did until the game showed
+        /// otherwise, is far too small. wood_wall_log's bark is painted as a row of
+        /// adjacent vertical strips, one per log in the wall, and the biggest triangle in
+        /// it is a single strip 10 pixels wide. Everything in the group then had to fit
+        /// inside those 10 pixels, which put the woodrack at 7 texels per metre against a
+        /// target of 35 - each texel blown up to 14cm, so the roof planks read as a
+        /// checkerboard of enormous squares. The barrels went the same way at 6.
+        ///
+        /// So: cluster the triangles by whether their rectangles touch, and take the
+        /// biggest cluster. Adjacent strips of one painted field merge into that field;
+        /// a disc in the corner of the sheet stays its own cluster because nothing
+        /// touches it. That is the shape of a painted feature, which is what we actually
+        /// want to aim at.
         ///
         /// The cap is found by area, not by name or by hardcoded rectangle. Triangles are
         /// bucketed by which axis their normal points along, and the axis carrying the
@@ -467,11 +618,10 @@ namespace Stoker
             if (uv == null || uv.Length == 0 || tris == null || tris.Length < 3) return;
             if (verts == null || verts.Length == 0) return;
 
-            // Per dominant normal axis: how much surface it carries, and the biggest single
-            // triangle's rect on it.
+            // Per dominant normal axis: how much surface it carries, and every triangle's
+            // rect on it, kept for clustering rather than reduced to a single winner.
             var surface = new float[3];
-            var bestArea = new float[3];
-            var best = new[] { whole, whole, whole };
+            var rects = new[] { new List<Rect>(), new List<Rect>(), new List<Rect>() };
 
             for (var i = 0; i + 2 < tris.Length; i += 3)
             {
@@ -507,11 +657,7 @@ namespace Stoker
                 if (width <= 0.005f || height <= 0.005f) continue;
                 if (width > 1f || height > 1f) continue;
 
-                var area = width * height;
-                if (area <= bestArea[axis]) continue;
-
-                bestArea[axis] = area;
-                best[axis] = new Rect(minX, minY, width, height);
+                rects[axis].Add(new Rect(minX, minY, width, height));
             }
 
             var total = surface[0] + surface[1] + surface[2];
@@ -525,7 +671,8 @@ namespace Stoker
                 if (surface[i] > surface[most]) most = i;
             }
 
-            if (bestArea[most] > 0f) side = best[most];
+            var field = Cluster(rects[most]);
+            if (field.width > 0f) side = field;
 
             // A donor whose thinnest axis still carries a third of its surface is not a
             // timber - it is a box, and its "ends" are just more of the same wall. Aiming
@@ -533,9 +680,10 @@ namespace Stoker
             // nothing, so it falls back to the side field, which is at least the surface
             // the piece is made of.
             var share = surface[least] / total;
-            if (share <= 0.30f && bestArea[least] > 0f)
+            var disc = Cluster(rects[least]);
+            if (share <= 0.30f && disc.width > 0f)
             {
-                cap = best[least];
+                cap = disc;
             }
             else
             {
@@ -623,47 +771,73 @@ namespace Stoker
                     continue;
                 }
 
-                // The group's own extent, in metres. Per group rather than per mesh: a
-                // handful of small stone footings and a metre of timber want different
-                // scales to land on the same density, which is the whole point.
-                var min = new Vector2(float.MaxValue, float.MaxValue);
-                var max = new Vector2(float.MinValue, float.MinValue);
-                foreach (var index in indices)
+                // Per island, not per group - and that distinction is worth as much as the
+                // rect being the right size.
+                //
+                // A group's extent is the bounding box of every part in it laid side by
+                // side, which is nothing any single part needs. The trough's six hoops
+                // measured 2.72m across as a group; one hoop is 1.9m round, and the other
+                // 0.8m was just the next hoop sitting beside it in UV space. Fitting the
+                // group meant fitting a surface that does not exist, and it cost the hoops
+                // 7 texels per metre - one or two pixels of grey stretched round a barrel,
+                // which is why they came out as thin white wires.
+                //
+                // Islands are free to overlap each other inside the rect. That is what
+                // tiling means, and it is safe done this way: a part is placed whole, so no
+                // face ever straddles the rect boundary. Wrapping per vertex is the thing
+                // that cannot be done - Stow paid for that one, with faces whose corners
+                // landed at 0.9 and 0.2 and a GPU interpolating backwards across the tile.
+                var islands = Islands(indices, uv);
+
+                var coarsest = float.MaxValue;
+                var finest = 0f;
+
+                foreach (var island in islands)
                 {
-                    if (index < 0 || index >= uv.Length) continue;
-                    min = Vector2.Min(min, uv[index]);
-                    max = Vector2.Max(max, uv[index]);
+                    var min = new Vector2(float.MaxValue, float.MaxValue);
+                    var max = new Vector2(float.MinValue, float.MinValue);
+                    foreach (var index in island)
+                    {
+                        min = Vector2.Min(min, uv[index]);
+                        max = Vector2.Max(max, uv[index]);
+                    }
+
+                    var span = max - min;
+                    if (span.x <= 0f || span.y <= 0f) continue;
+
+                    // Wanted, then reduced until it fits. Uniform on both axes so the
+                    // texture is not stretched in one direction, which reads as smeared
+                    // grain.
+                    var scale = target / px;
+                    scale = Mathf.Min(scale, rect.width / span.x);
+                    scale = Mathf.Min(scale, rect.height / span.y);
+
+                    coarsest = Mathf.Min(coarsest, scale * px);
+                    finest = Mathf.Max(finest, scale * px);
+
+                    // Centred in the rect, so a part that does fit samples the middle of
+                    // the patch rather than its edge, where the neighbour bleeds across.
+                    var centre = (min + max) * 0.5f;
+                    var offset = new Vector2(rect.x + rect.width * 0.5f,
+                                             rect.y + rect.height * 0.5f) - centre * scale;
+
+                    foreach (var index in island)
+                    {
+                        if (done[index]) continue;
+                        done[index] = true;
+
+                        uv[index] = new Vector2(
+                            Mathf.Clamp(uv[index].x * scale + offset.x, rect.xMin, rect.xMax),
+                            Mathf.Clamp(uv[index].y * scale + offset.y, rect.yMin, rect.yMax));
+                    }
                 }
 
-                var span = max - min;
-                if (span.x <= 0f || span.y <= 0f) continue;
-
-                // Wanted, then reduced until it fits. Uniform on both axes so the texture
-                // is not stretched in one direction, which reads as smeared grain.
-                var scale = target / px;
-                scale = Mathf.Min(scale, rect.width / span.x);
-                scale = Mathf.Min(scale, rect.height / span.y);
-
-                // Centred in the rect, so a group that does fit is sampling the middle of
-                // the tile rather than pressed against its edge where the neighbour bleeds.
-                var centre = (min + max) * 0.5f;
-                var offset = new Vector2(rect.x + rect.width * 0.5f, rect.y + rect.height * 0.5f)
-                             - centre * scale;
-
-                foreach (var index in indices)
-                {
-                    if (index < 0 || index >= uv.Length || done[index]) continue;
-                    done[index] = true;
-
-                    uv[index] = new Vector2(
-                        Mathf.Clamp(uv[index].x * scale + offset.x, rect.xMin, rect.xMax),
-                        Mathf.Clamp(uv[index].y * scale + offset.y, rect.yMin, rect.yMax));
-                }
+                if (finest <= 0f) continue;
 
                 StokerPlugin.Log.LogInfo(string.Format(
-                    "'{0}' laid out at {1:0} texels/m (wanted {2:0}), {3:0.00}x{4:0.00}m in "
-                    + "a {5:0.000}x{6:0.000} rect.",
-                    key, scale * px, target, span.x, span.y, rect.width, rect.height));
+                    "'{0}' laid out at {1:0}-{2:0} texels/m (wanted {3:0}) across {4} "
+                    + "parts, in a {5:0.000}x{6:0.000} rect.",
+                    key, coarsest, finest, target, islands.Count, rect.width, rect.height));
             }
 
             mesh.uv = uv;
