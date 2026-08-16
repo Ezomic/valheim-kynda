@@ -1151,4 +1151,8 @@ def main():
     print("VARIANTS_DONE")
 
 
-main()
+# Guarded so another design script can import the helpers rather than copy them a
+# fourth time. Blender runs the file it is given as __main__, so this still builds
+# every variant when it is the script; imported, it defines and does nothing.
+if __name__ == "__main__":
+    main()

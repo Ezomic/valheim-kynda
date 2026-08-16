@@ -2,6 +2,9 @@
 bin/
 obj/
 
+# Written when one design script imports another's helpers rather than copying them.
+tools/__pycache__/
+
 # Local IDE / user files
 *.user
 *.suo
