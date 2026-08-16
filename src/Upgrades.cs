@@ -460,7 +460,6 @@ namespace Stoker
         }
 
         private static GameObject _holder;
-        private static bool _addedToHammer;
 
         public static bool Ready
         {
@@ -479,9 +478,9 @@ namespace Stoker
         public static bool Register()
         {
             if (!StokerConfig.Enabled.Value) return true;
-            if (Ready && _addedToHammer) return true;
 
             if (ZNetScene.instance == null || ObjectDB.instance == null) return false;
+            if (Ready && InHammer()) return true;
 
             foreach (var def in Active())
             {
@@ -801,25 +800,62 @@ namespace Stoker
             }
         }
 
-        private static void AddToHammer()
+        /// <summary>
+        /// Whether every active upgrade is already in the hammer's current piece table.
+        ///
+        /// Asked of the table rather than remembered in a static bool. ObjectDB is rebuilt
+        /// per world, so the Hammer from the last one is a different object with a
+        /// different list - and a flag that says "already done" then keeps the upgrades out
+        /// of the build menu for the whole of the second world of a session. Stow lost a
+        /// built piece to the same mistake in its harsher form, where the stale flag guarded
+        /// the ZNetScene registration and every ZDO of the prefab was discarded.
+        /// </summary>
+        private static bool InHammer()
         {
-            if (_addedToHammer) return;
-
-            var hammer = ObjectDB.instance.GetItemPrefab("Hammer");
-            var drop = hammer != null ? hammer.GetComponent<ItemDrop>() : null;
-            if (drop == null || drop.m_itemData == null || drop.m_itemData.m_shared == null) return;
-
-            var table = drop.m_itemData.m_shared.m_buildPieces;
-            if (table == null || table.m_pieces == null) return;
+            var table = HammerPieces();
+            if (table == null) return false;
 
             foreach (var def in Active())
             {
-                if (def.Prefab == null) return;
-                if (!table.m_pieces.Contains(def.Prefab)) table.m_pieces.Add(def.Prefab);
+                if (def.Prefab == null) return false;
+                if (!table.m_pieces.Contains(def.Prefab)) return false;
             }
 
-            _addedToHammer = true;
-            StokerPlugin.Log.LogInfo("Both upgrades added to the hammer.");
+            return true;
+        }
+
+        private static PieceTable HammerPieces()
+        {
+            if (ObjectDB.instance == null) return null;
+
+            var hammer = ObjectDB.instance.GetItemPrefab("Hammer");
+            var drop = hammer != null ? hammer.GetComponent<ItemDrop>() : null;
+            if (drop == null || drop.m_itemData == null || drop.m_itemData.m_shared == null)
+                return null;
+
+            var table = drop.m_itemData.m_shared.m_buildPieces;
+            return table != null && table.m_pieces != null ? table : null;
+        }
+
+        private static void AddToHammer()
+        {
+            var table = HammerPieces();
+            if (table == null) return;
+
+            var added = 0;
+            foreach (var def in Active())
+            {
+                if (def.Prefab == null) return;
+                if (table.m_pieces.Contains(def.Prefab)) continue;
+
+                table.m_pieces.Add(def.Prefab);
+                added++;
+            }
+
+            // Logged on the add, not on the call: this is retried every frame and an
+            // already-satisfied retry would write a line per frame.
+            if (added > 0)
+                StokerPlugin.Log.LogInfo(added + " upgrade(s) added to the hammer.");
         }
     }
 }
