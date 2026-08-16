@@ -99,9 +99,20 @@ namespace Stoker
             Range = config.Bind("Upgrades", "Range", 4f,
                 "How close an upgrade must be to the station it feeds.");
 
-            MaxPerStation = config.Bind("Upgrades", "MaxPerStation", 2,
-                "Most upgrades of one kind that will count for one station. Keeps it a "
-                + "decision rather than something you stack until capacity stops mattering.");
+            // One. An upgrade is a one-time improvement to a station, not a currency you
+            // spend until capacity stops mattering.
+            //
+            // At two, the figures the whole design is built on stopped meaning anything:
+            // the kiln's 25 becomes 50 becomes 75, and "a charcoal kiln landing on a round
+            // 50" - the reason the woodrack adds 25 where the trough adds 20 - was only
+            // true if you happened to build exactly one. A second bin now changes nothing
+            // and says so when you look at it, because a silent no-op reads as a bug.
+            MaxPerStation = config.Bind("Upgrades", "MaxPerStation", 1,
+                "How many upgrades of one kind count for a single station. One, because "
+                + "these are a one-time improvement rather than something to stack - the "
+                + "capacity figures are chosen to land on a round number exactly once. "
+                + "Raising it stacks them again; a bin that is not counting says so when "
+                + "you look at it.");
 
             // Measured off the game rather than picked. Ripping the build set showed
             // vanilla runs two families: structural blocks - beam, pole, door, floor - at

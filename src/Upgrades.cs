@@ -320,6 +320,38 @@ namespace Stoker
             return count;
         }
 
+        /// <summary>
+        /// How many upgrades of this kind stand closer to the same station than this one.
+        ///
+        /// Which is how a bin knows whether it is doing anything. The upgrade is one-time
+        /// now, so the second one built beside a station changes nothing at all - and
+        /// without being told, that is indistinguishable from a broken mod. Nearest wins,
+        /// because it is stable: distance does not change when a piece is destroyed and
+        /// rebuilt, where "whichever registered first" would hand the credit around.
+        /// </summary>
+        private int CloserToStation(Vector3 station)
+        {
+            var mine = Vector3.Distance(transform.position, station);
+            var range = StokerConfig.Range.Value;
+            var ahead = 0;
+
+            foreach (var bin in All)
+            {
+                if (bin == null || bin == this || bin.m_servesFuelled != m_servesFuelled)
+                    continue;
+
+                var theirs = Vector3.Distance(bin.transform.position, station);
+                if (theirs > range) continue;
+
+                // Ties broken on the instance id, so two bins the same distance out do not
+                // both call themselves redundant and leave the station apparently unserved.
+                if (theirs < mine || (theirs == mine && bin.GetInstanceID() < GetInstanceID()))
+                    ahead++;
+            }
+
+            return ahead;
+        }
+
         public string GetHoverName()
         {
             return _piece != null ? _piece.m_name : "";
@@ -344,12 +376,26 @@ namespace Stoker
             //
             // The unattached case keeps its line, because that one is not information
             // about the piece, it is the piece telling you it is doing nothing.
-            var station = SmelterCapacity.NearestUsing(transform.position, m_servesFuelled);
+            var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
 
-            return Localization.instance.Localize(
-                station == null
-                    ? name + "\n<color=grey>not beside anything it can feed</color>"
-                    : name);
+            if (station == null)
+            {
+                return Localization.instance.Localize(
+                    name + "\n<color=grey>not beside anything it can feed</color>");
+            }
+
+            // The one case that does need saying. An upgrade is one-time, so a second one
+            // beside the same station does nothing whatsoever - and silence there is
+            // indistinguishable from the mod being broken, which is the reading a player
+            // will reach for first.
+            var ahead = CloserToStation(station.transform.position);
+            if (ahead >= Mathf.Max(1, StokerConfig.MaxPerStation.Value))
+            {
+                return Localization.instance.Localize(
+                    name + "\n<color=grey>already upgraded - this one adds nothing</color>");
+            }
+
+            return Localization.instance.Localize(name);
         }
     }
 
