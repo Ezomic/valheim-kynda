@@ -560,6 +560,19 @@ namespace Stoker
                 // does m_upgrade.SetActive(piece.m_isUpgrade) - so it is a flag rather than
                 // something to draw, and these are exactly what it means by an upgrade.
                 piece.m_isUpgrade = true;
+
+                // The forge, not the workbench the donor came with.
+                //
+                // A chest is workbench work and these are not: both upgrades are nailed
+                // together now, and nails are a forge product. It also puts the station
+                // requirement in step with the cost - there is no point asking for iron
+                // nails at a bench that could never have made them.
+                //
+                // Left alone rather than nulled if the forge cannot be found. A piece with
+                // no station requirement at all is buildable anywhere, which is a quieter
+                // and worse failure than one asking for the wrong bench.
+                var station = StationNamed(StokerConfig.Station.Value);
+                if (station != null) piece.m_craftingStation = station;
             }
 
             UpgradeModel.Apply(clone, def.ModelValue, def.Skins);
@@ -583,6 +596,38 @@ namespace Stoker
 
             StokerPlugin.Log.LogInfo("Built " + def.PrefabName + " from " + source.name + ".");
             return clone;
+        }
+
+        /// <summary>
+        /// The CraftingStation component off a named prefab.
+        ///
+        /// Via PropIndex rather than ZNetScene, for the same reason the materials go that
+        /// way: plenty of prefabs are reachable without carrying a ZNetView.
+        /// </summary>
+        private static CraftingStation StationNamed(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+
+            var prefab = PropIndex.Find(name);
+            if (prefab == null)
+            {
+                StokerPlugin.Log.LogWarning(
+                    "No prefab called '" + name + "' for the crafting station requirement - "
+                    + "the upgrades keep the donor's, which is the workbench.");
+                return null;
+            }
+
+            var station = prefab.GetComponent<CraftingStation>()
+                          ?? prefab.GetComponentInChildren<CraftingStation>(true);
+
+            if (station == null)
+            {
+                StokerPlugin.Log.LogWarning(
+                    "'" + name + "' exists but is not a crafting station - the upgrades keep "
+                    + "the donor's.");
+            }
+
+            return station;
         }
 
         // ------------------------------------------------------------------ the icon

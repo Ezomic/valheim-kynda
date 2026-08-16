@@ -22,6 +22,7 @@ namespace Stoker
 
         public static ConfigEntry<bool> Enabled;
         public static ConfigEntry<string> Donor;
+        public static ConfigEntry<string> Station;
         public static ConfigEntry<float> Range;
         public static ConfigEntry<int> MaxPerStation;
         public static ConfigEntry<float> TexelsPerMetre;
@@ -85,6 +86,15 @@ namespace Stoker
                 "Prefab cloned for its machinery - ZNetView, Piece, WearNTear, placement "
                 + "rules. Its look, collision and icon are all replaced, so this is not a "
                 + "visual choice. Falls back to piece_chest_wood. Needs a restart.");
+
+            // The donor is a chest, so both upgrades inherited the workbench. They are
+            // nailed together now, and nails are forge work - so the bench you need to
+            // build one is in step with what it is made of.
+            Station = config.Bind("Upgrades", "Station", "forge",
+                "Prefab name of the crafting station you must stand near to build these. "
+                + "The forge, because both upgrades are held together with nails and a "
+                + "workbench could never have made them. Empty or an unknown name leaves "
+                + "the donor's, which is the workbench.");
 
             Range = config.Bind("Upgrades", "Range", 4f,
                 "How close an upgrade must be to the station it feeds.");

@@ -84,10 +84,6 @@ namespace Stoker
                 var camera = rig.AddComponent<Camera>();
                 camera.orthographic = true;
                 camera.clearFlags = CameraClearFlags.SolidColor;
-
-                // Transparent black, not transparent white. A white background bleeds pale
-                // fringes into every edge when the sprite is filtered down.
-                camera.backgroundColor = new Color(0f, 0f, 0f, 0f);
                 camera.cullingMask = 1 << Layer;
                 camera.enabled = false;
 
@@ -105,9 +101,68 @@ namespace Stoker
                 target = RenderTexture.GetTemporary(Size, Size, 24, RenderTextureFormat.ARGB32,
                                                     RenderTextureReadWrite.sRGB);
                 camera.targetTexture = target;
-                camera.Render();
 
-                RenderTexture.active = target;
+                // The world's own atmosphere is not a studio. Fog is the one that actually
+                // ruins a shot - it is applied per pixel by distance and the subject sits
+                // eight kilometres down where Valheim's is thick - and ambient decides how
+                // dark the faces the key light misses come out, which at night is nearly
+                // black. Both are global, so they are set for the two frames and put back.
+                var fog = RenderSettings.fog;
+                var ambientMode = RenderSettings.ambientMode;
+                var ambient = RenderSettings.ambientLight;
+                var ambientIntensity = RenderSettings.ambientIntensity;
+
+                Color[] onBlack, onWhite;
+                try
+                {
+                    RenderSettings.fog = false;
+                    RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+
+                    // Enough to keep the shadow side readable and not so much that it
+                    // flattens the form. Vanilla's icons are contrasty but never black.
+                    RenderSettings.ambientLight = new Color(0.34f, 0.35f, 0.38f);
+                    RenderSettings.ambientIntensity = 1f;
+
+                    // Twice, on black and on white. An opaque shader has no reason to write
+                    // a meaningful alpha and Valheim's do not, so reading the alpha channel
+                    // back gives whatever happened to be in it - which is how an icon comes
+                    // out fully transparent, or solid to the edges of the frame, with
+                    // nothing wrong in the render itself.
+                    //
+                    // Two exposures answer it without trusting the shader: a pixel the
+                    // subject covers completely looks the same against either background, a
+                    // pixel it misses entirely takes the background, and an edge lands in
+                    // between by exactly its coverage. That difference is the alpha, and
+                    // recovering it this way keeps the soft edges that make the sprite look
+                    // photographed rather than cut out.
+                    onBlack = Expose(camera, target, Color.black);
+                    onWhite = Expose(camera, target, Color.white);
+                }
+                finally
+                {
+                    RenderSettings.fog = fog;
+                    RenderSettings.ambientMode = ambientMode;
+                    RenderSettings.ambientLight = ambient;
+                    RenderSettings.ambientIntensity = ambientIntensity;
+                }
+
+                var pixels = new Color[onBlack.Length];
+                var covered = 0;
+
+                for (var i = 0; i < pixels.Length; i++)
+                {
+                    var a = 1f - (onWhite[i].r - onBlack[i].r);
+                    a = Mathf.Clamp01(Mathf.Max(a, Mathf.Max(
+                        1f - (onWhite[i].g - onBlack[i].g),
+                        1f - (onWhite[i].b - onBlack[i].b))));
+
+                    // Straight colour out of the premultiplied one the black pass gives.
+                    pixels[i] = a <= 0.004f
+                        ? new Color(0f, 0f, 0f, 0f)
+                        : new Color(onBlack[i].r / a, onBlack[i].g / a, onBlack[i].b / a, a);
+
+                    if (a > 0.5f) covered++;
+                }
 
                 var texture = new Texture2D(Size, Size, TextureFormat.RGBA32, false)
                 {
@@ -116,13 +171,21 @@ namespace Stoker
                     name = name + "_icon",
                     hideFlags = HideFlags.HideAndDontSave
                 };
-                texture.ReadPixels(new Rect(0f, 0f, Size, Size), 0, 0);
+                texture.SetPixels(pixels);
                 texture.Apply();
 
+                // The coverage figure is the cheap check that the shot is worth keeping. A
+                // few percent means the piece missed the frame or came out transparent;
+                // near a hundred means the camera is inside it. Neither is visible from a
+                // log line saying the render succeeded, which is what the first version
+                // said while producing unusable icons.
                 StokerPlugin.Log.LogInfo(string.Format(
-                    "Icon for {0} rendered from the prefab at {1}px, subject {2:0.00}x"
-                    + "{3:0.00}x{4:0.00}m.",
-                    name, Size, bounds.size.x, bounds.size.y, bounds.size.z));
+                    "Icon for {0}: {1}px, subject {2:0.00}x{3:0.00}x{4:0.00}m, {5:0}% of the "
+                    + "frame covered.",
+                    name, Size, bounds.size.x, bounds.size.y, bounds.size.z,
+                    covered * 100f / pixels.Length));
+
+                Dump(texture, name);
 
                 return Sprite.Create(texture, new Rect(0f, 0f, Size, Size),
                                      new Vector2(0.5f, 0.5f));
@@ -145,6 +208,59 @@ namespace Stoker
                 // carrying a Piece.
                 if (rig != null) UnityEngine.Object.DestroyImmediate(rig);
                 if (subject != null) UnityEngine.Object.DestroyImmediate(subject);
+            }
+        }
+
+        /// <summary>One frame against a known background, read straight back.</summary>
+        private static Color[] Expose(Camera camera, RenderTexture target, Color background)
+        {
+            camera.backgroundColor = new Color(background.r, background.g, background.b, 1f);
+            camera.Render();
+
+            RenderTexture.active = target;
+
+            var readable = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+            try
+            {
+                readable.ReadPixels(new Rect(0f, 0f, Size, Size), 0, 0);
+                readable.Apply();
+                return readable.GetPixels();
+            }
+            finally { UnityEngine.Object.DestroyImmediate(readable); }
+        }
+
+        /// <summary>
+        /// Writes the icon beside the dll when Verbose is on.
+        ///
+        /// Worth the twenty lines. The first version of this logged that it had rendered
+        /// successfully and produced unusable icons, and there is no way to tell black from
+        /// transparent from washed-out by reading a log - or to fix any of them without
+        /// knowing which one it is.
+        /// </summary>
+        private static void Dump(Texture2D texture, string name)
+        {
+            if (StokerConfig.Verbose == null || !StokerConfig.Verbose.Value) return;
+
+            try
+            {
+                var type = HarmonyLib.AccessTools.TypeByName("UnityEngine.ImageConversion");
+                var encode = type != null
+                    ? HarmonyLib.AccessTools.Method(type, "EncodeToPNG", new[] { typeof(Texture2D) })
+                    : null;
+                if (encode == null) return;
+
+                var bytes = encode.Invoke(null, new object[] { texture }) as byte[];
+                if (bytes == null) return;
+
+                var dir = System.IO.Path.GetDirectoryName(typeof(IconRender).Assembly.Location);
+                var path = System.IO.Path.Combine(dir, name + "_rendered.png");
+                System.IO.File.WriteAllBytes(path, bytes);
+
+                StokerPlugin.Log.LogInfo("Wrote " + path + " to look at.");
+            }
+            catch (Exception e)
+            {
+                StokerPlugin.Log.LogWarning("Could not dump the icon: " + e.Message);
             }
         }
 
