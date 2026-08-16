@@ -560,9 +560,6 @@ namespace Stoker
                 // does m_upgrade.SetActive(piece.m_isUpgrade) - so it is a flag rather than
                 // something to draw, and these are exactly what it means by an upgrade.
                 piece.m_isUpgrade = true;
-
-                var icon = LoadIcon(def);
-                if (icon != null) piece.m_icon = icon;
             }
 
             UpgradeModel.Apply(clone, def.ModelValue, def.Skins);
@@ -572,6 +569,17 @@ namespace Stoker
 
             var bin = clone.GetComponent<UpgradeBin>() ?? clone.AddComponent<UpgradeBin>();
             bin.m_servesFuelled = def.ServesFuelled;
+
+            // After the model, the materials and the scale, because the icon is a
+            // photograph of the finished piece and none of that has happened yet where it
+            // used to sit. Taken there it would have shown the donor's barrel wearing the
+            // donor's chest textures at the donor's size - a picture of the thing this
+            // piece was cloned from rather than of the piece.
+            if (piece != null)
+            {
+                var shot = IconRender.Shoot(clone, def.PrefabName) ?? LoadIcon(def);
+                if (shot != null) piece.m_icon = shot;
+            }
 
             StokerPlugin.Log.LogInfo("Built " + def.PrefabName + " from " + source.name + ".");
             return clone;
