@@ -67,7 +67,7 @@ def scale_for(name):
     return SCALE["rack"] if "rack" in name else SCALE["trough"]
 
 
-def staged_scene(size):
+def staged_scene(size, close=False):
     """
     Eye height, three and a half metres back, with the station it upgrades beside it.
 
@@ -123,10 +123,20 @@ def staged_scene(size):
     # metre cube one side and a smelter the other does not fit at any distance you would
     # actually stand at, and backing off far enough to fit it stops being eye height and
     # starts being a survey photograph.
-    bpy.ops.object.camera_add(location=(0.25, -5.4, 1.7))
-    cam = bpy.context.active_object
-    cam.data.lens = 35.0
-    cam.rotation_euler = (math.radians(83.0), 0.0, math.radians(0.0))
+    # close is for comparing a detail rather than a silhouette - still standing height,
+    # just at the distance you are at when you actually put ore in the thing. A detail
+    # pass needs its own frame: at 5.4m a hoop is four pixels and every treatment of it
+    # looks identical, which is how a part nobody can see gets argued about.
+    if close:
+        bpy.ops.object.camera_add(location=(0.05, -4.0, 1.62))
+        cam = bpy.context.active_object
+        cam.data.lens = 42.0
+        cam.rotation_euler = (math.radians(84.0), 0.0, math.radians(0.0))
+    else:
+        bpy.ops.object.camera_add(location=(0.25, -5.4, 1.7))
+        cam = bpy.context.active_object
+        cam.data.lens = 35.0
+        cam.rotation_euler = (math.radians(83.0), 0.0, math.radians(0.0))
     bpy.context.scene.camera = cam
 
 
@@ -411,13 +421,152 @@ CANDIDATES = [
 ]
 
 
+# ------------------------------------------------------------------- the cask itself
+#
+# The arrangement is settled - two casks on a kerb, no frame - and the cask is what
+# reads as modded. Three reasons, and none of them is the arrangement:
+#
+# It is not a cask shape. A real one bulges at the belly; ours is a straight tube, and
+# the note in trough_barrels says so explicitly - the bulge was dropped on the grounds
+# that at 28 texels/m it is under a pixel of shading. That was about *shading*, and the
+# thing it costs is *silhouette*, which is not under a pixel of anything. A straight
+# hooped cylinder is a bucket, or a planter.
+#
+# The staves are modelled as square posts. Twenty 11.5cm boxes round a 30cm radius give
+# a corrugated outline no vanilla barrel has - piece_chest_barrel is a turned cylinder
+# with the staves painted on, which is the same trade as end grain: vanilla paints the
+# detail it does not model, and modelling it is most of what makes a prop look fan-made.
+#
+# It is oversized. Vanilla's barrell measures 0.84 across and 1.10 tall. Ours is 0.90 x
+# 1.35 in the world, so it stands a head above the thing it is imitating - and something
+# that is nearly a familiar object but bigger is exactly the uncanny note being reported.
+# The figures below are vanilla's, worked back through Scale 1.5: radius 0.28 modelled
+# is 0.84 across in the world, height 0.74 is 1.11 tall.
+
+ORE, COAL = (-0.34, 0.280, 0.74), (0.42, 0.225, 0.56)
+
+
+def hoops(x, radii, thickness=0.042):
+    """
+    Thin, and barely proud of the wood.
+
+    The shipped hoop is 7.5cm tall standing 2.2cm off an 11-sided ring against a body
+    of a different side count, and at arm's length it is a grey donut rather than a
+    band of iron - it was the loudest thing on the piece. Same side count as the body,
+    so the facets line up instead of the hoop's vertices poking through the staves.
+    """
+    for z, r in radii:
+        band(r + 0.008, thickness, z, sides=15, centre=(x, 0.0))
+
+
+def cask_smooth(x, radius, top, fill):
+    """
+    A turned barrel: bulged body, no modelled staves, three thin hoops.
+
+    This is how vanilla builds one, and it is also cheaper - two cones of fifteen sides
+    against twenty beveled boxes. The stave lines come from the donor's texture, which
+    is the whole reason we skin off piece_chest_barrel in the first place.
+    """
+    waist = radius * 0.87
+    cone(waist, radius, top * 0.52, top * 0.26, "wood", sides=15, centre=(x, 0.0))
+    cone(radius, radius * 0.93, top * 0.50, top * 0.75, "wood", sides=15, centre=(x, 0.0))
+    hoops(x, ((top * 0.10, waist * 1.04), (top * 0.50, radius),
+              (top * 0.95, radius * 0.94)))
+    contents((x, 0.0, top * 0.93), radius * 0.86, fill, rise=0.13,
+             count=6, lump=0.072)
+
+
+def cask_staved(x, radius, top, fill, stave=0.10):
+    """
+    Modelled staves kept, but coopered rather than extruded: two courses, the lower
+    leaning out and the upper leaning in, so the barrel is widest at its belly.
+
+    Six degrees each way is enough - a barrel bulges by about a tenth of its girth, not
+    by a third. The tilt is about local Y after the spin, which lands radially.
+    """
+    staves = ring_count(radius * 0.94, stave)
+    for i in range(staves):
+        a = (i / float(staves)) * math.tau
+        cx, cy = x + math.cos(a) * radius * 0.94, math.sin(a) * radius * 0.94
+        d = math.degrees(a)
+        box((stave, stave, top * 0.58), (cx, cy, top * 0.27), "wood",
+            rot=(0.0, -6.0, d), wobble=0.4)
+        box((stave, stave, top * 0.58), (cx, cy, top * 0.73), "wood",
+            rot=(0.0, 6.0, d), wobble=0.4)
+    hoops(x, ((top * 0.10, radius * 0.93), (top * 0.50, radius * 1.02),
+              (top * 0.95, radius * 0.94)))
+    contents((x, 0.0, top * 0.93), radius * 0.86, fill, rise=0.13,
+             count=6, lump=0.072)
+
+
+def cask_cut(x, radius, top, fill):
+    """
+    A barrel sawn off just above its belly, so the mouth is the widest part of it.
+
+    The one treatment that explains itself. Every other version is a cask that happens
+    to have no lid, and an open barrel full of ore is not a thing a cooper makes - it is
+    a thing somebody did to a barrel. Cutting it at the belly is what you would actually
+    do, it puts the widest hoop at the rim holding the staves in, and it gives the pair a
+    squatter outline that is further from vanilla's closed barrel rather than nearer it.
+    """
+    body = top * 1.28                      # the height it would have been before the cut
+    waist = radius * 0.87
+    cone(waist, radius, body * 0.46, body * 0.23, "wood", sides=15, centre=(x, 0.0))
+    cone(radius, radius * 0.99, body * 0.14, body * 0.53, "wood", sides=15,
+         centre=(x, 0.0))
+    hoops(x, ((body * 0.09, waist * 1.04), (body * 0.34, radius * 0.97)))
+    hoops(x, ((body * 0.57, radius * 1.00),), thickness=0.058)   # the rim hoop
+    contents((x, 0.0, body * 0.57), radius * 0.92, fill, rise=0.12,
+             count=6, lump=0.072)
+
+
+def cask_tub(x, radius, top, fill):
+    """
+    Not a barrel at all: a coopered tub, straight-tapered wider at the top.
+
+    Worth seeing because it sidesteps the comparison entirely. Nothing about it invites
+    you to measure it against vanilla's barrell, so it cannot look like a slightly wrong
+    one. The risk is the opposite failure - a tapered tub with two hoops is close to a
+    flowerpot, and there is no Viking read to fall back on.
+    """
+    cone(radius * 0.78, radius * 1.06, top, top * 0.5, "wood", sides=15, centre=(x, 0.0))
+    hoops(x, ((top * 0.12, radius * 0.84), (top * 0.90, radius * 1.04)))
+    contents((x, 0.0, top * 0.90), radius * 0.96, fill, rise=0.13,
+             count=6, lump=0.072)
+
+
+def kerb():
+    """The base from trough_grounded, unchanged - it is not what is under discussion."""
+    for y in (-0.44, 0.44):
+        box((1.52, 0.14, 0.40), (0.02, y, -0.13), "wood")
+    for x in (-0.80, 0.86):
+        box((0.14, 0.90, 0.38), (x, 0.0, -0.14), "wood")
+    collide((0.02, 0.0, 0.42), (1.80, 0.96, 0.84))
+
+
+def pair(shape):
+    def build():
+        shape(ORE[0], ORE[1], ORE[2], "ore")
+        shape(COAL[0], COAL[1], COAL[2], "coal")
+        kerb()
+    return build
+
+
+CASKS = [
+    ("stoker_cask_smooth", pair(cask_smooth), "CASK - Turned, bulged, painted staves"),
+    ("stoker_cask_staved", pair(cask_staved), "CASK - Coopered staves, two courses"),
+    ("stoker_cask_cut",    pair(cask_cut),    "CASK - Barrel sawn off at the belly"),
+    ("stoker_cask_tub",    pair(cask_tub),    "CASK - Tapered tub"),
+]
+
+
 # --------------------------------------------------------------------------- export
 
-def main():
+def main(items, close=False):
     os.makedirs(PREVIEWS, exist_ok=True)
     os.makedirs(SHELF, exist_ok=True)
 
-    for name, builder, label in BASELINE + CANDIDATES:
+    for name, builder, label in items:
         clear_scene()
         builder()
         obj = finish(name)
@@ -438,8 +587,9 @@ def main():
 
         tint()
         tint_stage()
-        staged_scene(size)
-        render(os.path.join(PREVIEWS, name + "_staged.png"), (760, 620))
+        staged_scene(size, close=close)
+        render(os.path.join(PREVIEWS, name + ("_close" if close else "_staged") + ".png"),
+               (760, 620))
 
         # dimensions is read after staged_scene has applied the runtime scale, so these
         # are already the metres the game draws - multiplying by size again double-counts.
@@ -460,4 +610,8 @@ BASELINE = [
 
 
 if __name__ == "__main__":
-    main()
+    # Which round to shoot. Edited rather than made a flag, because `blender --background
+    # --python` swallows anything after the script name and passing it through argv means
+    # a `--` separator nobody remembers.
+    main(CASKS)
+    main(CASKS, close=True)
