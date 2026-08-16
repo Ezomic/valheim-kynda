@@ -441,13 +441,25 @@ def rack_lean():
     # side-on and read as smooth pipes: the end grain is the whole reason a woodpile
     # is legible at distance, and it has to be pointing at the viewer to do any work.
     # The preview camera stands on -y, so that is where the ends go.
-    for row, z in enumerate((0.24, 0.50, 0.76)):
-        offset = (row % 2) * 0.07 - 0.035
-        for i in range(4):
-            x = -0.33 + i * 0.22
-            billet(0.12, 0.62, (x, offset, z), axis="y")
+    # Packed to the roof, and the rows have to overlap rather than merely touch.
+    #
+    # The old stack sat three rows at 0.26 apart holding logs 0.24 across, so every
+    # row hung two centimetres above the one below it - and billet varies diameter by
+    # up to a eighth either way, so the thin ones hung five. Read as levitating,
+    # correctly. Rows are 0.19 apart on a 0.23 log now, so each course settles into
+    # the hollows of the one under it the way stacked wood actually does.
+    #
+    # It also stopped 24cm short of the roof, which is the difference between a
+    # full rack and a rack someone has been taking from. Five rows reach it.
+    for row, z in enumerate((0.23, 0.42, 0.61, 0.80, 0.97)):
+        # Half-staggered, so a log beds into the gap between the two beneath rather
+        # than balancing on the crown of one.
+        shift = 0.045 if row % 2 else -0.045
+        for i in range(5):
+            x = -0.37 + i * 0.185 + shift
+            billet(0.115, 0.62, (x, (row % 2) * 0.05 - 0.025, z), axis="y")
 
-    box((0.98, 0.60, 0.10), (0.0, 0.02, 0.06), "wood")            # sill the pile sits on
+    box((1.06, 0.60, 0.10), (0.0, 0.02, 0.06), "wood")            # sill the pile sits on
     collide((0.0, 0.0, 0.62), (1.30, 0.68, 1.24))
 
 

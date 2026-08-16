@@ -329,16 +329,27 @@ namespace Stoker
         {
             // Vanilla pokes the link effect from here too, for any extension that is not
             // continuously connected. Looking at the piece is the moment you are asking
-            // which station it belongs to.
+            // which station it belongs to - and the effect answers that on its own, by
+            // drawing a run of motes to the station, which is how a chopping block says
+            // the same thing without a word of text.
             PokeEffect();
 
             var name = GetHoverName();
+
+            // Just the name once it is working. The station and its new capacity used to
+            // be appended - "Charcoal Kiln (ore 50)" - which is build-time information
+            // sitting permanently on a finished object. Vanilla's extensions do not
+            // narrate themselves either: a chopping block reads "Chopping block" and
+            // nothing more, and you learn what it is attached to from the motes.
+            //
+            // The unattached case keeps its line, because that one is not information
+            // about the piece, it is the piece telling you it is doing nothing.
             var station = SmelterCapacity.NearestUsing(transform.position, m_servesFuelled);
 
             return Localization.instance.Localize(
                 station == null
                     ? name + "\n<color=grey>not beside anything it can feed</color>"
-                    : name + "\n<color=orange>" + station + "</color>");
+                    : name);
         }
     }
 
@@ -353,16 +364,19 @@ namespace Stoker
         public static readonly UpgradeDef Trough = new UpgradeDef
         {
             PrefabName = "stoker_hopper",
-            Description = "Ore on one side, coal on the other. A smelter or furnace "
-                          + "beside it holds more of both.",
+            // Says what it upgrades before it says anything else. The build menu shows
+            // this under the name, and the star in the corner only tells you that the
+            // piece is an upgrade - never of what.
+            Description = "Smelter improvement. Ore on one side, coal on the other. A "
+                          + "smelter or furnace beside it holds more of both.",
             ServesFuelled = true,
         };
 
         public static readonly UpgradeDef Woodrack = new UpgradeDef
         {
             PrefabName = "stoker_woodrack",
-            Description = "Split logs, stacked and under cover. A charcoal kiln beside "
-                          + "it holds more wood.",
+            Description = "Kiln improvement. Split logs, stacked and under cover. A "
+                          + "charcoal kiln beside it holds more wood.",
             ServesFuelled = false,
         };
 
