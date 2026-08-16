@@ -121,9 +121,16 @@ namespace Stoker
             UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Trough",
                 "Name shown on the hammer and when you look at one.");
 
-            UpgradePrefabs.Trough.Cost = config.Bind("Trough", "Cost", "Wood:20,Bronze:5",
-                "Build cost, as Item:Amount pairs. Bronze gates it behind the smelter it "
-                + "upgrades, so it cannot be built before there is anything to smelt.");
+            // The nails carry the gate now, so the loose bronze that used to do it is gone
+            // rather than stacked on top - iron nails already require a smelter to have
+            // made iron, which is the same statement bronze was making and a biome later.
+            // Fine wood over ordinary wood on both, so the two upgrades are joinery rather
+            // than something knocked together from felled trunks.
+            UpgradePrefabs.Trough.Cost = config.Bind("Trough", "Cost",
+                "FineWood:20,IronNails:15",
+                "Build cost, as Item:Amount pairs. The iron nails put it a biome beyond the "
+                + "smelter it upgrades, so it is an improvement you return to make rather "
+                + "than part of the original build.");
 
             UpgradePrefabs.Trough.Model = config.Bind("Trough", "Model",
                 "stoker_trough_barrels.obj",
@@ -172,13 +179,21 @@ namespace Stoker
             UpgradePrefabs.Woodrack.Name = config.Bind("Woodrack", "Name", "Woodrack",
                 "Name shown on the hammer and when you look at one.");
 
-            // No bronze here. A charcoal kiln is a Black Forest build and the rack that
-            // feeds it has to be reachable at the same time, or the upgrade arrives an age
-            // after the station it exists for.
-            UpgradePrefabs.Woodrack.Cost = config.Bind("Woodrack", "Cost", "Wood:25,Stone:10",
-                "Build cost, as Item:Amount pairs. Deliberately not gated behind bronze - "
-                + "a charcoal kiln is buildable long before that, and an upgrade you "
-                + "cannot build alongside its station is one you never build at all.");
+            // This used to argue against any bronze at all, on the grounds that a charcoal
+            // kiln is a Black Forest build and an upgrade you cannot raise alongside its
+            // station is one you never build. The bronze nails overrule that on purpose:
+            // both upgrades now sit a tier behind the station they serve, which makes them
+            // a second visit rather than part of the first. Recorded rather than quietly
+            // deleted, because the old reasoning was sound and was replaced by a choice.
+            //
+            // Hide in place of the stone it used to want. A rack keeps cut wood off the
+            // ground and out of the rain, so a hide reads as what it is for in a way a
+            // footing of stone never did.
+            UpgradePrefabs.Woodrack.Cost = config.Bind("Woodrack", "Cost",
+                "FineWood:25,DeerHide:20,BronzeNails:25",
+                "Build cost, as Item:Amount pairs. The bronze nails put it a tier behind "
+                + "the charcoal kiln it serves, so it is something you come back and add "
+                + "rather than raise alongside the kiln itself.");
 
             UpgradePrefabs.Woodrack.Model = config.Bind("Woodrack", "Model",
                 "stoker_rack_lean.obj",
