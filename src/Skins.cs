@@ -713,15 +713,45 @@ namespace Stoker
             if (total <= 0f) return;
 
             var least = 0;
-            var most = 0;
             for (var i = 1; i < 3; i++)
             {
                 if (surface[i] < surface[least]) least = i;
-                if (surface[i] > surface[most]) most = i;
             }
 
-            var field = Cluster(rects[most]);
+            var fields = new[] { Cluster(rects[0]), Cluster(rects[1]), Cluster(rects[2]) };
+
+            // The side field is the biggest cluster on any axis, not the biggest cluster
+            // on whichever axis carries the most surface.
+            //
+            // Tying it to the surface leader was the wrong hook and cost two rounds. It
+            // assumes the broad painted field belongs to the facing with the most area,
+            // and on wood_wall_log it does not: measured off the rip, a bark field of
+            // 0.424 sits on one axis while another holds 0.547 of the same sheet, and
+            // which of them the runtime calls "most" turns on the mesh's local
+            // orientation rather than on anything about the texture. The rack kept being
+            // fitted into a 0.151 slice for that reason alone.
+            //
+            // Clustering every triangle regardless of facing was the other candidate and
+            // is worse: right here, but it merges every painted region on barrell into
+            // one rectangle covering 98% of its sheet.
+            var field = fields[0];
+            foreach (var candidate in fields)
+            {
+                if (candidate.width * candidate.height > field.width * field.height)
+                    field = candidate;
+            }
             if (field.width > 0f) side = field;
+
+            // All three printed, because a wrong rect is otherwise impossible to tell
+            // from a wrong axis, and that ambiguity is what made this take three passes.
+            StokerPlugin.Log.LogInfo(string.Format(
+                "{0}: surface {1:0}/{2:0}/{3:0}% by axis, fields {4:0.000}x{5:0.000} / "
+                + "{6:0.000}x{7:0.000} / {8:0.000}x{9:0.000}.",
+                renderer.name,
+                surface[0] / total * 100f, surface[1] / total * 100f, surface[2] / total * 100f,
+                fields[0].width, fields[0].height,
+                fields[1].width, fields[1].height,
+                fields[2].width, fields[2].height));
 
             // A donor whose thinnest axis still carries a third of its surface is not a
             // timber - it is a box, and its "ends" are just more of the same wall. Aiming
@@ -729,8 +759,8 @@ namespace Stoker
             // nothing, so it falls back to the side field, which is at least the surface
             // the piece is made of.
             var share = surface[least] / total;
-            var disc = Cluster(rects[least]);
-            if (share <= 0.30f && disc.width > 0f)
+            var disc = fields[least];
+            if (share <= 0.30f && disc.width > 0f && disc != side)
             {
                 cap = disc;
             }
