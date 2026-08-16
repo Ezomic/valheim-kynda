@@ -191,6 +191,18 @@ and renders a 128px transparent PNG beside it; the runtime finds it by name and 
 `Texture2D.LoadImage` by reflection, since `UnityEngine.ImageConversionModule` targets
 netstandard 2.1 and this builds against net462.
 
+
+## Core is optional
+
+Stoker installs and runs on its own. [Core](https://github.com/Ezomic/valheim-core) is a
+**soft** dependency: present, it is used; absent, nothing here is degraded. Installing
+Stoker from Thunderstore no longer installs Core with it.
+
+What Core adds is the **version gate** — a handshake that compares mod versions and build
+ids on connect and refuses a client that does not match. Without it nothing refuses a client that lacks the mod, and this registers prefabs into `ZNetScene`: a client that cannot resolve one **discards the ZDO rather than erroring**, destroying what is already standing in the world.
+
+Solo, none of that applies and Core is not needed at all.
+
 ## Config
 
 `BepInEx\config\ezomic.valheim.stoker.cfg`
