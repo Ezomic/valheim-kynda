@@ -9,7 +9,7 @@ namespace = "Ezomic"
 name = "Stoker"
 versionNumber = "0.3.0"
 description = "Load smelters, kilns and fires several at a time, and build upgrades to make them hold more."
-websiteUrl = ""
+websiteUrl = "https://github.com/Ezomic/valheim-stoker"
 containsNsfwContent = false
 
 [package.dependencies]
