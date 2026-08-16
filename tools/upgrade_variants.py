@@ -350,7 +350,7 @@ def bay(centre, inner, depth, mat, fill, wall=0.09, count=9, lump=0.15):
          count, lump, fill)
 
 
-def contents(centre, radius, mat, depth=0.26, count=7, lump=0.16, sides=11):
+def contents(centre, radius, mat, rise=0.15, count=5, lump=0.115):
     """
     A container filled to just under its rim, rather than a few lumps in the middle.
 
@@ -369,15 +369,29 @@ def contents(centre, radius, mat, depth=0.26, count=7, lump=0.16, sides=11):
     """
     cx, cy, cz = centre
 
-    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, vertices=sides,
-                                        location=(cx, cy, cz - depth / 2.0))
+    # A squashed sphere, which is what vanilla uses for exactly this. Both the smelter
+    # and the charcoal kiln carry an add_ore child that is a Sphere with a
+    # SphereCollider - a heap of material is a dome to this game, and never a plate.
+    #
+    # It was a flat-topped cylinder with a few boxes on it, and in game it read as
+    # angular slabs lying in the barrel rather than as a cask full of ore. The flat
+    # top is the whole of why: a disc seen from above is a hard polygon outline with
+    # no fall towards the walls, so the lumps sat on it like litter instead of being
+    # the top of something.
+    #
+    # Centred a quarter of its rise below the rim so the rim cuts it near its widest -
+    # any lower and the sphere is already narrowing where the barrel is still full
+    # width, which leaves a ring of daylight against the staves.
+    bpy.ops.mesh.primitive_ico_sphere_add(subdivisions=2, radius=1.0,
+                                          location=(cx, cy, cz - rise * 0.25))
     obj = bpy.context.active_object
-    obj.rotation_euler = (0.0, 0.0, math.radians(jitter(9.0)))
-    part(obj, mat, bevel=0.008, projection="cylinder", radius=radius)
+    obj.scale = (radius, radius, rise)
+    obj.rotation_euler = (0.0, 0.0, math.radians(jitter(40.0)))
+    part(obj, mat, bevel=0.006, projection="cube")
 
-    # Sat on the disc rather than replacing it, and pulled in from the wall so the
-    # rim reads as the edge of the contents instead of lumps balanced on it.
-    heap((cx, cy, cz + lump * 0.16), radius * 0.66, count, lump, mat, dome=0.30)
+    # A few lumps breaking the dome, spread across it rather than clustered in the
+    # middle. These are the texture, not the volume - the dome is the volume.
+    heap((cx, cy, cz + rise * 0.42), radius * 0.70, count, lump, mat, dome=0.34)
 
 
 def heap(centre, spread, count, size, mat, dome=0.55):
@@ -454,10 +468,23 @@ def rack_lean():
     for row, z in enumerate((0.23, 0.42, 0.61, 0.80, 0.97)):
         # Half-staggered, so a log beds into the gap between the two beneath rather
         # than balancing on the crown of one.
-        shift = 0.045 if row % 2 else -0.045
+        shift = 0.028 if row % 2 else -0.028
         for i in range(5):
-            x = -0.37 + i * 0.185 + shift
-            billet(0.115, 0.62, (x, (row % 2) * 0.05 - 0.025, z), axis="y")
+            # Kept clear of the posts, which is arithmetic rather than judgement. The
+            # posts stand at x +-0.52 and are 0.13 wide, so their inner faces are at
+            # +-0.455. A billet is up to an eighth over its nominal radius, so the
+            # widest is 0.108 x 1.12 = 0.121, and the outermost centre can therefore
+            # sit no further out than 0.334.
+            #
+            # It was reaching 0.544 - straight through a post. And because a post is
+            # 0.15 deep while the logs are 0.62 long, a log that reaches one does not
+            # merely touch it, it runs clean through and out the far side.
+            #
+            # Sat at 0.439 rather than the 0.451 the limit allows, because billet also
+            # jitters position by a couple of millimetres and a clearance of four is
+            # not a clearance.
+            x = -0.29 + i * 0.145 + shift
+            billet(0.108, 0.62, (x, (row % 2) * 0.05 - 0.025, z), axis="y")
 
     box((1.06, 0.60, 0.10), (0.0, 0.02, 0.06), "wood")            # sill the pile sits on
     collide((0.0, 0.0, 0.62), (1.30, 0.68, 1.24))
