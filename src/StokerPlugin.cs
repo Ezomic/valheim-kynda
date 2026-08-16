@@ -19,7 +19,7 @@ namespace Stoker
     {
         public const string PluginGuid = "ezomic.valheim.stoker";
         public const string PluginName = "Stoker";
-        public const string PluginVersion = "0.4.0";
+        public const string PluginVersion = "0.3.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
         /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>
