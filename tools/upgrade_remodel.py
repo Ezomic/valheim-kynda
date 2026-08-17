@@ -613,7 +613,11 @@ def main(items, close=False, promote=False):
         # The shelf unless promoted. The baseline pair is re-rendered rather than
         # re-exported: rewriting a shipped .obj from a script whose whole job is to
         # change it is how a rejected shape gets into the build menu.
-        if name not in [b[0] for b in BASELINE]:
+        #
+        # And never on the close pass. That is the same model shot from a second camera,
+        # and exporting it again wrote a promoted piece to the shelf as well as to
+        # assets - two copies of one model, one of them in the folder that means rejected.
+        if name not in [b[0] for b in BASELINE] and not close:
             dest = ASSETS if promote else SHELF
             bpy.ops.object.select_all(action="DESELECT")
             obj.select_set(True)
