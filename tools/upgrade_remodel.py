@@ -478,8 +478,13 @@ def cask_smooth(x, radius, top, fill):
     cone(radius, radius * 0.93, top * 0.50, top * 0.75, "wood", sides=15, centre=(x, 0.0))
     hoops(x, ((top * 0.10, waist * 1.04), (top * 0.50, radius),
               (top * 0.95, radius * 0.94)))
+    # Twelve small lumps rather than six large ones. At 7.2cm on a 24cm mouth each lump
+    # was nearly a third of the opening, so it presented a flat top the size of a paving
+    # slab and every ore donor read as slate however it was textured. The coal has always
+    # read correctly off the same geometry purely because it is near-black and the facets
+    # disappear into the mass - so this is the change that lets a mid-value ore work at all.
     contents((x, 0.0, top * 0.93), radius * 0.86, fill, rise=0.13,
-             count=6, lump=0.072)
+             count=12, lump=0.045)
 
 
 def cask_staved(x, radius, top, fill, stave=0.10):
@@ -501,8 +506,13 @@ def cask_staved(x, radius, top, fill, stave=0.10):
             rot=(0.0, 6.0, d), wobble=0.4)
     hoops(x, ((top * 0.10, radius * 0.93), (top * 0.50, radius * 1.02),
               (top * 0.95, radius * 0.94)))
+    # Twelve small lumps rather than six large ones. At 7.2cm on a 24cm mouth each lump
+    # was nearly a third of the opening, so it presented a flat top the size of a paving
+    # slab and every ore donor read as slate however it was textured. The coal has always
+    # read correctly off the same geometry purely because it is near-black and the facets
+    # disappear into the mass - so this is the change that lets a mid-value ore work at all.
     contents((x, 0.0, top * 0.93), radius * 0.86, fill, rise=0.13,
-             count=6, lump=0.072)
+             count=12, lump=0.045)
 
 
 def cask_cut(x, radius, top, fill):
