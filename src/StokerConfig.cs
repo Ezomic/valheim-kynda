@@ -163,7 +163,15 @@ namespace Stoker
 
             // ------------------------------------------------------------------ the trough
 
-            UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Trough",
+            // Tun, not Trough. It was a trough with two bays when it was named, and it has
+            // been a pair of casks for two model passes since - a tun is a large storage
+            // cask, which is what you are looking at. The config section stays [Trough]
+            // deliberately: renaming a section resets every saved setting under it, and a
+            // stale section header costs nothing next to that.
+            //
+            // The prefab name is untouchable for a different reason - it is still
+            // stoker_hopper, and ZDOs key on its hash.
+            UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Tun",
                 "Name shown on the hammer and when you look at one.");
 
             // The nails carry the gate now, so the loose bronze that used to do it is gone

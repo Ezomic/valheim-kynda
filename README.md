@@ -66,7 +66,7 @@ nothing else.
 
 | Piece | Cost | Serves |
 | --- | --- | --- |
-| **Trough** — two open casks, one of ore and one of coal | 20 fine wood, 15 iron nails | Smelter, blast furnace |
+| **Tun** — two open casks, one of ore and one of coal | 20 fine wood, 15 iron nails | Smelter, blast furnace |
 | **Woodrack** — rounds stacked in courses under a lean-to roof | 25 fine wood, 20 deer hide, 25 bronze nails | Charcoal kiln, windmill, spinning wheel |
 
 Build one from the hammer's Crafting tab within 4m of the station it serves. Look at one and
@@ -108,7 +108,7 @@ build at all.
 > **A piece whose materials you have never held does not appear in the hammer menu at all** —
 > not greyed out, absent. `PieceTable.UpdateAvailable` lists a piece only if it is a known
 > recipe, and `RequirementMode.IsKnown` requires every item in its cost to be in
-> `m_knownMaterial`. So on a character that has never picked up Bronze, the Trough is simply
+> `m_knownMaterial`. So on a character that has never picked up Bronze, the Tun is simply
 > missing while the Woodrack is there. That is vanilla behaviour and not a registration
 > failure — check the log for `Both upgrades added to the hammer` before hunting for a bug.
 > `TestMode` drops both to one wood, which makes them visible immediately.
@@ -232,17 +232,22 @@ Solo, none of that applies and Core is not needed at all.
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
 | `MaxPerStation` | `2` | Most of one kind that count for one station |
-| `OreCapacity` / `FuelCapacity` | per piece | Extra items each upgrade adds — see the Trough / Woodrack sections |
+| `OreCapacity` / `FuelCapacity` | per piece | Extra items each upgrade adds — see the Tun / Woodrack sections |
 | `ShowLink` | `true` | Draw the game's station-link effect to the station when you look at an upgrade |
 | `LinkHeight` | `0.8` | How far up the upgrade the link starts, in metres |
 
-### Trough / Woodrack
+### Tun / Woodrack
+
+The config section is still `[Trough]`. Renaming a section resets every saved setting
+under it, which is a worse trade than a stale header. The prefab name is still
+`stoker_hopper` for a harder reason — ZDOs key on its hash, so changing it destroys
+every one already standing.
 
 Each piece has its own section with the same four keys.
 
-| Key | Trough | Woodrack |
+| Key | Tun | Woodrack |
 | --- | --- | --- |
-| `Name` | `Trough` | `Woodrack` |
+| `Name` | `Tun` | `Woodrack` |
 | `Cost` | `FineWood:20,IronNails:15` | `FineWood:25,DeerHide:20,BronzeNails:25` |
 | `Model` | `stoker_trough_casks.obj` | `stoker_rack_courses.obj` |
 | `Scale` | `1.5` | `1.5` |

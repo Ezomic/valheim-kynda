@@ -421,7 +421,7 @@ namespace Stoker
             // Says what it upgrades before it says anything else. The build menu shows
             // this under the name, and the star in the corner only tells you that the
             // piece is an upgrade - never of what.
-            Description = "Smelter improvement. Ore on one side, coal on the other. A "
+            Description = "Smelter improvement. A cask of ore and a cask of coal. A "
                           + "smelter or furnace beside it holds more of both.",
             ServesFuelled = true,
         };
@@ -539,7 +539,7 @@ namespace Stoker
                 var entry = raw.Trim();
                 if (entry.Length == 0) continue;
 
-                var wantsTrough = true;
+                var wantsTun = true;
                 var wantsRack = true;
                 var donor = entry;
 
@@ -548,15 +548,19 @@ namespace Stoker
                 {
                     var which = entry.Substring(0, colon).Trim();
                     donor = entry.Substring(colon + 1).Trim();
-                    wantsTrough = which.Equals("trough",
-                        System.StringComparison.OrdinalIgnoreCase);
+
+                    // trough is kept as a synonym for tun. The piece was called that until
+                    // the model stopped being one, and a diagnostic line someone already
+                    // wrote should not start silently matching nothing.
+                    wantsTun = which.Equals("tun", System.StringComparison.OrdinalIgnoreCase)
+                        || which.Equals("trough", System.StringComparison.OrdinalIgnoreCase);
                     wantsRack = which.Equals("rack",
                         System.StringComparison.OrdinalIgnoreCase);
-                    if (!wantsTrough && !wantsRack)
+                    if (!wantsTun && !wantsRack)
                     {
                         StokerPlugin.Log.LogWarning(
                             "SkinTrials: '" + which + "' is not a piece. Use rack: or "
-                            + "trough:, or leave the prefix off for both.");
+                            + "tun:, or leave the prefix off for both.");
                         continue;
                     }
                 }
@@ -565,15 +569,18 @@ namespace Stoker
 
                 foreach (var host in All)
                 {
-                    if (host.ServesFuelled ? !wantsTrough : !wantsRack) continue;
+                    if (host.ServesFuelled ? !wantsTun : !wantsRack) continue;
 
                     _trials.Add(new UpgradeDef
                     {
                         // The donor name is in the prefab name so a ZDO dump says which
                         // trial it came from, and so two trials can never collide.
                         PrefabName = "stoker_skin_" + host.PrefabName + "_" + donor,
-                        LiteralName = "skin: " + (host.ServesFuelled ? "trough " : "rack ")
-                                      + donor,
+                        // The host's own display name rather than a hardcoded word, so a
+                        // rename lands here too instead of leaving the trials pointing at
+                        // whatever the piece used to be called.
+                        LiteralName = "skin: " + host.NameValue.ToLowerInvariant()
+                                      + " " + donor,
                         // The real piece's current model, deliberately. The whole point is
                         // that the only thing differing between these is the surface.
                         LiteralModel = host.ModelValue,
