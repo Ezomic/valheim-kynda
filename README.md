@@ -66,7 +66,7 @@ nothing else.
 
 | Piece | Cost | Serves |
 | --- | --- | --- |
-| **Trough** — two open casks bedded on a kerb, one of ore and one of coal | 20 fine wood, 15 iron nails | Smelter, blast furnace |
+| **Trough** — two open casks, one of ore and one of coal | 20 fine wood, 15 iron nails | Smelter, blast furnace |
 | **Woodrack** — rounds stacked in courses under a lean-to roof | 25 fine wood, 20 deer hide, 25 bronze nails | Charcoal kiln, windmill, spinning wheel |
 
 Build one from the hammer's Crafting tab within 4m of the station it serves. Look at one and
@@ -301,7 +301,7 @@ Batching:
 The upgrades:
 
 9. **Both appear on the hammer's Crafting tab, each with its own icon** — a stack of rounds
-   under a roof, and two casks on a kerb. A closed barrel with a lid means neither the
+   under a roof, and two casks. A closed barrel with a lid means neither the
    in-game shot nor the `_icon.png` was found and it is wearing the donor's; the log says
    which file it wanted.
 9b. **The logs read as firewood, not as rubble.** Every round should be a round. Anything

@@ -575,8 +575,8 @@ CASKS = [
 
 # ------------------------------------------------------------------------- the picks
 #
-# Chosen on 2026-08-17: the coursed lean-to for the kiln, and the turned cask on a kerb
-# for the smelter. These two write to assets/ rather than assets/variants/, which is the
+# Chosen on 2026-08-17: the coursed lean-to for the kiln, and a pair of turned casks for
+# the smelter. These two write to assets/ rather than assets/variants/, which is the
 # only difference between a candidate and a model that ships.
 #
 # The .obj filename is not the prefab name and carries no ZDO risk - the prefab keeps
@@ -585,15 +585,28 @@ CASKS = [
 
 
 def trough_casks():
-    """Two turned casks, ore and coal, bedded between low timbers."""
+    """
+    Two turned casks, ore and coal, standing on the ground and nothing else.
+
+    The kerb is gone. It was there to tie the pair into one object and to bed them into
+    the terrain, and it did neither well enough to earn a third of the piece's footprint:
+    four low timbers round a pair of barrels read as the pallet the deck had just been
+    taken away for being. Two casks standing together are legible as two casks standing
+    together, which is all this needs to be.
+    """
     cask_smooth(ORE[0], ORE[1], ORE[2], "ore")
     cask_smooth(COAL[0], COAL[1], COAL[2], "coal")
-    kerb()
+
+    # A collider each, now that the kerb is not supplying one. Axis-aligned boxes round
+    # a cylinder is what the .col format offers and it is close enough - the corners
+    # stand about 4cm proud of a 42cm radius, which nobody walks into and notices.
+    for x, radius, top in (ORE, COAL):
+        collide((x, 0.0, top * 0.5), (radius * 2.0, radius * 2.0, top))
 
 
 PICKS = [
     ("stoker_rack_courses", rack_courses,  "WOODRACK - Lean-to, coursed"),
-    ("stoker_trough_casks", trough_casks,  "TROUGH - Turned casks on a kerb"),
+    ("stoker_trough_casks", trough_casks,  "TROUGH - Turned casks"),
 ]
 
 

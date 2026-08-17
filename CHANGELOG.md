@@ -29,7 +29,8 @@ With that corrected, both models were rebuilt:
   and a roof rising towards the viewer is why it read as a table.
 - **Trough** is now `stoker_trough_casks`. The deck it stood on was a slab across the front
   at exactly the height a cask is widest, cutting both off at the belly; the casks stand on
-  the ground on a low kerb instead. The cask itself was straight-sided where a cask bulges,
+  the ground now, with nothing round them at all - a kerb was tried and read as the pallet
+  the deck had just been taken away for being. The cask itself was straight-sided where a cask bulges,
   had its staves modelled as twenty square posts where vanilla paints them on a turned
   cylinder, and at 0.90 × 1.35m stood a head over the 0.84 × 1.10 `barrell` it imitates. It
   is now vanilla's size, turned and bulged, with hoops thin enough to read as iron bands.
