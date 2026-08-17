@@ -45,8 +45,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # helper here goes through it, so nothing below may rebind those names.
 from upgrade_variants import (                                    # noqa: E402
     ASSETS, PREVIEWS, SHELF, TINTS,
-    band, bounds, box, clear_scene, collide, cone, contents, finish, heap, jitter,
-    log, material, part, render, ring_count, rnd, strap, tint, write_col,
+    band, bounds, box, clear_scene, collide, cone, contents, finish, heap, icon_scene,
+    jitter, log, material, part, render, ring_count, rnd, strap, tint, write_col,
     rack_lean, trough_barrels,
 )
 
@@ -75,6 +75,12 @@ def staged_scene(size, close=False):
     and it is applied to the model here rather than to the camera, so the reference cube
     and the station block stay honest metres.
     """
+    # icon_scene turns film_transparent on and nothing turns it off, so a staged render
+    # taken after an icon in the same run came out with a white void for a sky - which
+    # reads as a blown exposure and sends you to the lights. Cleared here rather than
+    # there, because this is the pass that needs it off.
+    bpy.context.scene.render.film_transparent = False
+
     for obj in bpy.context.scene.objects:
         if obj.type == "MESH":
             obj.scale = (size, size, size)
@@ -443,7 +449,7 @@ CANDIDATES = [
 # The figures below are vanilla's, worked back through Scale 1.5: radius 0.28 modelled
 # is 0.84 across in the world, height 0.74 is 1.11 tall.
 
-ORE, COAL = (-0.34, 0.280, 0.74), (0.42, 0.225, 0.56)
+ORE, COAL = (-0.31, 0.280, 0.74), (0.37, 0.225, 0.56)
 
 
 def hoops(x, radii, thickness=0.042):
@@ -535,13 +541,20 @@ def cask_tub(x, radius, top, fill):
              count=6, lump=0.072)
 
 
-def kerb():
-    """The base from trough_grounded, unchanged - it is not what is under discussion."""
-    for y in (-0.44, 0.44):
-        box((1.52, 0.14, 0.40), (0.02, y, -0.13), "wood")
-    for x in (-0.80, 0.86):
-        box((0.14, 0.90, 0.38), (x, 0.0, -0.14), "wood")
-    collide((0.02, 0.0, 0.42), (1.80, 0.96, 0.84))
+def kerb(half=0.70, length=1.30):
+    """
+    The base from trough_grounded, drawn in to the casks it holds.
+
+    It was sized before the casks were cut to vanilla's figures, so it went on standing
+    2.7m wide around a pair that now spans 1.27 - nearly a metre of empty kerb, which is
+    what turns a bed into a platform. Buried to its top either way: terrain is never
+    flat and the alternative is a corner in the air.
+    """
+    for y in (-0.42, 0.42):
+        box((length, 0.14, 0.40), (0.02, y, -0.13), "wood")
+    for x in (-half, half):
+        box((0.14, 0.86, 0.38), (x, 0.0, -0.14), "wood")
+    collide((0.0, 0.0, 0.42), (2.0 * half + 0.16, 0.92, 0.84))
 
 
 def pair(shape):
@@ -560,9 +573,33 @@ CASKS = [
 ]
 
 
+# ------------------------------------------------------------------------- the picks
+#
+# Chosen on 2026-08-17: the coursed lean-to for the kiln, and the turned cask on a kerb
+# for the smelter. These two write to assets/ rather than assets/variants/, which is the
+# only difference between a candidate and a model that ships.
+#
+# The .obj filename is not the prefab name and carries no ZDO risk - the prefab keeps
+# calling itself Trough and Woodrack, and only the Model config entry moves. The old
+# shapes go to the shelf rather than being deleted, the same as every other rejected one.
+
+
+def trough_casks():
+    """Two turned casks, ore and coal, bedded between low timbers."""
+    cask_smooth(ORE[0], ORE[1], ORE[2], "ore")
+    cask_smooth(COAL[0], COAL[1], COAL[2], "coal")
+    kerb()
+
+
+PICKS = [
+    ("stoker_rack_courses", rack_courses,  "WOODRACK - Lean-to, coursed"),
+    ("stoker_trough_casks", trough_casks,  "TROUGH - Turned casks on a kerb"),
+]
+
+
 # --------------------------------------------------------------------------- export
 
-def main(items, close=False):
+def main(items, close=False, promote=False):
     os.makedirs(PREVIEWS, exist_ok=True)
     os.makedirs(SHELF, exist_ok=True)
 
@@ -573,17 +610,32 @@ def main(items, close=False):
         tris = len(obj.data.polygons)
         size = scale_for(name)
 
-        # Candidates only, and always to the shelf. The baseline pair is re-rendered
-        # rather than re-exported: rewriting a shipped .obj from a script whose whole
-        # job is to change it is how a rejected shape gets into the build menu.
+        # The shelf unless promoted. The baseline pair is re-rendered rather than
+        # re-exported: rewriting a shipped .obj from a script whose whole job is to
+        # change it is how a rejected shape gets into the build menu.
         if name not in [b[0] for b in BASELINE]:
+            dest = ASSETS if promote else SHELF
             bpy.ops.object.select_all(action="DESELECT")
             obj.select_set(True)
             bpy.context.view_layer.objects.active = obj
-            bpy.ops.wm.obj_export(filepath=os.path.join(SHELF, name + ".obj"),
+            bpy.ops.wm.obj_export(filepath=os.path.join(dest, name + ".obj"),
                                   export_selected_objects=True, export_materials=True,
                                   forward_axis="Z", up_axis="Y")
-            write_col(os.path.join(SHELF, name + ".col"))
+            write_col(os.path.join(dest, name + ".col"))
+
+        # The icon here is only the fallback. IconRender photographs the finished prefab
+        # in game, where the borrowed vanilla materials actually exist, and this is what
+        # it falls back to if that fails - without one the piece wears the donor's icon,
+        # which is a picture of a barrel. So it has to exist and does not have to be good.
+        if promote:
+            tint()
+            centre, extent = bounds(obj)
+            icon_scene(centre, extent)
+            render(os.path.join(ASSETS, name + "_icon.png"), (128, 128))
+
+            clear_scene()
+            builder()
+            obj = finish(name)
 
         tint()
         tint_stage()
@@ -593,9 +645,13 @@ def main(items, close=False):
 
         # dimensions is read after staged_scene has applied the runtime scale, so these
         # are already the metres the game draws - multiplying by size again double-counts.
-        print("STAGED %-26s tris=%-6d  %.2f x %.2f x %.2fm in game (scale %.1f)  %s"
+        # Said out loud every run rather than checked once. These get placed in rows -
+        # eight upgraded smelters is sixteen copies in view - so the count is multiplied
+        # by the base rather than paid once, and a model creeps over one detail at a time.
+        flag = "  OVER BUDGET" if promote and tris > 3500 else ""
+        print("STAGED %-26s tris=%-6d  %.2f x %.2f x %.2fm in game (scale %.1f)  %s%s"
               % (name, tris, obj.dimensions[0], obj.dimensions[1], obj.dimensions[2],
-                 size, label))
+                 size, label, flag))
 
     print("REMODEL_DONE")
 
@@ -613,5 +669,5 @@ if __name__ == "__main__":
     # Which round to shoot. Edited rather than made a flag, because `blender --background
     # --python` swallows anything after the script name and passing it through argv means
     # a `--` separator nobody remembers.
-    main(CASKS)
-    main(CASKS, close=True)
+    main(PICKS, promote=True)
+    main(PICKS, close=True)

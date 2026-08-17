@@ -3,6 +3,44 @@
 Notable changes to Stoker. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [Unreleased]
+
+### Both upgrade models remade
+
+The art was the stated reason 0.3 was not 1.0. Two of the three causes were in the
+**preview** rather than in the models, which is why previous passes kept not helping.
+
+- **The renders were never at the size the game draws.** Both pieces carry `Scale 1.5`,
+  and the preview rendered the raw model beside a 1m cube — so every design was picked
+  from a picture two thirds the size of the real thing.
+- **The lights were hot enough to flatten everything.** A sun at 3.0 plus a fill at 1.0
+  plus a world at 0.7 puts a 0.30 albedo at 0.72 in sRGB, so timber rendered as sand and
+  the whole model arrived at one value. Value is most of what says a silhouette works.
+- **Nothing was ever in frame with it.** These are only ever seen touching a station, so
+  the stage now carries a block of the smelter's measured mass.
+
+With that corrected, both models were rebuilt:
+
+- **Woodrack** is now `stoker_rack_courses`. The logs came from a helper that picked a
+  cross-section at random — three, four, five, six or seven sides — which at 2 metres read
+  as a frame packed with rubble. Vanilla varies a woodpile's diameter and never its cross
+  section, so every piece is a round now. The back is closed, and the roof slopes forwards:
+  it had been rotated `-17` about x since the first version, which lifts the *front* edge,
+  and a roof rising towards the viewer is why it read as a table.
+- **Trough** is now `stoker_trough_casks`. The deck it stood on was a slab across the front
+  at exactly the height a cask is widest, cutting both off at the belly; the casks stand on
+  the ground on a low kerb instead. The cask itself was straight-sided where a cask bulges,
+  had its staves modelled as twenty square posts where vanilla paints them on a turned
+  cylinder, and at 0.90 × 1.35m stood a head over the 0.84 × 1.10 `barrell` it imitates. It
+  is now vanilla's size, turned and bulged, with hoops thin enough to read as iron bands.
+
+Both are under budget — 1,472 and 2,024 triangles against a ceiling of 3,500. The rejected
+designs are shelved in `assets\variants\`, including the shapes these replace, so a config
+line brings any of them back.
+
+**Not yet seen in game.** The models are built, exported and wired up; nobody has stood
+next to one.
+
 ## [0.3.0] — 2026-08-16
 
 First published release. Earlier numbers were development only and never went out.

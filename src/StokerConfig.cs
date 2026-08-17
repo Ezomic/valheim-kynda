@@ -153,8 +153,14 @@ namespace Stoker
                 + "smelter it upgrades, so it is an improvement you return to make rather "
                 + "than part of the original build.");
 
+            // stoker_trough_casks, not stoker_trough_barrels. Same two casks on the same
+            // kerb; what changed is the cask itself, which read as modded for three
+            // measurable reasons - it was a straight tube where a cask bulges, its staves
+            // were modelled as twenty square posts where vanilla paints them, and at
+            // 0.90 x 1.35 it stood a head over the 0.84 x 1.10 barrell it was imitating.
+            // The prefab is still called Trough, so nothing standing in a world notices.
             UpgradePrefabs.Trough.Model = config.Bind("Trough", "Model",
-                "stoker_trough_barrels.obj",
+                "stoker_trough_casks.obj",
                 "The OBJ loaded from beside the DLL. Its .col sidecar supplies the "
                 + "collision and its _icon.png the hammer icon, both matched by name - so "
                 + "dropping in a new model brings its own shape and picture with it.");
@@ -216,8 +222,14 @@ namespace Stoker
                 + "the charcoal kiln it serves, so it is something you come back and add "
                 + "rather than raise alongside the kiln itself.");
 
+            // stoker_rack_courses, not stoker_rack_lean. The lean-to's logs were built by
+            // a helper that picked a cross section at random - three, four, five, six or
+            // seven sides - so at 2 metres the rack read as a frame packed with rubble.
+            // Vanilla varies a woodpile's diameter and never its cross section. The roof
+            // also sloped the wrong way: -17 degrees about x lifts the front edge, which
+            // is why it read as a table.
             UpgradePrefabs.Woodrack.Model = config.Bind("Woodrack", "Model",
-                "stoker_rack_lean.obj",
+                "stoker_rack_courses.obj",
                 "The OBJ loaded from beside the DLL, with its .col and _icon.png matched "
                 + "by name.");
 

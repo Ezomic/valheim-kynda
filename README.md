@@ -23,10 +23,19 @@ in as one load or three. You buy fewer trips, not more metal.
 | Feature | State |
 | --- | --- |
 | Add several items per press | **works in game** |
-| Two upgrade pieces that raise capacity | **work in game**; models being revisited |
+| Two upgrade pieces that raise capacity | **work in game**; models remade, not yet seen in game |
 
-Both features have been used in a real session. What is unsettled is the art: the trough and
-the woodrack read acceptably at 128px and less well at eye height, and are being reworked.
+Both features have been used in a real session. The art was the reason this was 0.3 and not
+1.0: the trough and the woodrack read acceptably at 128px and less well at eye height. Both
+have been remade, and the remade pair has not been looked at in game yet.
+
+Two of the three causes turned out to be in the *preview*, not the models. The renders were
+taken at the raw model size while the runtime applies `Scale 1.5`, so every design was picked
+from a picture two thirds the size of the real thing; and the lights were hot enough to put a
+0.30 albedo at 0.72 in sRGB, so everything arrived at one flat value and no silhouette could
+be judged. The stage now renders at the scale the game draws, under lights that keep timber
+looking like timber, with a block of the smelter's measured mass standing beside the piece —
+because that is the only context these are ever seen in.
 
 ### Batching
 
@@ -57,8 +66,8 @@ nothing else.
 
 | Piece | Cost | Serves |
 | --- | --- | --- |
-| **Trough** — two bays, one of ore and one of coal, on legs | 20 wood, 5 bronze | Smelter, blast furnace |
-| **Woodrack** — split logs stacked under a roof | 25 wood, 10 stone | Charcoal kiln, windmill, spinning wheel |
+| **Trough** — two open casks bedded on a kerb, one of ore and one of coal | 20 fine wood, 15 iron nails | Smelter, blast furnace |
+| **Woodrack** — rounds stacked in courses under a lean-to roof | 25 fine wood, 20 deer hide, 25 bronze nails | Charcoal kiln, windmill, spinning wheel |
 
 Build one from the hammer's Crafting tab within 4m of the station it serves. Look at one and
 it tells you which station it is feeding and what that station's capacity now is — or says
@@ -234,17 +243,19 @@ Each piece has its own section with the same four keys.
 | Key | Trough | Woodrack |
 | --- | --- | --- |
 | `Name` | `Trough` | `Woodrack` |
-| `Cost` | `Wood:20,Bronze:5` | `Wood:25,Stone:10` |
-| `Model` | `stoker_trough_raised.obj` | `stoker_kiln_woodrack.obj` |
-| `Scale` | `1` | `1` |
+| `Cost` | `FineWood:20,IronNails:15` | `FineWood:25,DeerHide:20,BronzeNails:25` |
+| `Model` | `stoker_trough_casks.obj` | `stoker_rack_courses.obj` |
+| `Scale` | `1.5` | `1.5` |
 | `OreCapacity` | `20` | `25` |
 | `FuelCapacity` | `40` | *(none — its stations have no fuel slot)* |
 
 `Model` carries its own collision and icon: the `.col` sidecar and the `_icon.png` are
 matched by filename, so dropping in a new model brings its shape and its picture with it.
-The `assets\` folder holds the rejected variants too — `stoker_trough_stone.obj`,
-`stoker_smelter_orecart.obj` and the rest — so trying one is a config line and a relaunch,
-not a rebuild. A variant with no rendered icon falls back to the donor's, with a warning.
+`assets\variants\` holds every rejected design — the twin-barrel trough and the first lean-to
+among them — so trying one is a config line and a relaunch, not a rebuild. The csproj does not
+copy that folder, so a shelved shape is buildable without being deployed; move a file up into
+`assets\` to put it back in play. A variant with no rendered icon falls back to the donor's,
+with a warning.
 
 ### Diagnostics
 
@@ -289,9 +300,13 @@ Batching:
 
 The upgrades:
 
-9. **Both appear on the hammer's Crafting tab, each with its own icon** — a rack of logs and
-   a two-bay trough, not two barrels. A barrel means the `_icon.png` was not found; the log
-   says which file it wanted.
+9. **Both appear on the hammer's Crafting tab, each with its own icon** — a stack of rounds
+   under a roof, and two casks on a kerb. A closed barrel with a lid means neither the
+   in-game shot nor the `_icon.png` was found and it is wearing the donor's; the log says
+   which file it wanted.
+9b. **The logs read as firewood, not as rubble.** Every round should be a round. Anything
+   with a three- or four-sided end means the model came from `billet()` rather than
+   `round_log()`, and at 2m that reads as a cage full of rocks.
 10. Build a trough by a smelter: it should read **ore 20, fuel 40** — doubled from 10 and 20.
 11. Build a woodrack by a charcoal kiln: it should read **ore 50**, doubled from 25, and
     **still no fuel slot**. A kiln has no fuel at all, and handing it one would have it
