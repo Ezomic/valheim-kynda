@@ -53,6 +53,13 @@ namespace Stoker
         public string LiteralSkinDonors;
 
         /// <summary>
+        /// A comparison piece rather than a real one. Files under Misc instead of Crafting,
+        /// because Crafting has no room left and a piece past the end of a category's grid
+        /// is absent rather than merely hard to reach.
+        /// </summary>
+        public bool IsTrial;
+
+        /// <summary>
         /// Which vanilla prefab this piece borrows each material group from, when the
         /// general list is not what it wants. The woodrack is stacked round timber and
         /// wants bark off wood_wall_log; the trough is sawn staves and planking and wants
@@ -109,9 +116,26 @@ namespace Stoker
             }
         }
 
+        /// <summary>
+        /// The host piece's scale on a throwaway, because a comparison rendered at a
+        /// different size is not a comparison. Trials came out at 1.20m against the real
+        /// piece's 1.80 - two thirds, which is exactly the 1.5 they were not inheriting -
+        /// and a barrel two thirds the size wears its texture half again as coarse, which
+        /// is the very thing the trial exists to judge.
+        /// </summary>
+        public float LiteralScale;
+
         public string NameValue { get { return Name != null ? Name.Value : LiteralName; } }
         public string ModelValue { get { return Model != null ? Model.Value : LiteralModel; } }
-        public float ScaleValue { get { return Scale != null ? Scale.Value : 1f; } }
+
+        public float ScaleValue
+        {
+            get
+            {
+                if (Scale != null) return Scale.Value;
+                return LiteralScale > 0f ? LiteralScale : 1f;
+            }
+        }
 
         /// <summary>
         /// How much each of these adds, in items, to the station it serves.
@@ -489,6 +513,8 @@ namespace Stoker
                     ServesFuelled = isTrough,
                     OreCapacity = isTrough ? Trough.OreCapacity : Woodrack.OreCapacity,
                     FuelCapacity = isTrough ? Trough.FuelCapacity : null,
+                    LiteralScale = (isTrough ? Trough : Woodrack).ScaleValue,
+                    IsTrial = true,
                 });
             }
 
@@ -499,6 +525,44 @@ namespace Stoker
                     + "VariantMode goes off.");
 
             return _variants;
+        }
+
+        /// <summary>
+        /// The host's donor spec with this trial's terms laid over it.
+        ///
+        /// Terms within a trial are joined with '+' rather than ',' because a comma already
+        /// separates trials from each other - so `tun:fermenter+ore=TinOre` trials a whole
+        /// surface and a contents override together.
+        /// </summary>
+        private static string Merge(UpgradeDef host, string donor)
+        {
+            var terms = new List<string>();
+            if (host.SkinDonors != null && !string.IsNullOrEmpty(host.SkinDonors.Value))
+                terms.AddRange(host.SkinDonors.Value.Split(','));
+
+            foreach (var raw in donor.Split('+'))
+            {
+                var term = raw.Trim();
+                if (term.Length == 0) continue;
+
+                // A bare term replaces the host's bare term; a group= term replaces that
+                // group. Matching on the presence and value of '=' is all that is needed.
+                var eq = term.IndexOf('=');
+                var group = eq > 0 ? term.Substring(0, eq).Trim() : null;
+
+                terms.RemoveAll(delegate(string existing)
+                {
+                    var e = existing.Trim();
+                    var i = e.IndexOf('=');
+                    if (group == null) return i <= 0;
+                    return i > 0 && e.Substring(0, i).Trim().Equals(
+                        group, System.StringComparison.OrdinalIgnoreCase);
+                });
+
+                terms.Add(term);
+            }
+
+            return string.Join(",", terms.ToArray());
         }
 
         /// <summary>stoker_trough_bench -> "var: trough bench", which sorts together.</summary>
@@ -584,12 +648,19 @@ namespace Stoker
                         // The real piece's current model, deliberately. The whole point is
                         // that the only thing differing between these is the surface.
                         LiteralModel = host.ModelValue,
-                        LiteralSkinDonors = donor,
+                        // Merged with the host's own spec rather than replacing it. A bare
+                        // donor name covers the piece, but the host may also carry group
+                        // overrides - the tun's ore comes off IronOre - and dropping those
+                        // meant the trial differed from the real piece in two ways at once,
+                        // which is not a trial of anything.
+                        LiteralSkinDonors = Merge(host, donor),
                         Description = "Skin trial on " + donor + ". Not a real piece - clear "
                                       + "SkinTrials and it stops existing.",
                         ServesFuelled = host.ServesFuelled,
                         OreCapacity = host.OreCapacity,
                         FuelCapacity = host.FuelCapacity,
+                        LiteralScale = host.ScaleValue,
+                        IsTrial = true,
                     });
                 }
             }
@@ -717,7 +788,17 @@ namespace Stoker
 
                 // Inherited from the donor, which is a chest and so files under Furniture.
                 // These upgrade a smelter, so they belong on the same hammer tab as one.
-                piece.m_category = Piece.PieceCategory.Crafting;
+                //
+                // Except the throwaways, which go to Misc. Crafting is one of the fullest
+                // tabs in the game before any mod touches it, and the build menu draws a
+                // category into a fixed grid with no scrolling - so pieces past the end of
+                // it are not greyed out or pushed to a second page, they are simply absent.
+                // Seven trials plus two real pieces went in and the trials could not be
+                // found, which reads exactly like a registration failure and is not one:
+                // the log said "9 upgrade(s) added to the hammer" the whole time.
+                piece.m_category = def.IsTrial
+                    ? Piece.PieceCategory.Misc
+                    : Piece.PieceCategory.Crafting;
 
                 // The star in the corner of the build menu icon. It is not part of the icon
                 // art - Hud builds each slot from a prefab carrying an "upgrade" child and
