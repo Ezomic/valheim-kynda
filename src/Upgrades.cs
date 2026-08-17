@@ -46,6 +46,13 @@ namespace Stoker
         public string LiteralModel;
 
         /// <summary>
+        /// Same idea for the surface: a skin trial is one donor for one session and has no
+        /// business owning a config entry. Read by the Skins property below in place of
+        /// SkinDonors, so a trial and a real piece take exactly the same path afterwards.
+        /// </summary>
+        public string LiteralSkinDonors;
+
+        /// <summary>
         /// Which vanilla prefab this piece borrows each material group from, when the
         /// general list is not what it wants. The woodrack is stacked round timber and
         /// wants bark off wood_wall_log; the trough is sawn staves and planking and wants
@@ -73,11 +80,12 @@ namespace Stoker
         {
             get
             {
-                if (SkinDonors == null || string.IsNullOrEmpty(SkinDonors.Value)) return null;
+                var spec = SkinDonors != null ? SkinDonors.Value : LiteralSkinDonors;
+                if (string.IsNullOrEmpty(spec)) return null;
 
                 var map = new Dictionary<string, string>(
                     System.StringComparer.OrdinalIgnoreCase);
-                foreach (var entry in SkinDonors.Value.Split(','))
+                foreach (var entry in spec.Split(','))
                 {
                     var parts = entry.Split('=');
 
@@ -499,10 +507,100 @@ namespace Stoker
             return "var: " + stem.Replace("stoker_", "").Replace("_", " ");
         }
 
+        // -------------------------------------------------------------- skin trials
+
+        private static List<UpgradeDef> _trials;
+
+        /// <summary>
+        /// One buildable copy of a piece per candidate donor, so the same model can be seen
+        /// wearing every surface at once.
+        ///
+        /// VariantMode does this for models and could not do it for surfaces, because the
+        /// two things are not comparable in the same way. A model can be judged from an
+        /// offline render; a borrowed surface cannot exist until the game is running, so
+        /// choosing between donors meant a config line and a relaunch each - which compares
+        /// a texture against a memory of the last one, in different weather, at a different
+        /// time of day. Four relaunches is also four chances to forget which is which.
+        ///
+        /// Entries are `rack:donor`, `trough:donor`, or a bare donor for both. Same
+        /// destructive caveat as VariantMode: each of these is a registered prefab and
+        /// ZNetScene silently discards the ZDOs of a name that no longer resolves.
+        /// </summary>
+        private static List<UpgradeDef> SkinTrials()
+        {
+            if (_trials != null) return _trials;
+
+            _trials = new List<UpgradeDef>();
+            var spec = StokerConfig.SkinTrials.Value;
+            if (string.IsNullOrEmpty(spec)) return _trials;
+
+            foreach (var raw in spec.Split(','))
+            {
+                var entry = raw.Trim();
+                if (entry.Length == 0) continue;
+
+                var wantsTrough = true;
+                var wantsRack = true;
+                var donor = entry;
+
+                var colon = entry.IndexOf(':');
+                if (colon > 0)
+                {
+                    var which = entry.Substring(0, colon).Trim();
+                    donor = entry.Substring(colon + 1).Trim();
+                    wantsTrough = which.Equals("trough",
+                        System.StringComparison.OrdinalIgnoreCase);
+                    wantsRack = which.Equals("rack",
+                        System.StringComparison.OrdinalIgnoreCase);
+                    if (!wantsTrough && !wantsRack)
+                    {
+                        StokerPlugin.Log.LogWarning(
+                            "SkinTrials: '" + which + "' is not a piece. Use rack: or "
+                            + "trough:, or leave the prefix off for both.");
+                        continue;
+                    }
+                }
+
+                if (donor.Length == 0) continue;
+
+                foreach (var host in All)
+                {
+                    if (host.ServesFuelled ? !wantsTrough : !wantsRack) continue;
+
+                    _trials.Add(new UpgradeDef
+                    {
+                        // The donor name is in the prefab name so a ZDO dump says which
+                        // trial it came from, and so two trials can never collide.
+                        PrefabName = "stoker_skin_" + host.PrefabName + "_" + donor,
+                        LiteralName = "skin: " + (host.ServesFuelled ? "trough " : "rack ")
+                                      + donor,
+                        // The real piece's current model, deliberately. The whole point is
+                        // that the only thing differing between these is the surface.
+                        LiteralModel = host.ModelValue,
+                        LiteralSkinDonors = donor,
+                        Description = "Skin trial on " + donor + ". Not a real piece - clear "
+                                      + "SkinTrials and it stops existing.",
+                        ServesFuelled = host.ServesFuelled,
+                        OreCapacity = host.OreCapacity,
+                        FuelCapacity = host.FuelCapacity,
+                    });
+                }
+            }
+
+            if (_trials.Count > 0)
+                StokerPlugin.Log.LogWarning(
+                    "SKIN TRIALS: " + _trials.Count + " piece(s) on the hammer at one wood "
+                    + "each, named 'skin: ...'. Anything built from them is destroyed when "
+                    + "SkinTrials is cleared.");
+
+            return _trials;
+        }
+
         private static IEnumerable<UpgradeDef> Active()
         {
             foreach (var def in All) yield return def;
             foreach (var def in Variants()) yield return def;
+            foreach (var def in SkinTrials()) yield return def;
         }
 
         private static GameObject _holder;

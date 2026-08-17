@@ -32,6 +32,8 @@ namespace Stoker
         public static ConfigEntry<string> PrefabSearch;
         public static ConfigEntry<bool> TestMode;
         public static ConfigEntry<bool> VariantMode;
+        public static ConfigEntry<string> SkinTrials;
+        public static ConfigEntry<bool> DumpShader;
 
         /// <summary>
         /// The real costs are gated behind the stations they upgrade, which is a whole
@@ -66,6 +68,28 @@ namespace Stoker
                 + "DESTRUCTIVE WHEN TURNED OFF: anything built from a variant vanishes with "
                 + "it, because its prefab name stops existing. Build them somewhere you do "
                 + "not mind losing.");
+
+            // The same idea as VariantMode, one axis over. A model can be judged from a
+            // render; a borrowed surface cannot, because it does not exist until the game
+            // is running - so the only way to choose between donors was a config line and a
+            // relaunch each, which compares a texture against a memory of the last one.
+            //
+            // Carries VariantMode's destructive warning for the same reason: each trial is
+            // a registered prefab and its ZDOs die with its name.
+            SkinTrials = config.Bind("Diagnostics", "SkinTrials", "",
+                "Comma-separated donor prefabs. Puts one copy of each upgrade on the hammer "
+                + "per donor, named 'skin: ...', so the same model can be seen wearing every "
+                + "candidate surface side by side. Empty turns it off. "
+                + "DESTRUCTIVE WHEN TURNED OFF, exactly as VariantMode is: anything built "
+                + "from a trial vanishes when its prefab name stops existing.");
+
+            // Every property on the shader a borrowed material uses, once per material. The
+            // names are not guessable - _BumpMap is the Standard shader's name and Valheim's
+            // pieces are on Custom/Piece - and they are what any attempt to supply our own
+            // maps has to write to.
+            DumpShader = config.Bind("Diagnostics", "DumpShader", false,
+                "List every property of each borrowed material's shader, with its type. "
+                + "Needed before our own texture can be written into one.");
 
             // Off by default. It indexes every loaded object carrying a mesh - close to two
             // thousand of them - and then writes a few hundred names into a log shared with

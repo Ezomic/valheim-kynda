@@ -234,6 +234,7 @@ namespace Stoker
                         "'{0}' skinned with {1} from {2}/{3} (shader {4}), atlas {5}, {6}px.",
                         key, material.name, name, renderer.name, material.shader.name,
                         Atlas[key], TexPx[key]));
+                    DumpShader(material);
                     return material;
                 }
             }
@@ -241,6 +242,61 @@ namespace Stoker
             StokerPlugin.Log.LogWarning("No material found for group '" + key + "'.");
             Cache[key] = null;
             return null;
+        }
+
+        private static readonly HashSet<string> _dumped =
+            new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Every property on a borrowed material's shader, with its type and whether it is
+        /// currently set.
+        ///
+        /// The names are not guessable and getting one wrong is silent - a texture written
+        /// to a property the shader does not have simply does nothing, which looks exactly
+        /// like the texture failing to load. _BumpMap is the Standard shader's name, and
+        /// Valheim's pieces are on Custom/Piece, so the normal slot here is called something
+        /// else. This is what any attempt to supply our own maps has to be written against.
+        ///
+        /// Once per shader rather than once per material: the property list belongs to the
+        /// shader, and a piece borrowing four materials off Custom/Piece would print it four
+        /// times for nothing.
+        /// </summary>
+        private static void DumpShader(Material material)
+        {
+            if (!StokerConfig.DumpShader.Value) return;
+            if (material == null || material.shader == null) return;
+            if (!_dumped.Add(material.shader.name)) return;
+
+            var shader = material.shader;
+            var count = shader.GetPropertyCount();
+            StokerPlugin.Log.LogInfo(
+                "SHADER " + shader.name + ": " + count + " properties.");
+
+            for (var i = 0; i < count; i++)
+            {
+                var name = shader.GetPropertyName(i);
+                var type = shader.GetPropertyType(i);
+
+                var set = "";
+                if (type == UnityEngine.Rendering.ShaderPropertyType.Texture)
+                {
+                    var tex = material.GetTexture(name);
+                    set = tex == null
+                        ? "  (unset)"
+                        : "  = " + tex.name + " " + tex.width + "x" + tex.height;
+                }
+                else if (type == UnityEngine.Rendering.ShaderPropertyType.Color)
+                {
+                    set = "  = " + material.GetColor(name);
+                }
+                else if (type == UnityEngine.Rendering.ShaderPropertyType.Float
+                         || type == UnityEngine.Rendering.ShaderPropertyType.Range)
+                {
+                    set = "  = " + material.GetFloat(name);
+                }
+
+                StokerPlugin.Log.LogInfo("    " + name + " (" + type + ")" + set);
+            }
         }
 
         /// <summary>
