@@ -117,14 +117,14 @@ mod came out of the server pack; with nothing to register against, a compile-tim
 reference and a runtime check that only ever answers "not installed" were moving parts
 earning nothing.
 
-What that gives up is the **version gate** — a handshake that compares mod versions and
+What that gives up is the **version gate**, a handshake that compares mod versions and
 build ids on connect and refuses a client that does not match. It matters here more than
 for most mods, because these upgrades are registered prefabs: a client that cannot
 resolve a prefab name **discards the ZDO rather than erroring**, so a mismatch does not
 fail loudly, it deletes every Tun and Woodrack already standing in that world.
 
 Solo, none of that applies. If Stoker is ever shipped to other people again, the
-reference and the `Suite.Register` call go back together — never one without the other.
+reference and the `Suite.Register` call go back together, never one without the other.
 
 ## Config
 
