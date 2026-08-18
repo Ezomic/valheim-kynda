@@ -42,12 +42,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Core carries the version gate. Private=false on purpose - Core deploys its own DLL
-         to plugins\Core, and a second copy landing beside this one would be two assemblies
-         sharing one BepInPlugin GUID, which is a plugin that silently does not load. -->
-    <ProjectReference Include="..\core\Core.csproj">
-      <Private>false</Private>
-    </ProjectReference>
+    <!-- No reference to Core. Stoker left the suite when it came out of the pack and
+         off the server; with nothing to register against, a compile-time reference to
+         Core is a build-order dependency buying nothing. Restore this and the
+         Suite.Register call together, never one without the other. -->
   </ItemGroup>
 
   <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(ProfileDir)\BepInEx\plugins')">

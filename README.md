@@ -109,16 +109,22 @@ How batching rides the game's own add, why the trough still answers to its old p
 how the surfaces and the link effect are borrowed, and the manual pass before a release:
 [DESIGN.md](DESIGN.md).
 
-## Core is optional
+## Stoker does not use Core
 
-Stoker installs and runs on its own. [Core](https://github.com/Ezomic/valheim-core) is a
-**soft** dependency: present, it is used; absent, nothing here is degraded. Installing
-Stoker from Thunderstore no longer installs Core with it.
+Stoker installs and runs entirely on its own, with no reference to
+[Core](https://github.com/Ezomic/valheim-core) at all. It was a soft dependency until the
+mod came out of the server pack; with nothing to register against, a compile-time
+reference and a runtime check that only ever answers "not installed" were moving parts
+earning nothing.
 
-What Core adds is the **version gate**, a handshake that compares mod versions and build
-ids on connect and refuses a client that does not match. Without it nothing refuses a client that lacks the mod, and this registers prefabs into `ZNetScene`: a client that cannot resolve one **discards the ZDO rather than erroring**, destroying what is already standing in the world.
+What that gives up is the **version gate** — a handshake that compares mod versions and
+build ids on connect and refuses a client that does not match. It matters here more than
+for most mods, because these upgrades are registered prefabs: a client that cannot
+resolve a prefab name **discards the ZDO rather than erroring**, so a mismatch does not
+fail loudly, it deletes every Tun and Woodrack already standing in that world.
 
-Solo, none of that applies and Core is not needed at all.
+Solo, none of that applies. If Stoker is ever shipped to other people again, the
+reference and the `Suite.Register` call go back together — never one without the other.
 
 ## Config
 
