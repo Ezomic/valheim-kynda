@@ -48,6 +48,14 @@
          Suite.Register call together, never one without the other. -->
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Shared source, not a reference. Prefabs.cs is the suite's runtime prefab registry and
+         lives in the core repo, but it is deliberately not in EzomicCore.dll: Core is a soft
+         dependency, and a mod that could not register its prefab would load and do nothing at
+         all. Linking the file keeps one copy of the code without making Core mandatory. -->
+    <Compile Include="..\core\shared\Prefabs.cs" Link="shared\Prefabs.cs" />
+  </ItemGroup>
+
   <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(ProfileDir)\BepInEx\plugins')">
     <MakeDir Directories="$(DeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
