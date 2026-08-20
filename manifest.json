@@ -1,9 +1,9 @@
 {
   "name": "Stoker",
   "author": "Robbin Thijssen",
-  "version_number": "0.3.0",
+  "version_number": "1.0.0",
   "website_url": "https://github.com/Ezomic/valheim-stoker",
-  "description": "Load smelters, kilns and fires several at a time, and build upgrades to make them hold more.",
+  "description": "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out.",
   "dependencies": [
     "denikson-BepInExPack_Valheim-5.4.2333"
   ]

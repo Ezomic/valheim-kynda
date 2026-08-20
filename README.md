@@ -18,16 +18,25 @@ So the whole mod sits on one line:
 exactly three ore. Twenty iron takes the same time and burns the same coal whether it went
 in as one load or three. You buy fewer trips, not more metal.
 
-## Status: v0.3
+## Status: v1.0
 
 | Feature | State |
 | --- | --- |
-| Add several items per press | **works in game** |
-| Two upgrade pieces that raise capacity | **work in game**; models remade, not yet seen in game |
+| Add several items per press | **works in game**, and is what 1.0 is |
+| Two upgrade pieces that raise capacity | work in game, **off by default** |
 
-Both features have been used in a real session. The art was the reason this was 0.3 and not
-1.0: the trough and the woodrack read acceptably at 128px and less well at eye height. Both
-have been remade, and the remade pair has not been looked at in game yet.
+1.0 is the batching and nothing else. That half has been used in a real session, it installs
+nothing, and there is nothing in a world to lose if it is later removed.
+
+The upgrades stay in the code and stay off. They are not unfinished - they work, and their
+models were remade - but they register prefabs, and a prefab is the one thing here that is
+permanent: ZNetScene keys a piece on its name hash and **discards a ZDO whose name no longer
+resolves**, so a world that loads without them loses every Tun and Woodrack already standing,
+silently and without an error. Choosing that for your own world is fair. Being handed it in a
+pack is not, and 1.0 is the version that goes to people who did not choose it.
+
+`Upgrades.Enabled = true` turns them on. The rest of this file documents them as though they
+were on, because for anyone who flips that line they are.
 
 ## Batching
 
@@ -51,6 +60,9 @@ Batching stops early at the station's capacity or when you run out, so it can ne
 more than pressing repeatedly would have.
 
 ## The two upgrades
+
+**Off by default since 1.0** - see the status section above for why. Everything below
+describes them as they behave once `Upgrades.Enabled` is on.
 
 Two pieces, not one, because a charcoal kiln eats wood and a smelter eats ore and coal. A
 single generic bin looked like it belonged to neither: it was a box that said "storage" and
@@ -112,19 +124,22 @@ how the surfaces and the link effect are borrowed, and the manual pass before a 
 ## Stoker does not use Core
 
 Stoker installs and runs entirely on its own, with no reference to
-[Core](https://github.com/Ezomic/valheim-core) at all. It was a soft dependency until the
-mod came out of the server pack; with nothing to register against, a compile-time
-reference and a runtime check that only ever answers "not installed" were moving parts
-earning nothing.
+[Core](https://github.com/Ezomic/valheim-core) at all, and at the shipped default it does not
+need one.
 
-What that gives up is the **version gate**, a handshake that compares mod versions and
-build ids on connect and refuses a client that does not match. It matters here more than
-for most mods, because these upgrades are registered prefabs: a client that cannot
-resolve a prefab name **discards the ZDO rather than erroring**, so a mismatch does not
-fail loudly, it deletes every Tun and Woodrack already standing in that world.
+What a Core reference would buy is the **version gate**, a handshake that compares mod
+versions and build ids on connect and refuses a client that does not match. A gate is worth
+having wherever two ends can disagree about a rule. Batching is not such a rule. Three ore in
+one press is three presses of one ore - same time, same coal, same metal - so a player who has
+this and a player who does not are playing the same game at different walking speeds, and
+there is nothing for a server to hold anyone to.
 
-Solo, none of that applies. If Stoker is ever shipped to other people again, the
-reference and the `Suite.Register` call go back together, never one without the other.
+**The upgrades are the exception, and they are off for this reason as much as any.** They are
+registered prefabs, and a client that cannot resolve a prefab name **discards the ZDO rather
+than erroring**: a mismatch does not fail loudly, it deletes every Tun and Woodrack already
+standing in that world. Turning them on is therefore a decision about a world you control. If
+they are ever shipped on by default, the Core reference and the `Suite.Register` call go back
+together, never one without the other.
 
 ## Config
 
@@ -142,7 +157,7 @@ reference and the `Suite.Register` call go back together, never one without the 
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `Enabled` | `true` | Add both buildable upgrades |
+| `Enabled` | `false` | Add both buildable upgrades. Off by default: they register prefabs, and a world that loads without them discards every one already built |
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
 | `MaxPerStation` | `2` | Most of one kind that count for one station |

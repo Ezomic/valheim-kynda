@@ -3,7 +3,41 @@
 Notable changes to Stoker. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [Unreleased]
+## [1.0.0] - 2026-08-19
+
+**1.0 is the batching.** The two upgrade pieces are off by default, and that default is the
+only thing about them that changed.
+
+Stoker is going back into the Longhouse pack, which is a different bar from running it here.
+A pack member is handed to somebody who chose the pack, not the mod, so the question stops
+being "does this work" and becomes "what can this cost a person who never opted into it".
+
+Batching costs nothing. It installs no prefabs, it writes nothing to a world, and by its own
+balance line three ore in one press is three presses of one ore - so removing the mod leaves a
+world exactly as it would have been. The upgrades cannot say that. They are registered
+prefabs, and ZNetScene **discards a ZDO whose prefab name no longer resolves**: a world that
+later loads without them loses every Tun and Woodrack standing in it, silently. That is a fair
+trade for somebody who read the setting and turned it on. It is a trap in a pack.
+
+So they stay in the code, they stay working, and they stay off. `Upgrades.Enabled = true` is
+the whole of turning them back on - and note that **a value already in your `.cfg` beats this
+new default**, so an existing install keeps them until that line is edited.
+
+### Changed
+
+- `Upgrades.Enabled` now defaults to **false**, with the reason in the setting's own comment.
+- The README leads with what 1.0 actually is, and the Core section now says why no version
+  gate is needed at the shipped default: batching is not a rule two ends can disagree about.
+  The gate becomes necessary exactly when the upgrades come on, which is a solo decision.
+- The package description no longer advertises the upgrades.
+
+### Unchanged
+
+Everything else. The Shift-held batch at every `Smelter` station and at fires, the `[Shift] x3`
+hover line, the capacity matching, the link effect and the diagnostics are all as they were in
+0.3.0 - this release is a default and a page, not a rewrite.
+
+## [Unreleased] - the upgrades, still in the code and off
 
 ### Both upgrade models remade
 

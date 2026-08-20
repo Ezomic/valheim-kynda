@@ -103,8 +103,20 @@ namespace Stoker
 
             // ------------------------------------------------------------------ upgrades
 
-            Enabled = config.Bind("Upgrades", "Enabled", true,
-                "Add the two buildable upgrades that raise a nearby station's capacity.");
+            // Off as of 1.0.0, and the default is the whole of what changed. The upgrades
+            // work; what they cost is two permanent prefab names. ZNetScene keys a piece on
+            // name.GetStableHashCode() and discards any ZDO whose name no longer resolves,
+            // so a player who turns these on and later turns them off - or joins a server
+            // that never had them - loses every Tun and Woodrack they had built, silently.
+            // That is a fair trade for somebody who chose it and a trap for somebody handed
+            // this in a pack, and 1.0.0 is the version that goes to people who did not
+            // choose it. The code stays exactly where it is: this is a default, not a
+            // removal, and turning it back on is one line.
+            Enabled = config.Bind("Upgrades", "Enabled", false,
+                "Add the two buildable upgrades that raise a nearby station's capacity. Off "
+                + "by default: they register prefabs, and a world that later loads without "
+                + "them discards every one already built rather than reporting an error. "
+                + "Turn them on for a world that is yours, not for one you share.");
 
             Donor = config.Bind("Upgrades", "Donor", "piece_chest_barrel",
                 "Prefab cloned for its machinery - ZNetView, Piece, WearNTear, placement "
