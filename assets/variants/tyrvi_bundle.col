@@ -1,0 +1,2 @@
+# box  centre x y z  size x y z  qx qy qz qw
+box 0.000 0.022 0.000 0.330 0.050 0.110 0 0 0 1
