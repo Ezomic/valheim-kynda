@@ -512,7 +512,10 @@ namespace Stoker
                 var stem = Path.GetFileNameWithoutExtension(path);
                 var lower = stem.ToLowerInvariant();
 
-                var isTrough = lower.Contains("trough");
+                // "tun" as well as "trough": the piece was renamed and this filter was
+                // not, so a new candidate called stoker_tun_* was silently skipped and
+                // VariantMode looked like it had stopped working.
+                var isTrough = lower.Contains("trough") || lower.Contains("tun");
                 if (!isTrough && !lower.Contains("rack")) continue;
 
                 _variants.Add(new UpgradeDef
@@ -529,6 +532,15 @@ namespace Stoker
                     // would build, stand there and upgrade no station - which is precisely
                     // the silent no-op the thing is meant to let you judge.
                     Stations = (isTrough ? Trough : Woodrack).Stations,
+
+                    // And its skin donor, which is the whole reason this mode exists. Left
+                    // out, every variant fell through to the built-in fallback for its
+                    // group name - so four candidate Tuns were shown wearing the wooden
+                    // CHEST's material, chest planking and iron corners smeared across a
+                    // cask, while the real piece is configured to borrow the barrel's.
+                    // A comparison that changes the surface as well as the shape is not a
+                    // comparison of shapes.
+                    LiteralSkinDonors = (isTrough ? Trough : Woodrack).SkinDonors.Value,
                     OreCapacity = isTrough ? Trough.OreCapacity : Woodrack.OreCapacity,
                     FuelCapacity = isTrough ? Trough.FuelCapacity : null,
                     LiteralScale = (isTrough ? Trough : Woodrack).ScaleValue,

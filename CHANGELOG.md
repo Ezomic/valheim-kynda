@@ -53,6 +53,31 @@ capacity figures are chosen to land on a round number exactly once - a kiln at 5
 smelter at 30 from 10. A second bin changes nothing and says so when you look at it, because a
 silent no-op reads as a bug. The README claimed 2 for a while; the code never did.
 
+### The Tun is remodelled, and the rack's frame is its own surface
+
+Two art fixes, and both came out of measuring rather than looking.
+
+**The old Tun wore four palettes.** Measured by face count it was iron 29%, ore 26%, coal
+26% and wood 19% - so a third of it was hoops, half was visible contents, and the timber
+that should have been the object was a fifth of it. Every vanilla prop ripped here is one
+material on one submesh, and `barrell`'s iron hoops are **painted into its wood texture**
+rather than modelled. The replacement, `stoker_tun_casks`, is one group: two upright casks,
+hoops as shallow rings in the same timber, no contents. 716 triangles against 2,376.
+
+It was chosen from four built to the same rules - casks, a hopper, a bin under a lean-to,
+and a long trough - staged at the 1.5 scale the runtime applies, beside a block of the
+smelter's measured mass. The other three are in `assets/variants/` with their icons.
+
+**The rack's frame no longer wears the woodpile.** It had two groups, log sides and sawn
+ends, which meant the posts, sill, back board and lean-to roof were painted with split
+billets - a frame apparently built out of firewood. It has three now: `wood` for the
+courses, `wood_end` for the sawn discs, and `frame` for the structure, borrowing
+`wood_beam`. One material is right for a prop and two for furniture, and a rack is
+furniture holding a prop.
+
+`SkinDonors` takes `group=prefab` pairs, so `wood_stack,frame=wood_beam` is the default and
+either half can be retargeted without a rebuild.
+
 ### Batching, unchanged
 
 Hold Shift, three ore or coal per press at any `Smelter` station, three logs at a fire. `1`

@@ -46,6 +46,13 @@ namespace Stoker
                 // it is round bark-on timber at 54 - the right surface for split billets
                 // when the piece is mostly logs.
                 { "wood",  new[] { "piece_chest_wood", "wood_wall_log", "darkwood_beam" } },
+
+                // The structure a pile sits IN, as opposed to the pile. Split out because
+                // one group meant the rack's posts and lean-to wore woodpile texture - a
+                // stack of split billets painted across a squared post, which reads as a
+                // frame made of firewood. Vanilla does this the same way: a prop is one
+                // material, but furniture is two, and a rack is furniture holding a prop.
+                { "frame", new[] { "wood_beam", "wood_wall_log", "wood_pole" } },
                 { "iron",  new[] { "piece_artisanstation", "forge", "piece_cauldron" } },
                 { "stone", new[] { "stone_wall_2x1", "piece_stonecutter", "smelter" } },
                 { "coal",  new[] { "coal_pile", "Coal", "charcoal_kiln" } },

@@ -184,6 +184,10 @@ def tint_stage():
 # which meant the ore side of the trough has never been legible in a preview whatever
 # the model did - the heap and the cask it sits in were the same value.
 TINTS["ore"] = (0.31, 0.29, 0.25, 1.0)
+# The frame reads lighter than the split billets it holds, which is what squared,
+# planed timber looks like beside bark-on rounds. In game the difference comes from a
+# different donor entirely; this is only so the preview can tell them apart.
+TINTS["frame"] = (0.40, 0.27, 0.15, 1.0)
 
 
 def round_log(radius, length, location, axis="y", rot=0.0):
@@ -258,13 +262,13 @@ def rack_courses():
     you can see through is not a pile - it is a rack with some wood leaning in it.
     """
     for x in (-0.58, 0.58):
-        box((0.16, 0.22, 1.10), (x, 0.0, 0.55), "wood")
+        box((0.16, 0.22, 1.10), (x, 0.0, 0.55), "frame")
         # Buried deep on purpose - vanilla's own woodpiles sit 58cm into the ground,
         # because terrain is never flat and a 2m footprint always has a corner over a dip.
-        box((0.20, 0.26, 0.56), (x, 0.0, -0.16), "wood")
+        box((0.20, 0.26, 0.56), (x, 0.0, -0.16), "frame")
 
-    box((1.24, 0.07, 0.96), (0.0, 0.30, 0.54), "wood")            # back board
-    box((1.28, 0.70, 0.13), (0.0, 0.0, 0.07), "wood")             # sill
+    box((1.24, 0.07, 0.96), (0.0, 0.30, 0.54), "frame")            # back board
+    box((1.28, 0.70, 0.13), (0.0, 0.0, 0.07), "frame")             # sill
 
     stack(4, 3, 0.125, 0.58, 0.62, 0.27, 0.215, y=-0.02)
 
@@ -276,8 +280,8 @@ def rack_courses():
     # The fascia also has to clear the stack. At y -0.44 against a stack front face at
     # -0.31 it stood in front of the top course and hid it, so the rack looked half
     # empty and the roof looked like a second shelf.
-    box((1.48, 0.90, 0.10), (0.0, -0.04, 1.14), "wood", rot=(17.0, 0.0, 0.0))
-    box((1.52, 0.14, 0.17), (0.0, -0.46, 1.00), "wood", rot=(17.0, 0.0, 0.0))
+    box((1.48, 0.90, 0.10), (0.0, -0.04, 1.14), "frame", rot=(17.0, 0.0, 0.0))
+    box((1.52, 0.14, 0.17), (0.0, -0.46, 1.00), "frame", rot=(17.0, 0.0, 0.0))
     collide((0.0, 0.0, 0.62), (1.34, 0.82, 1.24))
 
 

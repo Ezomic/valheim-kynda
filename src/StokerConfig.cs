@@ -215,7 +215,11 @@ namespace Stoker
             // 0.90 x 1.35 it stood a head over the 0.84 x 1.10 barrell it was imitating.
             // The prefab is still called Trough, so nothing standing in a world notices.
             UpgradePrefabs.Trough.Model = config.Bind("Trough", "Model",
-                "stoker_trough_casks.obj",
+                // Chosen 2026-08-25 from a round of four - casks, hopper, bin, trough - all built to
+                // one material with no modelled hoops and no visible contents, which is what the
+                // model this replaces got wrong. A cask is one vessel, so it stays one group;
+                // the hopper and the bin would each have wanted a frame split like the rack's.
+                "stoker_tun_casks.obj",
                 "The OBJ loaded from beside the DLL. Its .col sidecar supplies the "
                 + "collision and its _icon.png the hammer icon, both matched by name - so "
                 + "dropping in a new model brings its own shape and picture with it.");
@@ -316,8 +320,13 @@ namespace Stoker
             // rack has nothing but wood now, which is the point. wood_wall_log is round
             // bark-on timber with real sawn-end discs painted in the corner of its sheet,
             // and a woodrack is a stack of logs.
+            // The frame is named separately as of 1.0.0, and that split is the point. With
+            // one donor the posts and the lean-to wore woodpile texture - split billets
+            // painted across a squared post, so the rack read as a frame built out of
+            // firewood. A pile and the thing holding it are two materials in vanilla too:
+            // a prop is one, furniture is two, and this is furniture holding a prop.
             UpgradePrefabs.Woodrack.SkinDonors = config.Bind("Woodrack", "SkinDonors",
-                "wood_wall_log",
+                "wood_wall_log,frame=wood_beam",
                 "Which vanilla prefab this piece borrows its surface from. A bare prefab "
                 + "name covers the whole piece; group=prefab pairs override a single "
                 + "group. Empty uses the general list.");
