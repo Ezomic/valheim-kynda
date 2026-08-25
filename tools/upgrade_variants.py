@@ -288,13 +288,21 @@ def strap(length, location, mat="iron", axis="x", thickness=0.028, width=0.10, r
     return box(size, location, mat, rot=(0.0, 0.0, rot), wobble=0.6, bevel=0.006)
 
 
-def cone(bottom, top, height, z, mat, sides=9, centre=(0.0, 0.0)):
-    """Odd-sided, so it never presents a flat face and reads as round from anywhere."""
+def cone(bottom, top, height, z, mat, sides=9, centre=(0.0, 0.0), ends=False):
+    """
+    Odd-sided, so it never presents a flat face and reads as round from anywhere.
+
+    ends=True puts the flat caps in their own group, the way log() already does. A
+    timber donor paints side grain across most of its sheet and keeps two or three
+    log-end discs in a corner, so caps sharing the staves' rect get bark - or, on a
+    barrel sheet, whatever band the corner happens to hold.
+    """
     bpy.ops.mesh.primitive_cone_add(vertices=sides, radius1=bottom, radius2=top,
                                     depth=height, location=(centre[0], centre[1], z))
     obj = bpy.context.active_object
     obj.rotation_euler = (0.0, 0.0, math.radians(jitter(8.0)))
-    return part(obj, mat, bevel=0.010, projection="cylinder", radius=max(bottom, top))
+    return part(obj, mat, bevel=0.010, projection="cylinder", radius=max(bottom, top),
+                ends=ends)
 
 
 def band(radius, height, z, mat="iron", sides=14, centre=(0.0, 0.0)):

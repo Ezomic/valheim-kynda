@@ -240,7 +240,13 @@ namespace Stoker
             // wood came from piece_chest_wood and the hoops from piece_artisanstation, so
             // one small cask wore two objects' palettes that were never painted together.
             UpgradePrefabs.Trough.SkinDonors = config.Bind("Trough", "SkinDonors",
-                "piece_chest_barrel",
+                // barrell, not piece_chest_barrel. The chest prefab carries several
+                // renderers and the first one holding a _MainTex is its BLACK METAL chest
+                // submesh - so the staves came out sampling black metal, which is exactly
+                // what they looked like. barrell is one material, barrel_iron, and its
+                // iron hoops are painted into the wood rather than modelled, which is the
+                // trick these casks are built for.
+                "barrell",
                 "Which vanilla prefab this piece borrows its surface from. A bare prefab "
                 + "name covers the whole piece, which is the usual case and matches how "
                 + "vanilla builds a piece - one texture carrying every substance it is "

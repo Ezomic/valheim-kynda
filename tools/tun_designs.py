@@ -77,11 +77,16 @@ def stave_barrel(centre, radius, height, sides=11):
     """
     # z is the CENTRE of a cone here, not its base. Built at z=0 the lower half sits
     # under the ground, which is what the first render of this showed.
+    # ends=True puts the cap faces in their own group, wood_end. Every timber donor in
+    # the game paints its side grain across most of the sheet and hides two or three
+    # hand-drawn log-end discs in a corner, so one rect fitted to caps AND staves gives
+    # the caps bark and the staves whatever the corner happens to hold. The rack already
+    # does this; the first cut of these casks did not, and the caps came out striped.
     cx, cy = centre
     body = uv.cone(radius * 0.88, radius, height * 0.5, height * 0.25, "wood",
-                   sides=sides, centre=(cx, cy))
+                   sides=sides, centre=(cx, cy), ends=True)
     top = uv.cone(radius, radius * 0.88, height * 0.5, height * 0.75, "wood",
-                  sides=sides, centre=(cx, cy))
+                  sides=sides, centre=(cx, cy), ends=True)
 
     hoops = [uv.band(radius * 1.02, 0.055, height * 0.26, mat="wood", sides=sides,
                      centre=(cx, cy)),
