@@ -43,11 +43,42 @@ namespace Stoker
         }
 
         /// <summary>
-        /// A station with a fuel slot takes the trough; one without takes the woodrack.
-        /// Decided on the station's own numbers rather than a list of prefab names, so a
-        /// modded station lands on the right side without anyone naming it.
+        /// Which kind of bin this station takes: one with a fuel slot takes the trough, one
+        /// without takes the woodrack. Read off the station's own numbers, so a modded
+        /// station lands on the right side of the split without anyone naming it.
+        ///
+        /// This decides the KIND. It no longer decides whether the bin serves this station
+        /// at all - see Serves. A blast furnace is fuelled and a windmill is not, and
+        /// neither is upgradable.
         /// </summary>
         private bool Fuelled { get { return _baseFuel > 0; } }
+
+        /// <summary>
+        /// Whether the upgrade that serves this kind will actually serve THIS station.
+        ///
+        /// Named stations rather than a component test, because the split by fuel slot is a
+        /// fact about how a station works and this is a decision about what the mod is for.
+        /// The Tun upgrades a smelter and the Woodrack upgrades a charcoal kiln, full stop:
+        /// a blast furnace and an eitr refinery are late-game stations that do not need
+        /// help, and a windmill and a spinning wheel are single-input like the kiln but are
+        /// not what a woodrack is a picture of.
+        ///
+        /// It is config, so a server that disagrees, or a modded station that wants in, is a
+        /// line in the .cfg rather than a rebuild.
+        /// </summary>
+        private bool Serves(UpgradeDef def)
+        {
+            if (def == null || def.Stations == null) return false;
+
+            var mine = Utils.GetPrefabName(gameObject);
+            foreach (var name in (def.Stations.Value ?? "").Split(','))
+            {
+                if (string.Equals(name.Trim(), mine, System.StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// A flat amount, taken from whichever upgrade serves this kind of station.
@@ -61,12 +92,12 @@ namespace Stoker
         {
             if (_smelter == null) return;
 
-            var level = StokerConfig.Enabled.Value
+            var def = UpgradePrefabs.For(Fuelled);
+
+            var level = StokerConfig.Enabled.Value && Serves(def)
                 ? Mathf.Min(UpgradeBin.CountNear(transform.position, Fuelled),
                             Mathf.Max(0, StokerConfig.MaxPerStation.Value))
                 : 0;
-
-            var def = UpgradePrefabs.For(Fuelled);
 
             var oreBonus = level * Mathf.Max(0, def.OreCapacity.Value);
             var fuelBonus = def.FuelCapacity != null
@@ -110,6 +141,11 @@ namespace Stoker
             {
                 if (capacity == null || capacity._smelter == null) continue;
                 if (capacity.Fuelled != fuelled) continue;
+
+                // A bin standing next to a station it does not serve must not claim it, or
+                // the hover text names a station whose capacity never moved - which is the
+                // silent no-op this mod already went out of its way to avoid elsewhere.
+                if (!capacity.Serves(UpgradePrefabs.For(fuelled))) continue;
 
                 var distance = Vector3.Distance(capacity.transform.position, point);
                 if (distance > range || distance >= bestDistance) continue;

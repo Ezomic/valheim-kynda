@@ -1,23 +1,36 @@
+using System.Runtime.CompilerServices;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
+using Ezomic.Core;
 using HarmonyLib;
 
 namespace Stoker
 {
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
-    // No dependency on Core at all, soft or otherwise. Stoker has left the suite while its
-    // upgrade models are being reworked - it is out of the pack and off the server, so there
-    // is no shared set for a version gate to hold it to, and a soft dependency that only ever
-    // resolves to "not installed" is a moving part earning nothing.
+    // Soft, not hard. A hard dependency that is absent does not degrade - the plugin never
+    // loads at all - and every mod here has to be installable on its own. Soft still buys
+    // the load-order guarantee when Core is present, which is all the gate needs.
+    //
+    // Back as of 1.0.0, together with the upgrades, and the pairing is the point: they are
+    // registered prefabs, and ZNetScene discards any ZDO whose prefab name does not resolve
+    // rather than erroring. A server without this mod does not fail to show a Tun, it
+    // deletes every Tun already standing. The gate is what refuses that connection instead.
+    //
     // No BepInProcess. It is a whitelist, and a dedicated server runs valheim_server.exe.
-    // The upgrades are registered prefabs, and ZNetScene discards any ZDO whose prefab name
-    // does not resolve - so a server without this mod destroys every one already standing.
+    [BepInDependency(CoreGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class StokerPlugin : BaseUnityPlugin
     {
         public const string PluginGuid = "ezomic.valheim.stoker";
         public const string PluginName = "Stoker";
         public const string PluginVersion = "1.0.0";
         public const string PluginAuthor = "Robbin Thijssen";
+
+        /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>
+        private const string CoreGuid = "ezomic.valheim.core";
+
+        /// <summary>Whether Core answered at load.</summary>
+        internal static bool CorePresent;
 
         internal static ManualLogSource Log;
 
@@ -27,6 +40,8 @@ namespace Stoker
         {
             Log = Logger;
             StokerConfig.Bind(Config);
+
+            TryRegisterWithCore();
 
             _harmony = new Harmony(PluginGuid);
             _harmony.PatchAll(typeof(ScenePatches));
@@ -47,16 +62,47 @@ namespace Stoker
                                + "Turn TestMode off in the config before playing for real.");
         }
 
-        // Core registration removed with the mod's departure from the pack and the server.
-        //
-        // What that gave up is worth writing down, because it comes back the moment Stoker
-        // ships anywhere again. The gate is what stopped a client joining a host that did not
-        // have this mod: the upgrades are registered prefabs, ZNetScene discards any ZDO whose
-        // prefab name will not resolve, and it does it silently - so a mismatched client does
-        // not error, it deletes every Tun and Woodrack already standing in that world.
-        //
-        // Standing alone, nothing refuses that client. Which is acceptable exactly while this
-        // is a single-player mod being reworked, and not a moment longer.
+        /// <summary>
+        /// Joins Core's version gate when Core is installed, and does nothing when it is not.
+        ///
+        /// What standing alone costs here is not enforcement of a rule, it is somebody's
+        /// buildings. The upgrades are registered prefabs; ZNetScene discards any ZDO whose
+        /// prefab name will not resolve, and it does it silently. So a client without this
+        /// mod joining a world that has it does not error and does not merely fail to see a
+        /// Tun - it deletes every Tun and Woodrack standing in that world.
+        ///
+        /// Ungated, nothing refuses that client. That was acceptable exactly while this was a
+        /// single-player mod being reworked, and it stopped being acceptable the moment it
+        /// went back into the pack.
+        /// </summary>
+        private void TryRegisterWithCore()
+        {
+            CorePresent = Chainloader.PluginInfos.ContainsKey(CoreGuid);
+
+            if (!CorePresent)
+            {
+                Log.LogWarning("Core is not installed, so there is no version gate. The "
+                               + "upgrades still work, but a world loaded without this mod "
+                               + "discards every one already built - and nothing will stop "
+                               + "that happening.");
+                return;
+            }
+
+            RegisterWithCore();
+        }
+
+        /// <summary>
+        /// Kept separate and never inlined. The JIT resolves the assemblies a method needs
+        /// when it first compiles that method, so a Suite call sitting directly in Awake
+        /// would drag Ezomic.Core in before the check above could prevent it, and the
+        /// missing-assembly exception would land during plugin load.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void RegisterWithCore()
+        {
+            // Everyone, not HostOnly, and not a matter of taste: this registers prefabs.
+            Suite.Register(PluginGuid, PluginName, PluginVersion, Config, Requirement.Everyone);
+        }
 
         private void OnDestroy()
         {

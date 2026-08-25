@@ -26,10 +26,13 @@ namespace Stoker
     {
         /// <summary>
         /// Permanent. ZNetScene keys on name.GetStableHashCode() and saved ZDOs store that
-        /// hash, so renaming one of these destroys every copy already standing in a world.
-        /// The trough is still called stoker_hopper for exactly that reason - it inherited
-        /// the name from the single generic bin it replaced, and changing it now would take
-        /// out anything built while that bin existed.
+        /// hash, so renaming one of these destroys every copy already standing in a world -
+        /// silently, because ZNetScene discards an unresolvable ZDO rather than erroring.
+        ///
+        /// The trough carried the wrong name, stoker_hopper, inherited from the single
+        /// generic bin it replaced. It was fixed on 2026-08-25 for the one reason that made
+        /// it fixable at all: nothing had shipped, so there was nothing standing anywhere to
+        /// lose. After a release that is no longer true of either of these.
         /// </summary>
         public string PrefabName;
 
@@ -157,6 +160,12 @@ namespace Stoker
 
         /// <summary>True for the trough, false for the woodrack.</summary>
         public bool ServesFuelled;
+
+        /// <summary>
+        /// The station prefabs this upgrade actually serves, comma separated. ServesFuelled
+        /// decides which KIND of station could take it; this decides which ones do.
+        /// </summary>
+        public ConfigEntry<string> Stations;
 
         public GameObject Prefab;
     }
@@ -441,12 +450,17 @@ namespace Stoker
     {
         public static readonly UpgradeDef Trough = new UpgradeDef
         {
-            PrefabName = "stoker_hopper",
+            // Renamed from stoker_hopper on 2026-08-25, while nothing had shipped. The old
+            // name was inherited from a design this piece stopped being two rewrites ago,
+            // and a prefab name is permanent from the first one built in any world - so the
+            // only free moment to fix one is before the mod is published. The cost of doing
+            // it later would be every Tun standing in every world, discarded in silence.
+            PrefabName = "stoker_tun",
             // Says what it upgrades before it says anything else. The build menu shows
             // this under the name, and the star in the corner only tells you that the
             // piece is an upgrade - never of what.
             Description = "Smelter improvement. A cask of ore and a cask of coal. A "
-                          + "smelter or furnace beside it holds more of both.",
+                          + "smelter beside it holds more of both.",
             ServesFuelled = true,
         };
 
@@ -511,6 +525,10 @@ namespace Stoker
                     Description = "Comparison variant. Not a real piece - turn VariantMode "
                                   + "off and it stops existing.",
                     ServesFuelled = isTrough,
+                    // Inherit the real piece's station list. A trial that served nothing
+                    // would build, stand there and upgrade no station - which is precisely
+                    // the silent no-op the thing is meant to let you judge.
+                    Stations = (isTrough ? Trough : Woodrack).Stations,
                     OreCapacity = isTrough ? Trough.OreCapacity : Woodrack.OreCapacity,
                     FuelCapacity = isTrough ? Trough.FuelCapacity : null,
                     LiteralScale = (isTrough ? Trough : Woodrack).ScaleValue,
@@ -657,6 +675,7 @@ namespace Stoker
                         Description = "Skin trial on " + donor + ". Not a real piece - clear "
                                       + "SkinTrials and it stops existing.",
                         ServesFuelled = host.ServesFuelled,
+                        Stations = host.Stations,
                         OreCapacity = host.OreCapacity,
                         FuelCapacity = host.FuelCapacity,
                         LiteralScale = host.ScaleValue,

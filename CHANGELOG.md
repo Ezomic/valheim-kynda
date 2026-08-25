@@ -3,41 +3,63 @@
 Notable changes to Stoker. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [1.0.0] - 2026-08-19
+## [1.0.0] - 2026-08-25
 
-**1.0 is the batching.** The two upgrade pieces are off by default, and that default is the
-only thing about them that changed.
+Both halves ship: the batching, and the two upgrade pieces.
 
-Stoker is going back into the Longhouse pack, which is a different bar from running it here.
-A pack member is handed to somebody who chose the pack, not the mod, so the question stops
-being "does this work" and becomes "what can this cost a person who never opted into it".
+### The upgrades are in, and so is the gate
 
-Batching costs nothing. It installs no prefabs, it writes nothing to a world, and by its own
-balance line three ore in one press is three presses of one ore - so removing the mod leaves a
-world exactly as it would have been. The upgrades cannot say that. They are registered
-prefabs, and ZNetScene **discards a ZDO whose prefab name no longer resolves**: a world that
-later loads without them loses every Tun and Woodrack standing in it, silently. That is a fair
-trade for somebody who read the setting and turned it on. It is a trap in a pack.
+They were briefly cut for a pack release and then put back, and the two decisions belong
+together rather than one at a time. A Tun and a Woodrack are **registered prefabs**, and
+ZNetScene discards a ZDO whose prefab name will not resolve rather than erroring - so a world
+that later loads without this mod does not fail to show what you built, it deletes it.
 
-So they stay in the code, they stay working, and they stay off. `Upgrades.Enabled = true` is
-the whole of turning them back on - and note that **a value already in your `.cfg` beats this
-new default**, so an existing install keeps them until that line is edited.
+That is why Core is a dependency again, soft, with `Suite.Register` at `Requirement.Everyone`.
+The reference and the registration go together and never one without the other: ungated, the
+mod has no way to stop a mismatched client quietly eating somebody's buildings. Without Core
+installed everything still works and the log says plainly what is unprotected.
 
-### Changed
+### Each upgrade now serves exactly one station
 
-- `Upgrades.Enabled` now defaults to **false**, with the reason in the setting's own comment.
-- The README leads with what 1.0 actually is, and the Core section now says why no version
-  gate is needed at the shipped default: batching is not a rule two ends can disagree about.
-  The gate becomes necessary exactly when the upgrades come on, which is a solo decision.
-- The package description no longer advertises the upgrades.
+**The Tun upgrades a smelter. The Woodrack upgrades a charcoal kiln.** Nothing else.
 
-### Unchanged
+Which *kind* of bin a station could take is still read off its own components, a fuel slot or
+not - that part is a fact about how a station works and it still means a modded station lands
+on the right side of the split. But which stations actually get one is a named list now,
+because that is a decision about what the mod is for. A blast furnace and an eitr refinery
+would have matched on components and are late-game stations that need no help; a windmill and
+a spinning wheel are single-input like the kiln and are not what a rack of split logs is a
+picture of.
 
-Everything else. The Shift-held batch at every `Smelter` station and at fires, the `[Shift] x3`
-hover line, the capacity matching, the link effect and the diagnostics are all as they were in
-0.3.0 - this release is a default and a page, not a rewrite.
+`Trough.Stations` and `Woodrack.Stations` are config, so a modded station that wants in is a
+line rather than a rebuild. A bin beside a station it does not serve says it is feeding
+nothing rather than pretending.
 
-## [Unreleased] - the upgrades, still in the code and off
+### The Tun's prefab is renamed
+
+`stoker_hopper` becomes **`stoker_tun`**. The old name was inherited from the single generic
+bin this piece replaced two designs ago, and a prefab name is permanent from the first one
+built in any world - so the only free moment to fix one is before the mod has ever shipped.
+That moment is now. After this release it cannot be touched again without deleting every Tun
+standing in every world that has ever run it.
+
+**If you have a Tun standing in a test world, it is gone.** Nothing was published, so this is
+the whole exposure.
+
+### One per station
+
+`MaxPerStation` is 1. These are a one-time improvement rather than something to stack, and the
+capacity figures are chosen to land on a round number exactly once - a kiln at 50 from 25, a
+smelter at 30 from 10. A second bin changes nothing and says so when you look at it, because a
+silent no-op reads as a bug. The README claimed 2 for a while; the code never did.
+
+### Batching, unchanged
+
+Hold Shift, three ore or coal per press at any `Smelter` station, three logs at a fire. `1`
+restores vanilla for either. The `[Shift] x3` hover line exists because a held modifier is
+otherwise invisible.
+
+## [1.0.0] - 2026-08-25 (the model rework, which also ships here)
 
 ### Both upgrade models remade
 

@@ -22,21 +22,20 @@ in as one load or three. You buy fewer trips, not more metal.
 
 | Feature | State |
 | --- | --- |
-| Add several items per press | **works in game**, and is what 1.0 is |
-| Two upgrade pieces that raise capacity | work in game, **off by default** |
+| Add several items per press | **works in game** |
+| Two upgrade pieces that raise capacity | work in game; **models not yet seen at eye height** |
 
-1.0 is the batching and nothing else. That half has been used in a real session, it installs
-nothing, and there is nothing in a world to lose if it is later removed.
+Both halves ship. The batching has been used in a real session. The upgrades work and their
+models were remade, but the remade pair has only been judged from renders, which is the one
+thing still outstanding.
 
-The upgrades stay in the code and stay off. They are not unfinished - they work, and their
-models were remade - but they register prefabs, and a prefab is the one thing here that is
-permanent: ZNetScene keys a piece on its name hash and **discards a ZDO whose name no longer
-resolves**, so a world that loads without them loses every Tun and Woodrack already standing,
-silently and without an error. Choosing that for your own world is fair. Being handed it in a
-pack is not, and 1.0 is the version that goes to people who did not choose it.
+**The upgrades register prefabs, and that is permanent.** ZNetScene keys a piece on its name
+hash and **discards a ZDO whose name no longer resolves**, so a world that later loads without
+this mod loses every Tun and Woodrack standing in it, silently and without an error. That is
+why Stoker registers with [Core](https://github.com/Ezomic/valheim-core)'s version gate: the
+gate refuses a mismatched connection rather than letting it quietly eat what you built.
 
-`Upgrades.Enabled = true` turns them on. The rest of this file documents them as though they
-were on, because for anyone who flips that line they are.
+`Upgrades.Enabled = false` turns them off, for a world where you want the batching alone.
 
 ## Batching
 
@@ -61,9 +60,6 @@ more than pressing repeatedly would have.
 
 ## The two upgrades
 
-**Off by default since 1.0** - see the status section above for why. Everything below
-describes them as they behave once `Upgrades.Enabled` is on.
-
 Two pieces, not one, because a charcoal kiln eats wood and a smelter eats ore and coal. A
 single generic bin looked like it belonged to neither: it was a box that said "storage" and
 nothing else.
@@ -81,12 +77,15 @@ tell you.
 **Looking at one also draws the link**, the same run of motes a chopping block draws to its
 workbench, so you can see at a glance which station an upgrade belongs to in a row of them.
 
-Two is the limit per station by default.
+**One per station.** These are a one-time improvement rather than something to stack, and the
+capacity figures are chosen to land on a round number exactly once. A second bin beside the
+same station changes nothing and says so when you look at it, because a silent no-op reads as
+a bug. `MaxPerStation` raises it if you disagree.
 
-| Station | Bare | One upgrade | Two |
-| --- | --- | --- | --- |
-| Charcoal kiln | 25 wood | **50** | 75 |
-| Smelter | 10 ore, 20 coal | **30, 60** | 50, 100 |
+| Station | Bare | With its upgrade |
+| --- | --- | --- |
+| Charcoal kiln | 25 wood | **50** |
+| Smelter | 10 ore, 20 coal | **30, 60** |
 
 **Each piece carries its own figure**, rather than the mod having one. The kiln holds 25 and
 should land on 50; the smelter holds 10 and should land on 30. That is +25 and +20, and no
@@ -97,12 +96,19 @@ The trough's coal figure is twice its ore figure because a smelter burns two coa
 ore it melts. Matching them would leave the coal gone with a third of the ore still waiting,
 which is the upgrade only half working.
 
-**Which piece serves which station is decided on the station's own numbers, not a list of
-names.** A station with a fuel slot takes the trough; one without takes the woodrack. That is
-the same component-level matching the capacity component uses, so a modded station lands on
-the right side without anyone naming it. It also means the windmill and spinning wheel accept
-a woodrack, which is thematically odd and mechanically correct, since they are single-input
-stations, which is exactly what the rack is for.
+**The Tun upgrades a smelter. The Woodrack upgrades a charcoal kiln. Nothing else.**
+
+Which *kind* of bin a station could take is still read off its own components - a fuel slot
+means the Tun, no fuel slot means the Woodrack - but which stations actually get one is a
+named list, because that is a decision about what the mod is for rather than a fact about how
+a station works. A blast furnace and an eitr refinery are fuelled and would match on
+components alone; they are late-game stations that do not need the help. A windmill and a
+spinning wheel are single-input like the kiln; neither is what a rack of split logs is a
+picture of.
+
+Both lists are config, so a modded station that wants in, or a server that disagrees, is a
+line in the `.cfg` rather than a rebuild. A bin standing beside a station it does not serve
+tells you it is feeding nothing rather than pretending.
 
 Bronze gates the trough behind the smelter it upgrades, so it cannot exist before there is
 anything to smelt. The woodrack deliberately is **not** gated that way: a charcoal kiln is a
@@ -121,25 +127,24 @@ How batching rides the game's own add, why the trough still answers to its old p
 how the surfaces and the link effect are borrowed, and the manual pass before a release:
 [DESIGN.md](DESIGN.md).
 
-## Stoker does not use Core
+## Stoker uses Core, and why it has to
 
-Stoker installs and runs entirely on its own, with no reference to
-[Core](https://github.com/Ezomic/valheim-core) at all, and at the shipped default it does not
-need one.
+[Core](https://github.com/Ezomic/valheim-core) is a **soft** dependency: install Stoker on its
+own and it works. What Core adds is the **version gate**, a handshake that compares mod
+versions and build ids on connect and refuses a client that does not match.
 
-What a Core reference would buy is the **version gate**, a handshake that compares mod
-versions and build ids on connect and refuses a client that does not match. A gate is worth
-having wherever two ends can disagree about a rule. Batching is not such a rule. Three ore in
-one press is three presses of one ore - same time, same coal, same metal - so a player who has
-this and a player who does not are playing the same game at different walking speeds, and
-there is nothing for a server to hold anyone to.
+Batching would not need one. Three ore in one press is three presses of one ore - same time,
+same coal, same metal - so a player who has it and a player who does not are playing the same
+game at different walking speeds, and there is nothing for a server to hold anyone to.
 
-**The upgrades are the exception, and they are off for this reason as much as any.** They are
+**The upgrades are a different matter, and they are why the gate is here.** They are
 registered prefabs, and a client that cannot resolve a prefab name **discards the ZDO rather
-than erroring**: a mismatch does not fail loudly, it deletes every Tun and Woodrack already
-standing in that world. Turning them on is therefore a decision about a world you control. If
-they are ever shipped on by default, the Core reference and the `Suite.Register` call go back
-together, never one without the other.
+than erroring**. A mismatch does not fail loudly and it does not merely hide a Tun: it deletes
+every Tun and Woodrack standing in that world. The gate refuses that connection instead, which
+is the only way the mod can protect what somebody built.
+
+Without Core the upgrades still work and the mod says so in the log - it just cannot stop that
+happening. Run it ungated on a world you control, not on one you share.
 
 ## Config
 
@@ -157,10 +162,11 @@ together, never one without the other.
 
 | Key | Default | What it does |
 | --- | --- | --- |
-| `Enabled` | `false` | Add both buildable upgrades. Off by default: they register prefabs, and a world that loads without them discards every one already built |
+| `Enabled` | `true` | Add both buildable upgrades. They register prefabs, so a world that later loads without this mod discards every one already built |
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery. Its look, collision and icon are all replaced, so this is not a visual choice |
 | `Range` | `4` | How close an upgrade must be to the station it feeds |
-| `MaxPerStation` | `2` | Most of one kind that count for one station |
+| `MaxPerStation` | `1` | How many of one kind count for a single station. One, because these are a one-time improvement and the figures land on a round number exactly once |
+| `Stations` | per piece | Which station prefabs each upgrade serves. `smelter` for the Tun, `charcoal_kiln` for the Woodrack |
 | `OreCapacity` / `FuelCapacity` | per piece | Extra items each upgrade adds; see the Tun / Woodrack sections |
 | `ShowLink` | `true` | Draw the game's station-link effect to the station when you look at an upgrade |
 | `LinkHeight` | `0.8` | How far up the upgrade the link starts, in metres |
@@ -169,7 +175,9 @@ together, never one without the other.
 
 The config section is still `[Trough]`. Renaming a section resets every saved setting
 under it, which is a worse trade than a stale header. The prefab name is still
-`stoker_hopper` for a harder reason: ZDOs key on its hash, so changing it destroys
+`stoker_tun` as of 1.0.0, renamed from `stoker_hopper` while nothing had shipped and
+there was therefore nothing standing to lose. From the first release it is fixed for good:
+ZDOs key on its hash, so changing it destroys
 every one already standing.
 
 Each piece has its own section with the same four keys.

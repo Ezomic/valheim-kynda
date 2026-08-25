@@ -56,6 +56,19 @@
     <Compile Include="..\core\shared\Prefabs.cs" Link="shared\Prefabs.cs" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Core carries the version gate, and Stoker needs it again the moment the
+         upgrades ship: they are registered prefabs, and ZNetScene discards any ZDO
+         whose prefab name will not resolve. A client joining a host without this mod
+         would not error, it would delete every Tun and Woodrack already standing.
+         Private=false on purpose - Core deploys its own DLL to plugins\Core, and a
+         second copy beside this one would be two assemblies sharing one BepInPlugin
+         GUID, which is a plugin that silently does not load. -->
+    <ProjectReference Include="..\core\Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
   <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(ProfileDir)\BepInEx\plugins')">
     <MakeDir Directories="$(DeployDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />

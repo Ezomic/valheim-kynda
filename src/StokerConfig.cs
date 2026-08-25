@@ -103,20 +103,22 @@ namespace Stoker
 
             // ------------------------------------------------------------------ upgrades
 
-            // Off as of 1.0.0, and the default is the whole of what changed. The upgrades
-            // work; what they cost is two permanent prefab names. ZNetScene keys a piece on
-            // name.GetStableHashCode() and discards any ZDO whose name no longer resolves,
-            // so a player who turns these on and later turns them off - or joins a server
-            // that never had them - loses every Tun and Woodrack they had built, silently.
-            // That is a fair trade for somebody who chose it and a trap for somebody handed
-            // this in a pack, and 1.0.0 is the version that goes to people who did not
-            // choose it. The code stays exactly where it is: this is a default, not a
-            // removal, and turning it back on is one line.
-            Enabled = config.Bind("Upgrades", "Enabled", false,
-                "Add the two buildable upgrades that raise a nearby station's capacity. Off "
-                + "by default: they register prefabs, and a world that later loads without "
-                + "them discards every one already built rather than reporting an error. "
-                + "Turn them on for a world that is yours, not for one you share.");
+            // On, and what that commits to belongs where somebody will read it. These are
+            // registered prefabs - stoker_hopper and stoker_woodrack - and ZNetScene keys a
+            // piece on name.GetStableHashCode() and discards any ZDO whose name no longer
+            // resolves. The names are therefore permanent from the first one built:
+            // withdrawing this mod from a world, or joining a server that does not run it,
+            // deletes every Tun and Woodrack standing there, silently and for good.
+            //
+            // That is exactly why Stoker registers with Core's gate again. The gate refuses
+            // the mismatched connection rather than letting it quietly eat what somebody
+            // built, and the two go together - the Core reference and the Suite.Register
+            // call, never one without the other.
+            Enabled = config.Bind("Upgrades", "Enabled", true,
+                "Add the two buildable upgrades that raise a nearby station's capacity. They "
+                + "register prefabs, so a world that later loads without this mod discards "
+                + "every one already built rather than reporting an error - which is what "
+                + "the version gate exists to prevent.");
 
             Donor = config.Bind("Upgrades", "Donor", "piece_chest_barrel",
                 "Prefab cloned for its machinery - ZNetView, Piece, WearNTear, placement "
@@ -181,10 +183,19 @@ namespace Stoker
             // deliberately: renaming a section resets every saved setting under it, and a
             // stale section header costs nothing next to that.
             //
-            // The prefab name is untouchable for a different reason - it is still
-            // stoker_hopper, and ZDOs key on its hash.
+            // The prefab name is stoker_tun as of 2026-08-25, renamed from stoker_hopper
+            // while nothing had shipped and there was therefore nothing to lose. It is
+            // untouchable from the first release onwards, because ZDOs key on its hash.
             UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Tun",
                 "Name shown on the hammer and when you look at one.");
+
+            // The smelter and nothing else. A blast furnace is fuelled too and would match
+            // on components alone, but it is a late-game station that does not need the
+            // help - and a Tun is a picture of a smelter's ore and coal, not of black metal.
+            UpgradePrefabs.Trough.Stations = config.Bind("Trough", "Stations", "smelter",
+                "Station prefabs this upgrades, comma separated. A station not named here is "
+                + "left alone even if it is the right kind, and a bin standing next to one "
+                + "says it is feeding nothing rather than pretending.");
 
             // The nails carry the gate now, so the loose bronze that used to do it is gone
             // rather than stacked on top - iron nails already require a smelter to have
@@ -246,6 +257,13 @@ namespace Stoker
                 + "matching them would run the fuel out before the ore.");
 
             // ------------------------------------------------------------------ the rack
+
+            // The charcoal kiln and nothing else. A windmill and a spinning wheel are
+            // single-input in the same way and would match on components, but neither is
+            // what a rack of split logs is a picture of, and neither is short of capacity.
+            UpgradePrefabs.Woodrack.Stations = config.Bind("Woodrack", "Stations", "charcoal_kiln",
+                "Station prefabs this upgrades, comma separated. A station not named here is "
+                + "left alone even if it is the right kind.");
 
             UpgradePrefabs.Woodrack.Name = config.Bind("Woodrack", "Name", "Woodrack",
                 "Name shown on the hammer and when you look at one.");

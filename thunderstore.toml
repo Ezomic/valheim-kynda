@@ -7,8 +7,8 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Ezomic"
 name = "Stoker"
-versionNumber = "0.3.0"
-description = "Load smelters, kilns and fires several at a time, and build upgrades to make them hold more."
+versionNumber = "1.0.0"
+description = "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out."
 websiteUrl = "https://github.com/Ezomic/valheim-stoker"
 containsNsfwContent = false
 
