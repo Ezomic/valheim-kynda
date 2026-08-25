@@ -1111,14 +1111,39 @@ namespace Stoker
                 if (def.Prefab == null) return;
                 if (table.m_pieces.Contains(def.Prefab)) continue;
 
-                table.m_pieces.Add(def.Prefab);
+                // Directly after the station it upgrades, not at the tail of the menu.
+                // The build grid draws a category in list order, so "the Tun is the
+                // smelter's upgrade" is something the menu can simply show by adjacency -
+                // a player finds it where their eye already is, next to the thing they
+                // just built. The first name in the def's own Stations list is the
+                // anchor; a station that is not on the hammer (or a trial def with an
+                // odd list) falls back to the tail, which is where everything landed
+                // before and is merely worse, not broken.
+                var at = -1;
+                if (def.Stations != null && !string.IsNullOrEmpty(def.Stations.Value))
+                {
+                    var first = def.Stations.Value.Split(',')[0].Trim();
+                    for (var i = 0; i < table.m_pieces.Count; i++)
+                    {
+                        var piece = table.m_pieces[i];
+                        if (piece == null) continue;
+                        if (!string.Equals(piece.name, first,
+                                           System.StringComparison.OrdinalIgnoreCase)) continue;
+                        at = i + 1;
+                        break;
+                    }
+                }
+
+                if (at >= 0) table.m_pieces.Insert(at, def.Prefab);
+                else table.m_pieces.Add(def.Prefab);
                 added++;
             }
 
             // Logged on the add, not on the call: this is retried every frame and an
             // already-satisfied retry would write a line per frame.
             if (added > 0)
-                StokerPlugin.Log.LogInfo(added + " upgrade(s) added to the hammer.");
+                StokerPlugin.Log.LogInfo(added + " upgrade(s) added to the hammer, each "
+                    + "beside its station.");
         }
     }
 }

@@ -63,37 +63,31 @@ def timber(size, location, rot=(0.0, 0.0, 0.0), bevel=0.014):
     return uv.box(size, location, "wood", rot=rot, bevel=bevel)
 
 
-def stave_barrel(centre, radius, height, sides=11):
+def stave_barrel(centre, radius, height, sides=9):
     """
-    A cask as one closed form with a slight waist, not a ring of separate staves.
+    A cask at vanilla's density, which is far lower than the first cut of this assumed.
 
-    Odd-sided, because an even-sided cylinder presents a flat face to the camera and
-    reads as a box. Eleven is enough to read round at 1.5 scale and cheap enough that
-    two of them leave room under the budget.
+    Measured off Haldor's camp: fi_vil_container_barrel_small is 116 triangles for a
+    0.64m barrel, barrel_big_fruit is 140, the keg is 142. The whole camp is built from
+    meshes that size. The first version of this was 716 for the pair - five times a
+    vanilla barrel - and it read smooth and round where the game is chunky and faceted.
+    That density is a difference in how it looks, not just what it costs.
 
-    The hoops are two shallow rings of the SAME timber. In game the borrowed barrel
-    material carries vanilla's painted hoops, so a modelled iron band would be a second
-    set of hoops in a different palette - which is precisely what went wrong before.
+    So: nine sides, no modelled hoops, and no waist ring. The hoops come from the sheet,
+    which is what fi_village_wood paints and what barrell paints too - the game makes a
+    banded barrel with texture and a barrel of fish by moving the UVs, never by adding
+    geometry.
+
+    ends=True still splits the caps, because a timber sheet keeps its end discs in a
+    corner and one rect over caps and staves gives the caps whatever is there.
     """
-    # z is the CENTRE of a cone here, not its base. Built at z=0 the lower half sits
-    # under the ground, which is what the first render of this showed.
-    # ends=True puts the cap faces in their own group, wood_end. Every timber donor in
-    # the game paints its side grain across most of the sheet and hides two or three
-    # hand-drawn log-end discs in a corner, so one rect fitted to caps AND staves gives
-    # the caps bark and the staves whatever the corner happens to hold. The rack already
-    # does this; the first cut of these casks did not, and the caps came out striped.
     cx, cy = centre
-    body = uv.cone(radius * 0.88, radius, height * 0.5, height * 0.25, "wood",
+    body = uv.cone(radius * 0.86, radius, height * 0.5, height * 0.25, "wood",
                    sides=sides, centre=(cx, cy), ends=True)
-    top = uv.cone(radius, radius * 0.88, height * 0.5, height * 0.75, "wood",
+    top = uv.cone(radius, radius * 0.86, height * 0.5, height * 0.75, "wood",
                   sides=sides, centre=(cx, cy), ends=True)
 
-    hoops = [uv.band(radius * 1.02, 0.055, height * 0.26, mat="wood", sides=sides,
-                     centre=(cx, cy)),
-             uv.band(radius * 1.02, 0.055, height * 0.74, mat="wood", sides=sides,
-                     centre=(cx, cy))]
-
-    return [body, top] + hoops
+    return [body, top]
 
 
 def casks():

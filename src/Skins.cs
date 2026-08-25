@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 
 namespace Stoker
@@ -135,9 +136,18 @@ namespace Stoker
         {
             if (overrides == null) return null;
 
+            string donor;
+
+            // The exact group before its family, or an end group can never have its own
+            // entry: Base("wood_end") is "wood", so wood_end= pairs were parsed into the
+            // map and then never read. With a prefab donor that never mattered - the cap
+            // rect is measured off the renderer - but an @material donor has no renderer,
+            // so the caps' rect has to arrive as its own pair or not at all.
+            if (overrides.TryGetValue(group, out donor) && !string.IsNullOrEmpty(donor))
+                return donor;
+
             var family = Base(group);
 
-            string donor;
             if (overrides.TryGetValue(family, out donor) && !string.IsNullOrEmpty(donor))
                 return donor;
 
@@ -180,6 +190,175 @@ namespace Stoker
             return string.IsNullOrEmpty(donor) ? group : group + "|" + donor;
         }
 
+        /// <summary>
+        /// A loaded material by name, for the @material donor form.
+        ///
+        /// Resources.FindObjectsOfTypeAll because the material belongs to something that
+        /// may not be in any scene - a location prefab held in memory rather than placed.
+        /// Exact name first, then a case-insensitive match, because Unity appends nothing
+        /// to a material the way it does "(Clone)" to an instantiated object but the
+        /// capitalisation in an asset name is not something to rely on.
+        /// </summary>
+        private static Material FindMaterial(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+
+            Material loose = null;
+
+            foreach (var candidate in Resources.FindObjectsOfTypeAll<Material>())
+            {
+                if (candidate == null || candidate.shader == null) continue;
+                if (candidate.name == name) return candidate;
+
+                if (loose != null) continue;
+
+                if (string.Equals(candidate.name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    loose = candidate;
+                    continue;
+                }
+
+                // Prefix, because Unity hands back "name (Instance)" for a material that
+                // has been instanced, and a rip reports the asset name without it. That
+                // difference is invisible in a report and fatal to an exact match, which
+                // is why fi_village_containers resolved and fi_village_wood did not.
+                if (candidate.name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                    loose = candidate;
+            }
+
+            if (loose == null)
+            {
+                var near = new List<string>();
+                foreach (var candidate in Resources.FindObjectsOfTypeAll<Material>())
+                {
+                    if (candidate == null || candidate.name == null) continue;
+                    if (candidate.name.IndexOf(name.Split('_')[0],
+                                               StringComparison.OrdinalIgnoreCase) < 0) continue;
+                    if (!near.Contains(candidate.name)) near.Add(candidate.name);
+                    if (near.Count >= 12) break;
+                }
+
+                StokerPlugin.Log.LogWarning("No loaded material called '" + name + "'. It only "
+                    + "exists once something using it has loaded. Loaded names sharing its "
+                    + "prefix: " + (near.Count == 0 ? "none" : string.Join(", ", near.ToArray())));
+            }
+
+            return loose;
+        }
+
+        /// <summary>
+        /// One model whose skin could not fully resolve at build time, waiting for the
+        /// material to stream in.
+        /// </summary>
+        private sealed class LateSkin
+        {
+            public MeshRenderer Renderer;
+            public Mesh Mesh;
+            public Vector2[] OriginalUv;
+            public string[] Groups;
+            public IDictionary<string, string> Overrides;
+        }
+
+        /// <summary>Groups whose rect is sampled upside-down. See the ~ marker.</summary>
+        private static readonly HashSet<string> FlipV =
+            new HashSet<string>(StringComparer.Ordinal);
+
+        private static readonly List<LateSkin> _late = new List<LateSkin>();
+        private static float _nextLate;
+
+        /// <summary>
+        /// Skin a renderer now, and finish the job later if an @material is not loaded yet.
+        ///
+        /// An @donor names a material rather than a prefab, and a material only exists in
+        /// memory once something wearing it has streamed in - but prefabs are built and
+        /// skinned the moment ZNetScene exists, which is before any zone loads. So asking
+        /// once at build time is asking at the one moment the answer is guaranteed to be
+        /// no, however carefully the player positions themselves. This watches instead.
+        ///
+        /// The original UVs are snapshotted because Remap is not idempotent: it places UVs
+        /// relative to what they are, so a late pass has to restore the mesh first and
+        /// remap everything from scratch, or the groups that resolved on time get placed
+        /// twice.
+        /// </summary>
+        public static Material[] SkinAndWatch(MeshRenderer renderer, Mesh mesh,
+            string[] groups, IDictionary<string, string> overrides)
+        {
+            var skins = Skin(groups, overrides);
+
+            for (var i = 0; i < groups.Length; i++)
+            {
+                if (skins[i] != null || !Key(groups[i], overrides).Contains("@")) continue;
+
+                _late.Add(new LateSkin
+                {
+                    Renderer = renderer,
+                    Mesh = mesh,
+                    OriginalUv = mesh != null ? mesh.uv : null,
+                    Groups = groups,
+                    Overrides = overrides,
+                });
+
+                StokerPlugin.Log.LogInfo("A skin donor is not loaded yet - it will be "
+                    + "applied when its location streams in.");
+                break;
+            }
+
+            return skins;
+        }
+
+        /// <summary>
+        /// Retry the late skins. Call from the plugin's Update.
+        ///
+        /// Throttled hard, because the lookup behind a miss walks every loaded material.
+        /// Five seconds is far below how often the answer can change - a location streams
+        /// in over seconds - and the list is empty in any session that never uses an
+        /// @donor, which is a count check and nothing else.
+        /// </summary>
+        public static void Tick()
+        {
+            if (_late.Count == 0) return;
+            if (Time.realtimeSinceStartup < _nextLate) return;
+            _nextLate = Time.realtimeSinceStartup + 5f;
+
+            for (var i = _late.Count - 1; i >= 0; i--)
+            {
+                var entry = _late[i];
+
+                // The world that wanted it is gone; a new world builds new prefabs and
+                // registers its own watch.
+                if (entry.Renderer == null || entry.Mesh == null) { _late.RemoveAt(i); continue; }
+
+                var skins = Skin(entry.Groups, entry.Overrides);
+
+                var missing = false;
+                for (var j = 0; j < entry.Groups.Length; j++)
+                    if (skins[j] == null && Key(entry.Groups[j], entry.Overrides).Contains("@"))
+                        missing = true;
+                if (missing) continue;
+
+                // Restore, then remap from scratch - see the class comment.
+                if (entry.OriginalUv != null) entry.Mesh.uv = entry.OriginalUv;
+                entry.Renderer.sharedMaterials = skins;
+                Remap(entry.Mesh, entry.Groups, entry.Overrides);
+
+                // Pieces already standing share the Mesh asset, so their UVs just moved
+                // with the remap - leaving their old materials on would scramble them.
+                // Every scene renderer drawing this mesh gets the new set. FindObjectsOfType
+                // is scene-only and this runs once, on the frame the donor finally loads.
+                foreach (var live in UnityEngine.Object.FindObjectsOfType<MeshRenderer>())
+                {
+                    if (live == null || live == entry.Renderer) continue;
+                    var filter = live.GetComponent<MeshFilter>();
+                    if (filter == null || filter.sharedMesh != entry.Mesh) continue;
+                    live.sharedMaterials = skins;
+                }
+
+                _late.RemoveAt(i);
+                StokerPlugin.Log.LogInfo("A late skin donor arrived and was applied, "
+                    + "standing pieces included.");
+            }
+        }
+
         public static Material[] Skin(string[] groups, IDictionary<string, string> overrides)
         {
             var skins = new Material[groups.Length];
@@ -212,9 +391,113 @@ namespace Stoker
 
             foreach (var name in donors)
             {
+                var wanted = name.Trim();
+
+                // A donor written @material names a MATERIAL rather than a prefab, and it
+                // exists because the best surfaces in the game are unreachable any other
+                // way. Haldor's camp dresses every barrel, keg and crate in
+                // fi_village_wood - measured, fifteen containers ripped, fourteen of them
+                // one material - but those props are children inside a location prefab,
+                // so ZNetScene has never heard of them and PropIndex only walks roots.
+                // The prefab lookup cannot get there; the material is loaded all the same.
+                //
+                // Caveat, and it is real: a material only exists in memory once something
+                // using it has loaded. Ask for one before its location has ever streamed
+                // in and it is not found, which is a warning and a fallback rather than a
+                // failure.
+                if (wanted.StartsWith("@"))
+                {
+                    // An @donor may carry a measured rect: @name:x/y/w/h, slashes because
+                    // the donor list splits on commas. With no renderer to measure, the
+                    // rect has to come from somewhere, and "the whole sheet" was tried
+                    // and answered: fi_village_wood is an atlas, so the caps showed the
+                    // entire catalogue - barrels, crates and the painted fruit at once.
+                    // The rect vanilla itself uses is in any ripped prop wearing the
+                    // sheet; the barrel's is measured in the config comment beside it.
+                    var spec = wanted.Substring(1);
+                    var rect = new Rect(0f, 0f, 1f, 1f);
+
+                    // @name:keep - take the material and touch nothing else. For a mesh
+                    // carrying vanilla's own UVs (the camp-barrel Tun is a rip, and its
+                    // UVs are the ones this sheet was painted for) any remap is strictly
+                    // worse than none, so no Atlas entry is stored and Remap skips the
+                    // group entirely.
+                    if (spec.EndsWith(":keep", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var keepName = spec.Substring(0, spec.Length - 5);
+                        var kept = FindMaterial(keepName);
+                        if (kept == null) continue;
+
+                        var keptTex = kept.GetTexture("_MainTex");
+                        if (keptTex == null) continue;
+
+                        Cache[key] = kept;
+                        Atlas.Remove(key);
+                        FlipV.Remove(key);
+                        TexPx[key] = Mathf.Max(1, keptTex.width);
+
+                        StokerPlugin.Log.LogInfo("'" + key + "' skinned with the material "
+                            + kept.name + " found by name, vanilla UVs kept, "
+                            + keptTex.width + "px.");
+                        return kept;
+                    }
+
+                    var colon = spec.IndexOf(':');
+                    var flip = false;
+                    if (colon > 0)
+                    {
+                        var parts = spec.Substring(colon + 1).Split('/');
+
+                        // A ~ before the height flips V inside the rect. The stave strip
+                        // is painted one way up and a cylinder unwrap runs whichever way
+                        // the model was built - fi_village_wood's hoop band landed on the
+                        // TOP of the casks, which is this exact mismatch and nothing else.
+                        if (parts.Length == 4 && parts[3].StartsWith("~"))
+                        {
+                            flip = true;
+                            parts[3] = parts[3].Substring(1);
+                        }
+
+                        float x, y, w, h;
+                        if (parts.Length == 4
+                            && float.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out x)
+                            && float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out y)
+                            && float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out w)
+                            && float.TryParse(parts[3], NumberStyles.Float, CultureInfo.InvariantCulture, out h)
+                            && w > 0f && h > 0f)
+                        {
+                            rect = new Rect(x, y, w, h);
+                        }
+                        else
+                        {
+                            StokerPlugin.Log.LogWarning("Could not read the rect in '"
+                                + wanted + "' - expected @name:x/y/w/h. Using the whole "
+                                + "sheet, which will look like every tile at once.");
+                        }
+                        spec = spec.Substring(0, colon);
+                    }
+
+                    var byName = FindMaterial(spec);
+                    if (byName == null) continue;
+
+                    var tex = byName.GetTexture("_MainTex");
+                    if (tex == null) continue;
+
+                    Cache[key] = byName;
+                    Atlas[key] = rect;
+                    TexPx[key] = Mathf.Max(1, tex.width);
+                    if (flip) FlipV.Add(key); else FlipV.Remove(key);
+
+                    StokerPlugin.Log.LogInfo("'" + key + "' skinned with the material "
+                        + byName.name + " found by name (shader " + byName.shader.name
+                        + "), rect " + rect + (flip ? ", V flipped" : "") + ", "
+                        + tex.width + "px.");
+                    return byName;
+                }
+
                 // Via PropIndex rather than ZNetScene directly: many dressing prefabs
                 // carry no ZNetView and so are invisible to ZNetScene however loaded.
-                var donor = PropIndex.Find(name);
+                var donor = PropIndex.Find(wanted);
                 if (donor == null) continue;
 
                 var renderer = MainRenderer(donor);
@@ -247,7 +530,16 @@ namespace Stoker
             }
 
             StokerPlugin.Log.LogWarning("No material found for group '" + key + "'.");
-            Cache[key] = null;
+
+            // A missing @material is NOT cached as a failure. Those name a material that
+            // only exists once something using it has streamed in, so "not found" means
+            // "not yet" rather than "never" - and caching the null meant the answer was
+            // fixed at world load, before the location it lives in had ever been near.
+            // Prefab donors are cached as before: a prefab that ZNetScene does not have at
+            // load is not going to appear later, and re-searching every frame for one is
+            // the cost this cache exists to avoid.
+            if (!key.Contains("@")) Cache[key] = null;
+
             return null;
         }
 
@@ -900,9 +1192,12 @@ namespace Stoker
                         if (index < 0 || index >= uv.Length || done[index]) continue;
                         done[index] = true;
 
+                        var ty = Mathf.Clamp01(uv[index].y);
+                        if (FlipV.Contains(key)) ty = 1f - ty;
+
                         uv[index] = new Vector2(
                             rect.x + Mathf.Clamp01(uv[index].x) * rect.width,
-                            rect.y + Mathf.Clamp01(uv[index].y) * rect.height);
+                            rect.y + ty * rect.height);
                     }
 
                     StokerPlugin.Log.LogInfo(string.Format(
@@ -970,7 +1265,11 @@ namespace Stoker
 
                         uv[index] = new Vector2(
                             Mathf.Clamp(uv[index].x * scale + offset.x, rect.xMin, rect.xMax),
-                            Mathf.Clamp(uv[index].y * scale + offset.y, rect.yMin, rect.yMax));
+                            FlipV.Contains(key)
+                                ? rect.yMax - (Mathf.Clamp(uv[index].y * scale + offset.y,
+                                                           rect.yMin, rect.yMax) - rect.yMin)
+                                : Mathf.Clamp(uv[index].y * scale + offset.y,
+                                              rect.yMin, rect.yMax));
                     }
                 }
 

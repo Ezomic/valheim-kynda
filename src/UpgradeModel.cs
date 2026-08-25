@@ -53,7 +53,7 @@ namespace Stoker
             filter.sharedMesh = model.Mesh;
 
             var meshRenderer = visual.AddComponent<MeshRenderer>();
-            meshRenderer.sharedMaterials = Skins.Skin(model.Groups, skins);
+            meshRenderer.sharedMaterials = Skins.SkinAndWatch(meshRenderer, model.Mesh, model.Groups, skins);
 
             // Without this the mesh samples the whole texture sheet instead of the one
             // tile its material actually occupies, and picks up the neighbouring tiles.

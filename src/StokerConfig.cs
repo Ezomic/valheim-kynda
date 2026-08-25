@@ -158,7 +158,12 @@ namespace Stoker
             // furniture at 24 to 54 off a tight rect. wood_stack is 28, barrell 29,
             // piece_chest_wood 42, wood_wall_log 54. These pieces are props, so 35 sits in
             // the middle of the family they belong to.
-            TexelsPerMetre = config.Bind("Upgrades", "TexelsPerMetre", 35f,
+            // 28, not 35. The measured family is wood_stack 28, barrell 29,
+            // piece_chest_wood 42, wood_wall_log 54 - so 35 was above what the barrel
+            // sheet itself is drawn at, and the layout said so: "12-35 texels/m (wanted
+            // 35)" in a 0.29 x 0.31 rect. Asking for more density than the rect can hold
+            // does not sharpen anything, it stretches the faces that cannot fit.
+            TexelsPerMetre = config.Bind("Upgrades", "TexelsPerMetre", 28f,
                 "How coarse the borrowed texture is drawn, in texels per metre. Vanilla's "
                 + "props and piles run 24 to 54; its structural pieces run far finer and "
                 + "are the wrong thing to match. Higher is finer and eventually reads as "
@@ -215,11 +220,13 @@ namespace Stoker
             // 0.90 x 1.35 it stood a head over the 0.84 x 1.10 barrell it was imitating.
             // The prefab is still called Trough, so nothing standing in a world notices.
             UpgradePrefabs.Trough.Model = config.Bind("Trough", "Model",
-                // Chosen 2026-08-25 from a round of four - casks, hopper, bin, trough - all built to
-                // one material with no modelled hoops and no visible contents, which is what the
-                // model this replaces got wrong. A cask is one vessel, so it stays one group;
-                // the hopper and the bin would each have wanted a frame split like the rack's.
-                "stoker_tun_casks.obj",
+                // The camp's own barrels: fi_vil_container_barrel_big_fruit and
+                // _small_fish, ripped, joined, fills re-aimed at coal and ore. Two
+                // hand-built rounds preceded this and both lost the same fight - fitting
+                // a foreign projection to a sheet painted for a different body. The sheet
+                // only fits the geometry it was painted for, and the rips carry that
+                // geometry with its UVs. Approved in game on 2026-08-25.
+                "stoker_tun_camp.obj",
                 "The OBJ loaded from beside the DLL. Its .col sidecar supplies the "
                 + "collision and its _icon.png the hammer icon, both matched by name - so "
                 + "dropping in a new model brings its own shape and picture with it.");
@@ -228,7 +235,10 @@ namespace Stoker
             // is 0.84m across and 1.10m tall; ours were 0.57 and 0.86. At 1.5 each cask is
             // 0.86 x 1.29, which is a real barrel sat beside a real smelter - and the
             // smelter is 3.03 x 4.24 x 2.58, so there is no danger of crowding it.
-            UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1.5f,
+            // 1, not 1.5: these ARE the camp's barrels at their real size, and standing
+            // them half again taller than their originals ten metres away would be its
+            // own uncanny.
+            UpgradePrefabs.Trough.Scale = config.Bind("Trough", "Scale", 1.0f,
                 "Overall size of the trough. Scales the collision with it, since the boxes "
                 + "are children of the piece.");
 
@@ -240,13 +250,13 @@ namespace Stoker
             // wood came from piece_chest_wood and the hoops from piece_artisanstation, so
             // one small cask wore two objects' palettes that were never painted together.
             UpgradePrefabs.Trough.SkinDonors = config.Bind("Trough", "SkinDonors",
-                // barrell, not piece_chest_barrel. The chest prefab carries several
-                // renderers and the first one holding a _MainTex is its BLACK METAL chest
-                // submesh - so the staves came out sampling black metal, which is exactly
-                // what they looked like. barrell is one material, barrel_iron, and its
-                // iron hoops are painted into the wood rather than modelled, which is the
-                // trick these casks are built for.
-                "barrell",
+                // @fi_village_wood:keep - the camp sheet with vanilla's UVs untouched,
+                // which is the whole point of using vanilla's geometry. The fills carry
+                // their own entries because content groups ignore the piece-wide donor:
+                // coal keeps the coal_pile sheet whole, and ore aims at the one
+                // green-free band of the copper texture, measured from its pixels - the
+                // rest of that sheet is patina, and patina in a barrel reads as mould.
+                "@fi_village_wood:keep,coal=@coal_pile:keep,ore=@copper_ore:0.02/0.30/0.46/0.22",
                 "Which vanilla prefab this piece borrows its surface from. A bare prefab "
                 + "name covers the whole piece, which is the usual case and matches how "
                 + "vanilla builds a piece - one texture carrying every substance it is "

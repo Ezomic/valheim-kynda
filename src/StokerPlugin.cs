@@ -118,6 +118,10 @@ namespace Stoker
         {
             if (ZNetScene.instance == null || ObjectDB.instance == null) return;
             UpgradePrefabs.Register();
+
+            // Skins that named a material the world had not streamed in yet. Empty-list
+            // cheap in any session that never uses an @donor.
+            Skins.Tick();
         }
     }
 }
