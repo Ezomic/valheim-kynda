@@ -122,6 +122,10 @@ namespace Stoker
             // Skins that named a material the world had not streamed in yet. Empty-list
             // cheap in any session that never uses an @donor.
             Skins.Tick();
+
+            // And once those land, the hammer icons become photographs of the skinned
+            // pieces rather than the flat placeholder renders.
+            UpgradePrefabs.RefreshIcons();
         }
     }
 }

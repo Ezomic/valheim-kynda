@@ -311,7 +311,7 @@ namespace Stoker
             // also sloped the wrong way: -17 degrees about x lifts the front edge, which
             // is why it read as a table.
             UpgradePrefabs.Woodrack.Model = config.Bind("Woodrack", "Model",
-                "stoker_rack_courses.obj",
+                "stoker_rack_camp.obj",
                 "The OBJ loaded from beside the DLL, with its .col and _icon.png matched "
                 + "by name.");
 
@@ -319,7 +319,7 @@ namespace Stoker
             // ours was 1.35 x 1.36 x 1.02, well under half its footprint. At 1.5 it is
             // 2.03 x 2.04 x 1.53 - taller and shallower than vanilla's, which suits a
             // roofed rack rather than a free heap.
-            UpgradePrefabs.Woodrack.Scale = config.Bind("Woodrack", "Scale", 1.5f,
+            UpgradePrefabs.Woodrack.Scale = config.Bind("Woodrack", "Scale", 1.0f,
                 "Overall size of the woodrack. Scales the collision with it, since the "
                 + "boxes are children of the piece.");
 
@@ -342,7 +342,7 @@ namespace Stoker
             // firewood. A pile and the thing holding it are two materials in vanilla too:
             // a prop is one, furniture is two, and this is furniture holding a prop.
             UpgradePrefabs.Woodrack.SkinDonors = config.Bind("Woodrack", "SkinDonors",
-                "wood_wall_log,frame=wood_beam",
+                "@wood_pile:keep,frame=wood_beam",
                 "Which vanilla prefab this piece borrows its surface from. A bare prefab "
                 + "name covers the whole piece; group=prefab pairs override a single "
                 + "group. Empty uses the general list.");

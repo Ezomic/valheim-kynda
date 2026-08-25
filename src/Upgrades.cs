@@ -168,6 +168,10 @@ namespace Stoker
         public ConfigEntry<string> Stations;
 
         public GameObject Prefab;
+
+        /// <summary>Whether the hammer icon has been re-shot from the live, fully
+        /// skinned piece. See RefreshIcons.</summary>
+        public bool IconLive;
     }
 
     /// <summary>
@@ -1104,6 +1108,45 @@ namespace Stoker
 
             var table = drop.m_itemData.m_shared.m_buildPieces;
             return table != null && table.m_pieces != null ? table : null;
+        }
+
+        /// <summary>
+        /// Replace each piece's hammer icon with a photograph of the fully skinned piece,
+        /// once its materials have actually landed.
+        ///
+        /// The icon taken at build time cannot be right for an @material donor: the
+        /// material belongs to a location that has not streamed in yet, so the camera
+        /// photographed magenta and the hammer showed a purple Tun. The file icon fixed
+        /// the magenta and introduced its own fault - it is a flat-tint render, and next
+        /// to the game's icons it reads as a sketch. So the file is the placeholder and
+        /// this is the real picture: shot from the prefab after every material slot is
+        /// filled, which is the exact thing the player will build.
+        /// </summary>
+        public static void RefreshIcons()
+        {
+            foreach (var def in Active())
+            {
+                if (def.Prefab == null || def.IconLive) continue;
+
+                var piece = def.Prefab.GetComponent<Piece>();
+                if (piece == null) { def.IconLive = true; continue; }
+
+                var renderer = def.Prefab.GetComponentInChildren<MeshRenderer>(true);
+                if (renderer == null) { def.IconLive = true; continue; }
+
+                var ready = true;
+                foreach (var mat in renderer.sharedMaterials)
+                    if (mat == null) ready = false;
+                if (!ready) continue;   // the late-skin watch is still working
+
+                var shot = IconRender.Shoot(def.Prefab, def.PrefabName);
+                def.IconLive = true;   // one attempt; a failed shoot keeps the file icon
+                if (shot == null) continue;
+
+                piece.m_icon = shot;
+                StokerPlugin.Log.LogInfo("Re-shot " + def.PrefabName
+                    + "'s icon from the skinned piece.");
+            }
         }
 
         private static void AddToHammer()
