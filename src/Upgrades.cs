@@ -866,7 +866,13 @@ namespace Stoker
             // piece was cloned from rather than of the piece.
             if (piece != null)
             {
-                var shot = IconRender.Shoot(clone, def.PrefabName) ?? LoadIcon(def);
+                // The FILE first, the in-process shot as fallback - which is also what
+                // the README always claimed. The shot photographs the prefab at build
+                // time, and an @material donor is guaranteed absent at build time (its
+                // location has not streamed in yet), so the shot captured a magenta
+                // missing-material prefab and the hammer showed a purple Tun. The
+                // rendered png beside the model has no such timing to lose.
+                var shot = LoadIcon(def) ?? IconRender.Shoot(clone, def.PrefabName);
                 if (shot != null) piece.m_icon = shot;
             }
 
