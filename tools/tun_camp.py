@@ -41,7 +41,7 @@ ASSETS = os.path.join(ROOT, "assets")
 PREVIEWS = os.path.join(ASSETS, "previews")
 RIPS = r"E:\Repositories\valheim\own-profile\BepInEx\rips"
 
-NAME = "stoker_tun_camp"
+NAME = "kynda_tun_camp"
 
 # The wood tiles on fi_village_wood, measured from the ripped empty barrel. An upward
 # face sampling inside either is rim timber; outside is painted contents.

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Lends each material group a real material off a vanilla prefab.
@@ -15,7 +15,7 @@ namespace Stoker
     /// map and leaves the surface lit for a shape it no longer has.
     ///
     /// Brought back from Vaettir, which got it from Stow, which got it from here. What
-    /// Stoker kept was the borrowing; what it lost along the way was the atlas measuring
+    /// Kynda kept was the borrowing; what it lost along the way was the atlas measuring
     /// below - so its pieces have been sampling whole texture sheets rather than the one
     /// tile they were supposed to.
     /// </summary>
@@ -238,7 +238,7 @@ namespace Stoker
                     if (near.Count >= 12) break;
                 }
 
-                StokerPlugin.Log.LogWarning("No loaded material called '" + name + "'. It only "
+                KyndaPlugin.Log.LogWarning("No loaded material called '" + name + "'. It only "
                     + "exists once something using it has loaded. Loaded names sharing its "
                     + "prefix: " + (near.Count == 0 ? "none" : string.Join(", ", near.ToArray())));
             }
@@ -298,7 +298,7 @@ namespace Stoker
                     Overrides = overrides,
                 });
 
-                StokerPlugin.Log.LogInfo("A skin donor is not loaded yet - it will be "
+                KyndaPlugin.Log.LogInfo("A skin donor is not loaded yet - it will be "
                     + "applied when its location streams in.");
                 break;
             }
@@ -354,7 +354,7 @@ namespace Stoker
                 }
 
                 _late.RemoveAt(i);
-                StokerPlugin.Log.LogInfo("A late skin donor arrived and was applied, "
+                KyndaPlugin.Log.LogInfo("A late skin donor arrived and was applied, "
                     + "standing pieces included.");
             }
         }
@@ -436,7 +436,7 @@ namespace Stoker
                         FlipV.Remove(key);
                         TexPx[key] = Mathf.Max(1, keptTex.width);
 
-                        StokerPlugin.Log.LogInfo("'" + key + "' skinned with the material "
+                        KyndaPlugin.Log.LogInfo("'" + key + "' skinned with the material "
                             + kept.name + " found by name, vanilla UVs kept, "
                             + keptTex.width + "px.");
                         return kept;
@@ -470,7 +470,7 @@ namespace Stoker
                         }
                         else
                         {
-                            StokerPlugin.Log.LogWarning("Could not read the rect in '"
+                            KyndaPlugin.Log.LogWarning("Could not read the rect in '"
                                 + wanted + "' - expected @name:x/y/w/h. Using the whole "
                                 + "sheet, which will look like every tile at once.");
                         }
@@ -488,7 +488,7 @@ namespace Stoker
                     TexPx[key] = Mathf.Max(1, tex.width);
                     if (flip) FlipV.Add(key); else FlipV.Remove(key);
 
-                    StokerPlugin.Log.LogInfo("'" + key + "' skinned with the material "
+                    KyndaPlugin.Log.LogInfo("'" + key + "' skinned with the material "
                         + byName.name + " found by name (shader " + byName.shader.name
                         + "), rect " + rect + (flip ? ", V flipped" : "") + ", "
                         + tex.width + "px.");
@@ -520,7 +520,7 @@ namespace Stoker
 
                     // The renderer is named because which one was measured is the thing
                     // that went wrong last time and the thing a wrong rect points at.
-                    StokerPlugin.Log.LogInfo(string.Format(
+                    KyndaPlugin.Log.LogInfo(string.Format(
                         "'{0}' skinned with {1} from {2}/{3} (shader {4}), atlas {5}, {6}px.",
                         key, material.name, name, renderer.name, material.shader.name,
                         Atlas[key], TexPx[key]));
@@ -529,7 +529,7 @@ namespace Stoker
                 }
             }
 
-            StokerPlugin.Log.LogWarning("No material found for group '" + key + "'.");
+            KyndaPlugin.Log.LogWarning("No material found for group '" + key + "'.");
 
             // A missing @material is NOT cached as a failure. Those name a material that
             // only exists once something using it has streamed in, so "not found" means
@@ -562,13 +562,13 @@ namespace Stoker
         /// </summary>
         private static void DumpShader(Material material)
         {
-            if (!StokerConfig.DumpShader.Value) return;
+            if (!KyndaConfig.DumpShader.Value) return;
             if (material == null || material.shader == null) return;
             if (!_dumped.Add(material.shader.name)) return;
 
             var shader = material.shader;
             var count = shader.GetPropertyCount();
-            StokerPlugin.Log.LogInfo(
+            KyndaPlugin.Log.LogInfo(
                 "SHADER " + shader.name + ": " + count + " properties.");
 
             for (var i = 0; i < count; i++)
@@ -594,7 +594,7 @@ namespace Stoker
                     set = "  = " + material.GetFloat(name);
                 }
 
-                StokerPlugin.Log.LogInfo("    " + name + " (" + type + ")" + set);
+                KyndaPlugin.Log.LogInfo("    " + name + " (" + type + ")" + set);
             }
         }
 
@@ -841,7 +841,7 @@ namespace Stoker
             }
             catch (Exception e)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "Could not read " + donor + "'s sheet to find its metal: " + e.Message);
                 return fallback;
             }
@@ -889,7 +889,7 @@ namespace Stoker
                                 Mathf.Max(1f, x1 - x0 - 1f) / w,
                                 Mathf.Max(1f, y1 - y0 - 1f) / h);
 
-            StokerPlugin.Log.LogInfo(string.Format(
+            KyndaPlugin.Log.LogInfo(string.Format(
                 "{0}'s metal is the {1}x{2} px block at {3:0.000},{4:0.000} - saturation "
                 + "{5:0.00} against {6:0.00} across the sheet.",
                 donor, x1 - x0 + 1, y1 - y0 + 1, rect.x, rect.y,
@@ -952,7 +952,7 @@ namespace Stoker
 
         private static Rect Grey(string donor, Rect fallback)
         {
-            StokerPlugin.Log.LogInfo(
+            KyndaPlugin.Log.LogInfo(
                 donor + " has no unsaturated block - it is all one substance, so metal "
                 + "parts will wear the same surface as the rest of it.");
             return fallback;
@@ -1099,7 +1099,7 @@ namespace Stoker
 
             // All three printed, because a wrong rect is otherwise impossible to tell
             // from a wrong axis, and that ambiguity is what made this take three passes.
-            StokerPlugin.Log.LogInfo(string.Format(
+            KyndaPlugin.Log.LogInfo(string.Format(
                 "{0}: surface {1:0}/{2:0}/{3:0}% by axis, fields {4:0.000}x{5:0.000} / "
                 + "{6:0.000}x{7:0.000} / {8:0.000}x{9:0.000}.",
                 renderer.name,
@@ -1122,7 +1122,7 @@ namespace Stoker
             else
             {
                 cap = side;
-                StokerPlugin.Log.LogInfo(string.Format(
+                KyndaPlugin.Log.LogInfo(string.Format(
                     "{0} has no separate end patch - its thinnest axis is {1:0}% of its "
                     + "surface. Sawn ends will use the side grain.",
                     renderer.name, share * 100f));
@@ -1159,7 +1159,7 @@ namespace Stoker
             if (uv == null || uv.Length == 0) return;
 
             var count = Mathf.Min(groups.Length, mesh.subMeshCount);
-            var target = Mathf.Max(1f, StokerConfig.TexelsPerMetre.Value);
+            var target = Mathf.Max(1f, KyndaConfig.TexelsPerMetre.Value);
 
             // A vertex on the seam between two groups appears in both submeshes, and
             // mapping it twice would place it relative to an already-placed position.
@@ -1200,7 +1200,7 @@ namespace Stoker
                             rect.y + ty * rect.height);
                     }
 
-                    StokerPlugin.Log.LogInfo(string.Format(
+                    KyndaPlugin.Log.LogInfo(string.Format(
                         "'{0}' aimed at the end-grain patch at {1:0.000},{2:0.000} "
                         + "{3:0.000}x{4:0.000} ({5} texels across).",
                         key, rect.x, rect.y, rect.width, rect.height,
@@ -1275,7 +1275,7 @@ namespace Stoker
 
                 if (finest <= 0f) continue;
 
-                StokerPlugin.Log.LogInfo(string.Format(
+                KyndaPlugin.Log.LogInfo(string.Format(
                     "'{0}' laid out at {1:0}-{2:0} texels/m (wanted {3:0}) across {4} "
                     + "parts, in a {5:0.000}x{6:0.000} rect.",
                     key, coarsest, finest, target, islands.Count, rect.width, rect.height));

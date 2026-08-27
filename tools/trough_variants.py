@@ -172,10 +172,10 @@ def trough_long():
 # --------------------------------------------------------------------------- export
 
 VARIANTS = [
-    ("stoker_trough_stone", trough_stone, "A - Stone trough (the original)"),
-    ("stoker_trough_timber", trough_timber, "B - Timber trough (iron-hooped)"),
-    ("stoker_trough_raised", trough_raised, "C - Raised trough (on legs)"),
-    ("stoker_trough_long", trough_long, "D - Long trough (three bays)"),
+    ("kynda_trough_stone", trough_stone, "A - Stone trough (the original)"),
+    ("kynda_trough_timber", trough_timber, "B - Timber trough (iron-hooped)"),
+    ("kynda_trough_raised", trough_raised, "C - Raised trough (on legs)"),
+    ("kynda_trough_long", trough_long, "D - Long trough (three bays)"),
 ]
 
 

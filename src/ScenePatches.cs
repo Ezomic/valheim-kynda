@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace Stoker
+namespace Kynda
 {
     internal static class ScenePatches
     {
@@ -20,11 +20,11 @@ namespace Stoker
         {
             var touched = SmelterCapacity.AttachToPrefabs();
             if (touched > 0)
-                StokerPlugin.Log.LogInfo("Capacity component added to " + touched + " station prefab(s).");
+                KyndaPlugin.Log.LogInfo("Capacity component added to " + touched + " station prefab(s).");
 
             UpgradePrefabs.Register();
 
-            PropIndex.Search(StokerConfig.PrefabSearch.Value);
+            PropIndex.Search(KyndaConfig.PrefabSearch.Value);
         }
 
         /// <summary>

@@ -1,7 +1,7 @@
 using HarmonyLib;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Tells the player the batch modifier exists.
@@ -28,7 +28,7 @@ namespace Stoker
         private static void SmelterFuelHover(Smelter __instance, ref string __result)
         {
             if (__instance.m_maxFuel <= 0) return;
-            __result += BatchAdd.BatchHint(StokerConfig.SmelterItemsPerAdd.Value);
+            __result += BatchAdd.BatchHint(KyndaConfig.SmelterItemsPerAdd.Value);
         }
 
         [HarmonyPostfix]
@@ -36,7 +36,7 @@ namespace Stoker
         private static void SmelterOreHover(Smelter __instance, ref string __result)
         {
             if (__instance.m_maxOre <= 0) return;
-            __result += BatchAdd.BatchHint(StokerConfig.SmelterItemsPerAdd.Value);
+            __result += BatchAdd.BatchHint(KyndaConfig.SmelterItemsPerAdd.Value);
         }
 
         // ------------------------------------------------------------------ fireplace
@@ -51,7 +51,7 @@ namespace Stoker
             if (string.IsNullOrEmpty(__result)) return;
             if (!__instance.m_canRefill || __instance.m_infiniteFuel) return;
 
-            __result += BatchAdd.BatchHint(StokerConfig.FireplaceItemsPerAdd.Value);
+            __result += BatchAdd.BatchHint(KyndaConfig.FireplaceItemsPerAdd.Value);
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Stoker
             }
             catch (System.Exception e)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "Could not add the batch hint to hover text - batching still works, it "
                     + "just will not announce itself: " + e.Message);
             }

@@ -45,7 +45,7 @@ SHELF = os.path.join(ASSETS, "variants")   # not VARIANTS - that name is the mod
 # does not copy - the convention for a rejected design, so it stays buildable and
 # stops being deployed. Without this, re-running the script quietly un-shelves the
 # whole set back into the build menu.
-SHIPPED = ("stoker_rack_lean", "stoker_trough_barrels")
+SHIPPED = ("kynda_rack_lean", "kynda_trough_barrels")
 
 COLLIDERS = []
 PARTS = []
@@ -823,19 +823,19 @@ def trough_tower():
 # --------------------------------------------------------------------------- export
 
 VARIANTS = [
-    ("stoker_rack_lean",      rack_lean,      "WOODRACK - Lean-to"),
-    ("stoker_rack_crib",      rack_crib,      "WOODRACK - Log crib"),
-    ("stoker_rack_barrow",    rack_barrow,    "WOODRACK - Barrow"),
-    ("stoker_trough_bench",   trough_bench,   "TROUGH - Bench"),
-    ("stoker_trough_hod",     trough_hod,     "TROUGH - Stone hod"),
-    ("stoker_trough_scuttle", trough_scuttle, "TROUGH - Scuttle"),
+    ("kynda_rack_lean",      rack_lean,      "WOODRACK - Lean-to"),
+    ("kynda_rack_crib",      rack_crib,      "WOODRACK - Log crib"),
+    ("kynda_rack_barrow",    rack_barrow,    "WOODRACK - Barrow"),
+    ("kynda_trough_bench",   trough_bench,   "TROUGH - Bench"),
+    ("kynda_trough_hod",     trough_hod,     "TROUGH - Stone hod"),
+    ("kynda_trough_scuttle", trough_scuttle, "TROUGH - Scuttle"),
 
-    ("stoker_rack_aframe",    rack_aframe,    "WOODRACK - A-frame"),
-    ("stoker_rack_rick",      rack_rick,      "WOODRACK - Round rick"),
-    ("stoker_rack_upright",   rack_upright,   "WOODRACK - Upright corral"),
-    ("stoker_trough_barrels", trough_barrels, "TROUGH - Twin barrels"),
-    ("stoker_trough_pit",     trough_pit,     "TROUGH - Kerbed pit"),
-    ("stoker_trough_tower",   trough_tower,   "TROUGH - Standing bin"),
+    ("kynda_rack_aframe",    rack_aframe,    "WOODRACK - A-frame"),
+    ("kynda_rack_rick",      rack_rick,      "WOODRACK - Round rick"),
+    ("kynda_rack_upright",   rack_upright,   "WOODRACK - Upright corral"),
+    ("kynda_trough_barrels", trough_barrels, "TROUGH - Twin barrels"),
+    ("kynda_trough_pit",     trough_pit,     "TROUGH - Kerbed pit"),
+    ("kynda_trough_tower",   trough_tower,   "TROUGH - Standing bin"),
 ]
 
 

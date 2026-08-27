@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to Stoker. Format follows [Keep a Changelog](https://keepachangelog.com),
+Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
 ## [1.0.0] - 2026-08-25
@@ -37,7 +37,7 @@ nothing rather than pretending.
 
 ### The Tun's prefab is renamed
 
-`stoker_hopper` becomes **`stoker_tun`**. The old name was inherited from the single generic
+`kynda_hopper` becomes **`kynda_tun`**. The old name was inherited from the single generic
 bin this piece replaced two designs ago, and a prefab name is permanent from the first one
 built in any world - so the only free moment to fix one is before the mod has ever shipped.
 That moment is now. After this release it cannot be touched again without deleting every Tun
@@ -61,7 +61,7 @@ Two art fixes, and both came out of measuring rather than looking.
 26% and wood 19% - so a third of it was hoops, half was visible contents, and the timber
 that should have been the object was a fifth of it. Every vanilla prop ripped here is one
 material on one submesh, and `barrell`'s iron hoops are **painted into its wood texture**
-rather than modelled. The replacement, `stoker_tun_casks`, is one group: two upright casks,
+rather than modelled. The replacement, `kynda_tun_casks`, is one group: two upright casks,
 hoops as shallow rings in the same timber, no contents. 716 triangles against 2,376.
 
 It was chosen from four built to the same rules - casks, a hopper, a bin under a lean-to,
@@ -102,13 +102,13 @@ The art was the stated reason 0.3 was not 1.0. Two of the three causes were in t
 
 With that corrected, both models were rebuilt:
 
-- **Woodrack** is now `stoker_rack_courses`. The logs came from a helper that picked a
+- **Woodrack** is now `kynda_rack_courses`. The logs came from a helper that picked a
   cross-section at random (three, four, five, six or seven sides) which at 2 metres read
   as a frame packed with rubble. Vanilla varies a woodpile's diameter and never its cross
   section, so every piece is a round now. The back is closed, and the roof slopes forwards:
   it had been rotated `-17` about x since the first version, which lifts the *front* edge,
   and a roof rising towards the viewer is why it read as a table.
-- **Trough** is now `stoker_trough_casks`. The deck it stood on was a slab across the front
+- **Trough** is now `kynda_trough_casks`. The deck it stood on was a slab across the front
   at exactly the height a cask is widest, cutting both off at the belly; the casks stand on
   the ground now, with nothing round them at all - a kerb was tried and read as the pallet
   the deck had just been taken away for being. The cask itself was straight-sided where a cask bulges,

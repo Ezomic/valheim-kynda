@@ -395,10 +395,10 @@ def smelter_skip():
 # --------------------------------------------------------------------------- export
 
 VARIANTS = [
-    ("stoker_kiln_woodrack", kiln_woodrack, "KILN - Woodrack"),
-    ("stoker_smelter_orecart", smelter_orecart, "SMELTER - Ore cart"),
-    ("stoker_smelter_sacks", smelter_sacks, "SMELTER - Sack stack"),
-    ("stoker_smelter_skip", smelter_skip, "SMELTER - Hanging skip"),
+    ("kynda_kiln_woodrack", kiln_woodrack, "KILN - Woodrack"),
+    ("kynda_smelter_orecart", smelter_orecart, "SMELTER - Ore cart"),
+    ("kynda_smelter_sacks", smelter_sacks, "SMELTER - Sack stack"),
+    ("kynda_smelter_skip", smelter_skip, "SMELTER - Hanging skip"),
 ]
 
 

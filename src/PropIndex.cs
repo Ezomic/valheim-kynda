@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Finds a loaded prefab by name, so a material can be lifted off it.
@@ -66,7 +66,7 @@ namespace Stoker
                     _index[candidate.name] = candidate;
             }
 
-            StokerPlugin.Log.LogInfo(
+            KyndaPlugin.Log.LogInfo(
                 "Prop index built: " + _index.Count + " candidates with meshes.");
         }
 
@@ -103,7 +103,7 @@ namespace Stoker
                 }
 
                 hits.Sort();
-                StokerPlugin.Log.LogInfo(
+                KyndaPlugin.Log.LogInfo(
                     "Prefabs matching '" + word + "' (" + hits.Count + "): "
                     + string.Join(", ", hits.GetRange(0, Math.Min(40, hits.Count)).ToArray()));
             }

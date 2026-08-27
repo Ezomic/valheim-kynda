@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Loads a Wavefront OBJ into a Mesh at runtime. OBJ is plain text and needs no asset
@@ -31,14 +31,14 @@ namespace Stoker
         {
             if (!File.Exists(path))
             {
-                StokerPlugin.Log.LogWarning("No model at " + path);
+                KyndaPlugin.Log.LogWarning("No model at " + path);
                 return null;
             }
 
             try { return Parse(File.ReadAllLines(path), Path.GetFileNameWithoutExtension(path)); }
             catch (Exception e)
             {
-                StokerPlugin.Log.LogError("Could not read " + path + ": " + e.Message);
+                KyndaPlugin.Log.LogError("Could not read " + path + ": " + e.Message);
                 return null;
             }
         }
@@ -136,7 +136,7 @@ namespace Stoker
 
             if (outPositions.Count == 0 || groupTris.Count == 0)
             {
-                StokerPlugin.Log.LogError("Model " + name + " has no geometry.");
+                KyndaPlugin.Log.LogError("Model " + name + " has no geometry.");
                 return null;
             }
 
@@ -152,7 +152,7 @@ namespace Stoker
             if (outPositions.Count > 65535)
             {
                 mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
-                StokerPlugin.Log.LogInfo(name + " needs 32 bit indices ("
+                KyndaPlugin.Log.LogInfo(name + " needs 32 bit indices ("
                                           + outPositions.Count + " verts).");
             }
 
@@ -191,7 +191,7 @@ namespace Stoker
             var total = 0;
             for (int i = 0; i < groupTris.Count; i++) total += groupTris[i].Count;
 
-            StokerPlugin.Log.LogInfo(string.Format("Loaded {0}: {1} verts, {2} tris, parts [{3}]",
+            KyndaPlugin.Log.LogInfo(string.Format("Loaded {0}: {1} verts, {2} tris, parts [{3}]",
                 name, outPositions.Count, total / 3, string.Join(", ", groupNames.ToArray())));
 
             return new ModelData { Mesh = mesh, Groups = groupNames.ToArray() };

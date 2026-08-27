@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Raises a station's capacity for each matching upgrade built beside it.
@@ -94,9 +94,9 @@ namespace Stoker
 
             var def = UpgradePrefabs.For(Fuelled);
 
-            var level = StokerConfig.Enabled.Value && Serves(def)
+            var level = KyndaConfig.Enabled.Value && Serves(def)
                 ? Mathf.Min(UpgradeBin.CountNear(transform.position, Fuelled),
-                            Mathf.Max(0, StokerConfig.MaxPerStation.Value))
+                            Mathf.Max(0, KyndaConfig.MaxPerStation.Value))
                 : 0;
 
             var oreBonus = level * Mathf.Max(0, def.OreCapacity.Value);
@@ -132,7 +132,7 @@ namespace Stoker
         /// <summary>The nearest station of the matching kind, or null.</summary>
         public static SmelterCapacity Nearest(Vector3 point, bool fuelled)
         {
-            var range = StokerConfig.Range.Value;
+            var range = KyndaConfig.Range.Value;
 
             SmelterCapacity best = null;
             var bestDistance = float.MaxValue;

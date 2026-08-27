@@ -1,4 +1,4 @@
-# Stoker design notes
+# Kynda design notes
 
 Why it works the way it does, and how it is built. None of this is needed to play; for that
 see the [README](README.md).
@@ -72,7 +72,7 @@ a future rename costs the hint and leaves the feature working.
 The upgrades are registered prefabs, and `ZNetScene` discards any ZDO whose prefab name does
 not resolve, so a server without this mod would silently destroy every one already standing.
 
-**The trough's prefab is still named `stoker_hopper`.** It inherited the name from the single
+**The trough's prefab is still named `kynda_hopper`.** It inherited the name from the single
 generic bin it replaced. Prefab names are permanent: `ZNetScene` keys on
 `name.GetStableHashCode()` and saved ZDOs store that hash, so renaming it would have
 destroyed every bin already placed in a world, silently. Only its display name, model and

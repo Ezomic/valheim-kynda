@@ -1,4 +1,4 @@
-# Stoker
+# Kynda
 
 Fewer trips to the smelter. Same amount of metal out of it.
 
@@ -32,7 +32,7 @@ thing still outstanding.
 **The upgrades register prefabs, and that is permanent.** ZNetScene keys a piece on its name
 hash and **discards a ZDO whose name no longer resolves**, so a world that later loads without
 this mod loses every Tun and Woodrack standing in it, silently and without an error. That is
-why Stoker registers with [Core](https://github.com/Ezomic/valheim-core)'s version gate: the
+why Kynda registers with [Core](https://github.com/Ezomic/valheim-core)'s version gate: the
 gate refuses a mismatched connection rather than letting it quietly eat what you built.
 
 `Upgrades.Enabled = false` turns them off, for a world where you want the batching alone.
@@ -127,9 +127,9 @@ How batching rides the game's own add, why the trough still answers to its old p
 how the surfaces and the link effect are borrowed, and the manual pass before a release:
 [DESIGN.md](DESIGN.md).
 
-## Stoker uses Core, and why it has to
+## Kynda uses Core, and why it has to
 
-[Core](https://github.com/Ezomic/valheim-core) is a **soft** dependency: install Stoker on its
+[Core](https://github.com/Ezomic/valheim-core) is a **soft** dependency: install Kynda on its
 own and it works. What Core adds is the **version gate**, a handshake that compares mod
 versions and build ids on connect and refuses a client that does not match.
 
@@ -148,7 +148,7 @@ happening. Run it ungated on a world you control, not on one you share.
 
 ## Config
 
-`BepInEx\config\ezomic.valheim.stoker.cfg`
+`BepInEx\config\ezomic.valheim.kynda.cfg`
 
 ### Batching
 
@@ -175,7 +175,7 @@ happening. Run it ungated on a world you control, not on one you share.
 
 The config section is still `[Trough]`. Renaming a section resets every saved setting
 under it, which is a worse trade than a stale header. The prefab name is still
-`stoker_tun` as of 1.0.0, renamed from `stoker_hopper` while nothing had shipped and
+`kynda_tun` as of 1.0.0, renamed from `kynda_hopper` while nothing had shipped and
 there was therefore nothing standing to lose. From the first release it is fixed for good:
 ZDOs key on its hash, so changing it destroys
 every one already standing.
@@ -186,7 +186,7 @@ Each piece has its own section with the same four keys.
 | --- | --- | --- |
 | `Name` | `Tun` | `Woodrack` |
 | `Cost` | `FineWood:20,IronNails:15` | `FineWood:25,DeerHide:20,BronzeNails:25` |
-| `Model` | `stoker_trough_casks.obj` | `stoker_rack_courses.obj` |
+| `Model` | `kynda_trough_casks.obj` | `kynda_rack_courses.obj` |
 | `Scale` | `1.5` | `1.5` |
 | `OreCapacity` | `20` | `25` |
 | `FuelCapacity` | `40` | *(none, its stations have no fuel slot)* |
@@ -229,5 +229,5 @@ Deploys to the repo-local `testprofile\`, or build into the shared play profile 
 
 ## Author
 
-Stoker is an original mod by **Robbin Thijssen** (Thijssen Software).
+Kynda is an original mod by **Robbin Thijssen** (Thijssen Software).
 Copyright (c) 2026 Robbin Thijssen. MIT licensed. See `LICENSE`.

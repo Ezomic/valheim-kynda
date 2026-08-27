@@ -6,10 +6,10 @@ schemaVersion = "0.0.1"
 
 [package]
 namespace = "Ezomic"
-name = "Stoker"
+name = "Kynda"
 versionNumber = "1.0.0"
 description = "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out."
-websiteUrl = "https://github.com/Ezomic/valheim-stoker"
+websiteUrl = "https://github.com/Ezomic/valheim-kynda"
 containsNsfwContent = false
 
 [package.dependencies]
@@ -21,8 +21,8 @@ readme = "./README.md"
 outdir = "./build"
 
 [[build.copy]]
-source = "./package/BepInEx/plugins/Stoker"
-target = "plugins/Stoker"
+source = "./package/BepInEx/plugins/Kynda"
+target = "plugins/Kynda"
 
 [publish]
 repository = "https://thunderstore.io"

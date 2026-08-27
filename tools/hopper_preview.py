@@ -13,7 +13,7 @@ import math
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OBJ = os.path.join(ROOT, "assets", "stoker_hopper.obj")
+OBJ = os.path.join(ROOT, "assets", "kynda_hopper.obj")
 OUT = os.path.join(ROOT, "assets", "previews", "hopper_eyeheight.png")
 
 TINTS = {

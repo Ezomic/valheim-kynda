@@ -39,7 +39,7 @@ TINTS = {
     "ore":   (0.34, 0.24, 0.16, 1.0),
 }
 
-MODELS = ["stoker_kiln_woodrack", "stoker_trough_raised"]
+MODELS = ["kynda_kiln_woodrack", "kynda_trough_raised"]
 
 
 def clear_scene():

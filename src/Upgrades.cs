@@ -6,7 +6,7 @@ using BepInEx.Configuration;
 using HarmonyLib;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// One of the two things you build beside a station to make it hold more.
@@ -29,7 +29,7 @@ namespace Stoker
         /// hash, so renaming one of these destroys every copy already standing in a world -
         /// silently, because ZNetScene discards an unresolvable ZDO rather than erroring.
         ///
-        /// The trough carried the wrong name, stoker_hopper, inherited from the single
+        /// The trough carried the wrong name, kynda_hopper, inherited from the single
         /// generic bin it replaced. It was fixed on 2026-08-25 for the one reason that made
         /// it fixable at all: nothing had shipped, so there was nothing standing anywhere to
         /// lose. After a release that is no longer true of either of these.
@@ -104,7 +104,7 @@ namespace Stoker
                         var whole = parts[0].Trim();
                         // Fully qualified: this class has a Skins property of its own, and
                         // it would otherwise shadow the static class being reached for.
-                        if (whole.Length > 0) map[Stoker.Skins.Everything] = whole;
+                        if (whole.Length > 0) map[Kynda.Skins.Everything] = whole;
                         continue;
                     }
 
@@ -239,12 +239,12 @@ namespace Stoker
         /// </summary>
         private void PokeEffect(float timeout = 1f)
         {
-            if (!_placed || !StokerConfig.ShowLink.Value) return;
+            if (!_placed || !KyndaConfig.ShowLink.Value) return;
 
             var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
             if (station == null) return;
 
-            var from = transform.position + Vector3.up * StokerConfig.LinkHeight.Value;
+            var from = transform.position + Vector3.up * KyndaConfig.LinkHeight.Value;
             var to = station.ConnectionPoint;
 
             if (_connection == null)
@@ -287,7 +287,7 @@ namespace Stoker
             if (_pokesDescribed >= 3 || _connection == null) return;
             _pokesDescribed++;
 
-            StokerPlugin.Log.LogInfo(string.Format(
+            KyndaPlugin.Log.LogInfo(string.Format(
                 "Link poke {0}: {1} -> {2}, {3:0.00}m, active {4}/{5}, {6} particle "
                 + "system(s), {7} renderer(s).",
                 _pokesDescribed, from, to, span.magnitude,
@@ -332,13 +332,13 @@ namespace Stoker
                 if (extension == null || extension.m_connectionPrefab == null) continue;
 
                 _connectionPrefab = extension.m_connectionPrefab;
-                StokerPlugin.Log.LogInfo(
+                KyndaPlugin.Log.LogInfo(
                     "Link effect borrowed from " + prefab.name + " ("
                     + _connectionPrefab.name + ").");
                 return _connectionPrefab;
             }
 
-            StokerPlugin.Log.LogWarning(
+            KyndaPlugin.Log.LogWarning(
                 "No StationExtension with a connection effect is loaded - upgrades will not "
                 + "draw a link to their station.");
             return null;
@@ -353,7 +353,7 @@ namespace Stoker
         /// <summary>How many upgrades of the matching kind are close enough to count.</summary>
         public static int CountNear(Vector3 point, bool fuelled)
         {
-            var range = StokerConfig.Range.Value;
+            var range = KyndaConfig.Range.Value;
             var count = 0;
 
             foreach (var bin in All)
@@ -377,7 +377,7 @@ namespace Stoker
         private int CloserToStation(Vector3 station)
         {
             var mine = Vector3.Distance(transform.position, station);
-            var range = StokerConfig.Range.Value;
+            var range = KyndaConfig.Range.Value;
             var ahead = 0;
 
             foreach (var bin in All)
@@ -434,7 +434,7 @@ namespace Stoker
             // indistinguishable from the mod being broken, which is the reading a player
             // will reach for first.
             var ahead = CloserToStation(station.transform.position);
-            if (ahead >= Mathf.Max(1, StokerConfig.MaxPerStation.Value))
+            if (ahead >= Mathf.Max(1, KyndaConfig.MaxPerStation.Value))
             {
                 return Localization.instance.Localize(
                     name + "\n<color=grey>already upgraded - this one adds nothing</color>");
@@ -454,12 +454,12 @@ namespace Stoker
     {
         public static readonly UpgradeDef Trough = new UpgradeDef
         {
-            // Renamed from stoker_hopper on 2026-08-25, while nothing had shipped. The old
+            // Renamed from kynda_hopper on 2026-08-25, while nothing had shipped. The old
             // name was inherited from a design this piece stopped being two rewrites ago,
             // and a prefab name is permanent from the first one built in any world - so the
             // only free moment to fix one is before the mod is published. The cost of doing
             // it later would be every Tun standing in every world, discarded in silence.
-            PrefabName = "stoker_tun",
+            PrefabName = "kynda_tun",
             // Says what it upgrades before it says anything else. The build menu shows
             // this under the name, and the star in the corner only tells you that the
             // piece is an upgrade - never of what.
@@ -470,7 +470,7 @@ namespace Stoker
 
         public static readonly UpgradeDef Woodrack = new UpgradeDef
         {
-            PrefabName = "stoker_woodrack",
+            PrefabName = "kynda_woodrack",
             Description = "Kiln improvement. Split logs, stacked and under cover. A "
                           + "charcoal kiln beside it holds more wood.",
             ServesFuelled = false,
@@ -507,17 +507,17 @@ namespace Stoker
             if (_variants != null) return _variants;
 
             _variants = new List<UpgradeDef>();
-            if (!StokerConfig.VariantMode.Value) return _variants;
+            if (!KyndaConfig.VariantMode.Value) return _variants;
 
             var dir = Path.GetDirectoryName(typeof(UpgradePrefabs).Assembly.Location);
 
-            foreach (var path in Directory.GetFiles(dir, "stoker_*.obj"))
+            foreach (var path in Directory.GetFiles(dir, "kynda_*.obj"))
             {
                 var stem = Path.GetFileNameWithoutExtension(path);
                 var lower = stem.ToLowerInvariant();
 
                 // "tun" as well as "trough": the piece was renamed and this filter was
-                // not, so a new candidate called stoker_tun_* was silently skipped and
+                // not, so a new candidate called kynda_tun_* was silently skipped and
                 // VariantMode looked like it had stopped working.
                 var isTrough = lower.Contains("trough") || lower.Contains("tun");
                 if (!isTrough && !lower.Contains("rack")) continue;
@@ -526,7 +526,7 @@ namespace Stoker
                 {
                     // Prefixed so a variant can never collide with a real piece's name, and
                     // so the throwaway ones are obvious in a ZDO dump.
-                    PrefabName = "stoker_var_" + stem,
+                    PrefabName = "kynda_var_" + stem,
                     LiteralName = Pretty(stem),
                     LiteralModel = stem + ".obj",
                     Description = "Comparison variant. Not a real piece - turn VariantMode "
@@ -553,7 +553,7 @@ namespace Stoker
             }
 
             if (_variants.Count > 0)
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "VARIANT MODE: " + _variants.Count + " comparison piece(s) on the hammer "
                     + "at one wood each. Anything built from them is destroyed when "
                     + "VariantMode goes off.");
@@ -599,10 +599,10 @@ namespace Stoker
             return string.Join(",", terms.ToArray());
         }
 
-        /// <summary>stoker_trough_bench -> "var: trough bench", which sorts together.</summary>
+        /// <summary>kynda_trough_bench -> "var: trough bench", which sorts together.</summary>
         private static string Pretty(string stem)
         {
-            return "var: " + stem.Replace("stoker_", "").Replace("_", " ");
+            return "var: " + stem.Replace("kynda_", "").Replace("_", " ");
         }
 
         // -------------------------------------------------------------- skin trials
@@ -629,7 +629,7 @@ namespace Stoker
             if (_trials != null) return _trials;
 
             _trials = new List<UpgradeDef>();
-            var spec = StokerConfig.SkinTrials.Value;
+            var spec = KyndaConfig.SkinTrials.Value;
             if (string.IsNullOrEmpty(spec)) return _trials;
 
             foreach (var raw in spec.Split(','))
@@ -656,7 +656,7 @@ namespace Stoker
                         System.StringComparison.OrdinalIgnoreCase);
                     if (!wantsTun && !wantsRack)
                     {
-                        StokerPlugin.Log.LogWarning(
+                        KyndaPlugin.Log.LogWarning(
                             "SkinTrials: '" + which + "' is not a piece. Use rack: or "
                             + "tun:, or leave the prefix off for both.");
                         continue;
@@ -673,7 +673,7 @@ namespace Stoker
                     {
                         // The donor name is in the prefab name so a ZDO dump says which
                         // trial it came from, and so two trials can never collide.
-                        PrefabName = "stoker_skin_" + host.PrefabName + "_" + donor,
+                        PrefabName = "kynda_skin_" + host.PrefabName + "_" + donor,
                         // The host's own display name rather than a hardcoded word, so a
                         // rename lands here too instead of leaving the trials pointing at
                         // whatever the piece used to be called.
@@ -701,7 +701,7 @@ namespace Stoker
             }
 
             if (_trials.Count > 0)
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "SKIN TRIALS: " + _trials.Count + " piece(s) on the hammer at one wood "
                     + "each, named 'skin: ...'. Anything built from them is destroyed when "
                     + "SkinTrials is cleared.");
@@ -734,7 +734,7 @@ namespace Stoker
         /// <summary>Idempotent, and safe to call every frame until it takes.</summary>
         public static bool Register()
         {
-            if (!StokerConfig.Enabled.Value) return true;
+            if (!KyndaConfig.Enabled.Value) return true;
 
             if (ZNetScene.instance == null || ObjectDB.instance == null) return false;
             if (Ready && InHammer()) return true;
@@ -756,14 +756,14 @@ namespace Stoker
 
             // Configured first, then a fallback, because a name that does not resolve is
             // skipped silently by the game and the piece would just never appear.
-            foreach (var name in new[] { StokerConfig.Donor.Value, "piece_chest_wood" })
+            foreach (var name in new[] { KyndaConfig.Donor.Value, "piece_chest_wood" })
             {
                 if (string.IsNullOrEmpty(name)) continue;
 
                 var found = scene.GetPrefab(name);
                 if (found != null) return found;
 
-                StokerPlugin.Log.LogWarning("Upgrade donor '" + name + "' does not exist.");
+                KyndaPlugin.Log.LogWarning("Upgrade donor '" + name + "' does not exist.");
             }
 
             return null;
@@ -776,7 +776,7 @@ namespace Stoker
 
             if (_holder == null)
             {
-                _holder = new GameObject("StokerUpgradeHolder");
+                _holder = new GameObject("KyndaUpgradeHolder");
                 _holder.SetActive(false);
                 Object.DontDestroyOnLoad(_holder);
             }
@@ -809,7 +809,7 @@ namespace Stoker
             {
                 if (particles == null) continue;
 
-                StokerPlugin.Log.LogInfo("Stripped inherited particle system '"
+                KyndaPlugin.Log.LogInfo("Stripped inherited particle system '"
                                          + particles.name + "' from " + def.PrefabName + ".");
                 Object.DestroyImmediate(particles);
             }
@@ -819,7 +819,7 @@ namespace Stoker
             {
                 piece.m_name = def.NameValue;
                 piece.m_description = def.Description;
-                piece.m_resources = Requirements(StokerConfig.CostNow(def));
+                piece.m_resources = Requirements(KyndaConfig.CostNow(def));
 
                 // Inherited from the donor, which is a chest and so files under Furniture.
                 // These upgrade a smelter, so they belong on the same hammer tab as one.
@@ -851,7 +851,7 @@ namespace Stoker
                 // Left alone rather than nulled if the forge cannot be found. A piece with
                 // no station requirement at all is buildable anywhere, which is a quieter
                 // and worse failure than one asking for the wrong bench.
-                var station = StationNamed(StokerConfig.Station.Value);
+                var station = StationNamed(KyndaConfig.Station.Value);
                 if (station != null) piece.m_craftingStation = station;
             }
 
@@ -880,7 +880,7 @@ namespace Stoker
                 if (shot != null) piece.m_icon = shot;
             }
 
-            StokerPlugin.Log.LogInfo("Built " + def.PrefabName + " from " + source.name + ".");
+            KyndaPlugin.Log.LogInfo("Built " + def.PrefabName + " from " + source.name + ".");
             return clone;
         }
 
@@ -897,7 +897,7 @@ namespace Stoker
             var prefab = PropIndex.Find(name);
             if (prefab == null)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "No prefab called '" + name + "' for the crafting station requirement - "
                     + "the upgrades keep the donor's, which is the workbench.");
                 return null;
@@ -908,7 +908,7 @@ namespace Stoker
 
             if (station == null)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "'" + name + "' exists but is not a crafting station - the upgrades keep "
                     + "the donor's.");
             }
@@ -935,7 +935,7 @@ namespace Stoker
 
             if (!File.Exists(path))
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "No icon beside the dll for " + def.PrefabName + " - it will wear the "
                     + "donor's, which is a picture of something else. Expected "
                     + Path.GetFileName(path) + ".");
@@ -958,7 +958,7 @@ namespace Stoker
                 texture.name = def.PrefabName + "_icon";
                 texture.hideFlags = HideFlags.HideAndDontSave;
 
-                StokerPlugin.Log.LogInfo(string.Format("Icon for {0}: {1} ({2}x{3}).",
+                KyndaPlugin.Log.LogInfo(string.Format("Icon for {0}: {1} ({2}x{3}).",
                     def.PrefabName, Path.GetFileName(path), texture.width, texture.height));
 
                 return Sprite.Create(texture,
@@ -967,7 +967,7 @@ namespace Stoker
             }
             catch (System.Exception e)
             {
-                StokerPlugin.Log.LogError("Could not read " + path + ": " + e.Message);
+                KyndaPlugin.Log.LogError("Could not read " + path + ": " + e.Message);
                 return null;
             }
         }
@@ -985,7 +985,7 @@ namespace Stoker
             var type = AccessTools.TypeByName("UnityEngine.ImageConversion");
             if (type == null)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "UnityEngine.ImageConversion is missing - cannot read icons.");
                 return false;
             }
@@ -998,7 +998,7 @@ namespace Stoker
 
             if (method == null)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "No LoadImage overload found on UnityEngine.ImageConversion.");
                 return false;
             }
@@ -1031,7 +1031,7 @@ namespace Stoker
                 var drop = prefab != null ? prefab.GetComponent<ItemDrop>() : null;
                 if (drop == null)
                 {
-                    StokerPlugin.Log.LogWarning("Cost mentions unknown item '" + itemName + "'.");
+                    KyndaPlugin.Log.LogWarning("Cost mentions unknown item '" + itemName + "'.");
                     continue;
                 }
 
@@ -1067,7 +1067,7 @@ namespace Stoker
                 }
                 catch (System.Exception e)
                 {
-                    StokerPlugin.Log.LogError(
+                    KyndaPlugin.Log.LogError(
                         "Could not register " + def.PrefabName + ": " + e.Message);
                 }
             }
@@ -1144,7 +1144,7 @@ namespace Stoker
                 if (shot == null) continue;
 
                 piece.m_icon = shot;
-                StokerPlugin.Log.LogInfo("Re-shot " + def.PrefabName
+                KyndaPlugin.Log.LogInfo("Re-shot " + def.PrefabName
                     + "'s icon from the skinned piece.");
             }
         }
@@ -1191,7 +1191,7 @@ namespace Stoker
             // Logged on the add, not on the call: this is retried every frame and an
             // already-satisfied retry would write a line per frame.
             if (added > 0)
-                StokerPlugin.Log.LogInfo(added + " upgrade(s) added to the hammer, each "
+                KyndaPlugin.Log.LogInfo(added + " upgrade(s) added to the hammer, each "
                     + "beside its station.");
         }
     }

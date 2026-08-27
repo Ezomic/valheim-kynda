@@ -3,7 +3,7 @@ Four Tuns, built to the rule the last one broke.
 
     blender --background --python tools/tun_designs.py
 
-The shipped stoker_trough_casks was measured before this round and it explains itself:
+The shipped kynda_trough_casks was measured before this round and it explains itself:
 
     iron   696 faces  29.3%      <- hoops, modelled as separate bands
     ore    608 faces  25.6%      <- visible contents
@@ -179,10 +179,10 @@ def neighbour():
 
 
 BUILDS = [
-    ("stoker_tun_casks",  casks,       "A  casks - two upright barrels"),
-    ("stoker_tun_hopper", hopper,      "B  hopper - tapered box on legs"),
-    ("stoker_tun_bin",    bin_roofed,  "C  bin - square, half lean-to"),
-    ("stoker_tun_trough", trough,      "D  trough - long and low on skids"),
+    ("kynda_tun_casks",  casks,       "A  casks - two upright barrels"),
+    ("kynda_tun_hopper", hopper,      "B  hopper - tapered box on legs"),
+    ("kynda_tun_bin",    bin_roofed,  "C  bin - square, half lean-to"),
+    ("kynda_tun_trough", trough,      "D  trough - long and low on skids"),
 ]
 
 

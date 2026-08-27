@@ -1,0 +1,82 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <AssemblyName>Kynda</AssemblyName>
+    <RootNamespace>Kynda</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Version>1.0.0</Version>
+    <Authors>Robbin Thijssen</Authors>
+    <Company>Thijssen Software</Company>
+    <Product>Kynda</Product>
+    <Description>Load smelters, kilns and fires several at a time, and build upgrades to make them hold more.</Description>
+    <Copyright>Copyright (c) 2026 Robbin Thijssen</Copyright>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <DebugType>none</DebugType>
+    <NoWarn>CS0649;CS0169</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
+    <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
+    <ProfileDir Condition="'$(ProfileDir)' == ''">$(MSBuildProjectDirectory)\testprofile</ProfileDir>
+    <BepInExCore>$(ProfileDir)\BepInEx\core</BepInExCore>
+    <DeployDir>$(ProfileDir)\BepInEx\plugins\Kynda</DeployDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(ManagedDir)\assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <!-- Localization lives here, not in assembly_valheim. -->
+    <Reference Include="assembly_guiutils"><HintPath>$(ManagedDir)\assembly_guiutils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(ManagedDir)\UnityEngine.PhysicsModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- Grafted props must have their ParticleSystems stripped explicitly. -->
+    <Reference Include="UnityEngine.ParticleSystemModule"><HintPath>$(ManagedDir)\UnityEngine.ParticleSystemModule.dll</HintPath><Private>false</Private></Reference>
+    <!-- Input.GetKey, for the batch modifier. -->
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(ManagedDir)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- No reference to Core. Kynda left the suite when it came out of the pack and
+         off the server; with nothing to register against, a compile-time reference to
+         Core is a build-order dependency buying nothing. Restore this and the
+         Suite.Register call together, never one without the other. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Shared source, not a reference. Prefabs.cs is the suite's runtime prefab registry and
+         lives in the core repo, but it is deliberately not in EzomicCore.dll: Core is a soft
+         dependency, and a mod that could not register its prefab would load and do nothing at
+         all. Linking the file keeps one copy of the code without making Core mandatory. -->
+    <Compile Include="..\core\shared\Prefabs.cs" Link="shared\Prefabs.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Core carries the version gate, and Kynda needs it again the moment the
+         upgrades ship: they are registered prefabs, and ZNetScene discards any ZDO
+         whose prefab name will not resolve. A client joining a host without this mod
+         would not error, it would delete every Tun and Woodrack already standing.
+         Private=false on purpose - Core deploys its own DLL to plugins\Core, and a
+         second copy beside this one would be two assemblies sharing one BepInPlugin
+         GUID, which is a plugin that silently does not load. -->
+    <ProjectReference Include="..\core\Core.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <Target Name="Deploy" AfterTargets="Build" Condition="Exists('$(ProfileDir)\BepInEx\plugins')">
+    <MakeDir Directories="$(DeployDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
+    <!-- The model and its collision sidecar are read from beside the dll at runtime. -->
+    <ItemGroup>
+      <HopperAssets Include="$(MSBuildProjectDirectory)\assets\*.obj;$(MSBuildProjectDirectory)\assets\*.col;$(MSBuildProjectDirectory)\assets\*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(HopperAssets)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
+  </Target>
+
+</Project>

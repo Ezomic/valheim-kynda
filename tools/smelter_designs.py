@@ -217,11 +217,11 @@ def twin_bins():
 # --------------------------------------------------------------------------- export
 
 VARIANTS = [
-    ("stoker_ore_trough", ore_trough, "1 - Ore trough (low, long, divided)"),
-    ("stoker_ore_cairn", ore_cairn, "2 - Ore cairn (heap on a revetment)"),
-    ("stoker_charcoal_clamp", charcoal_clamp, "3 - Charcoal clamp (turf dome)"),
-    ("stoker_ore_barrow", ore_barrow, "4 - Ore barrow (wheeled, tipped)"),
-    ("stoker_twin_bins", twin_bins, "5 - Twin bins (vertical, separated)"),
+    ("kynda_ore_trough", ore_trough, "1 - Ore trough (low, long, divided)"),
+    ("kynda_ore_cairn", ore_cairn, "2 - Ore cairn (heap on a revetment)"),
+    ("kynda_charcoal_clamp", charcoal_clamp, "3 - Charcoal clamp (turf dome)"),
+    ("kynda_ore_barrow", ore_barrow, "4 - Ore barrow (wheeled, tipped)"),
+    ("kynda_twin_bins", twin_bins, "5 - Twin bins (vertical, separated)"),
 ]
 
 

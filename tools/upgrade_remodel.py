@@ -50,7 +50,7 @@ from upgrade_variants import (                                    # noqa: E402
     rack_lean, trough_barrels,
 )
 
-# What the runtime applies to each piece, from StokerConfig. Rendering without it is
+# What the runtime applies to each piece, from KyndaConfig. Rendering without it is
 # what made every previous preview a picture of something smaller than the piece.
 SCALE = {"trough": 1.5, "rack": 1.5}
 
@@ -422,12 +422,12 @@ def trough_tub():
 
 
 CANDIDATES = [
-    ("stoker_rack_courses",    rack_courses,    "WOODRACK - Lean-to, coursed"),
-    ("stoker_rack_open",       rack_open,       "WOODRACK - Open stack, no roof"),
-    ("stoker_rack_gable",      rack_gable,      "WOODRACK - Gable shed"),
-    ("stoker_trough_grounded", trough_grounded, "TROUGH - Casks on a kerb"),
-    ("stoker_trough_framed",   trough_framed,   "TROUGH - Casks in a frame"),
-    ("stoker_trough_tub",      trough_tub,      "TROUGH - Cask and tub"),
+    ("kynda_rack_courses",    rack_courses,    "WOODRACK - Lean-to, coursed"),
+    ("kynda_rack_open",       rack_open,       "WOODRACK - Open stack, no roof"),
+    ("kynda_rack_gable",      rack_gable,      "WOODRACK - Gable shed"),
+    ("kynda_trough_grounded", trough_grounded, "TROUGH - Casks on a kerb"),
+    ("kynda_trough_framed",   trough_framed,   "TROUGH - Casks in a frame"),
+    ("kynda_trough_tub",      trough_tub,      "TROUGH - Cask and tub"),
 ]
 
 
@@ -580,10 +580,10 @@ def pair(shape):
 
 
 CASKS = [
-    ("stoker_cask_smooth", pair(cask_smooth), "CASK - Turned, bulged, painted staves"),
-    ("stoker_cask_staved", pair(cask_staved), "CASK - Coopered staves, two courses"),
-    ("stoker_cask_cut",    pair(cask_cut),    "CASK - Barrel sawn off at the belly"),
-    ("stoker_cask_tub",    pair(cask_tub),    "CASK - Tapered tub"),
+    ("kynda_cask_smooth", pair(cask_smooth), "CASK - Turned, bulged, painted staves"),
+    ("kynda_cask_staved", pair(cask_staved), "CASK - Coopered staves, two courses"),
+    ("kynda_cask_cut",    pair(cask_cut),    "CASK - Barrel sawn off at the belly"),
+    ("kynda_cask_tub",    pair(cask_tub),    "CASK - Tapered tub"),
 ]
 
 
@@ -619,8 +619,8 @@ def trough_casks():
 
 
 PICKS = [
-    ("stoker_rack_courses", rack_courses,  "WOODRACK - Lean-to, coursed"),
-    ("stoker_trough_casks", trough_casks,  "TROUGH - Turned casks"),
+    ("kynda_rack_courses", rack_courses,  "WOODRACK - Lean-to, coursed"),
+    ("kynda_trough_casks", trough_casks,  "TROUGH - Turned casks"),
 ]
 
 
@@ -691,8 +691,8 @@ def main(items, close=False, promote=False):
 # A baseline taken with the same lights and the same scale as the candidates is the
 # only way a comparison means anything.
 BASELINE = [
-    ("stoker_rack_lean", rack_lean, "SHIPPED - Woodrack, lean-to"),
-    ("stoker_trough_barrels", trough_barrels, "SHIPPED - Trough, twin casks"),
+    ("kynda_rack_lean", rack_lean, "SHIPPED - Woodrack, lean-to"),
+    ("kynda_trough_barrels", trough_barrels, "SHIPPED - Trough, twin casks"),
 ]
 
 

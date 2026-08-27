@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Photographs the finished prefab and uses that as its build-menu icon.
@@ -179,7 +179,7 @@ namespace Stoker
                 // near a hundred means the camera is inside it. Neither is visible from a
                 // log line saying the render succeeded, which is what the first version
                 // said while producing unusable icons.
-                StokerPlugin.Log.LogInfo(string.Format(
+                KyndaPlugin.Log.LogInfo(string.Format(
                     "Icon for {0}: {1}px, subject {2:0.00}x{3:0.00}x{4:0.00}m, {5:0}% of the "
                     + "frame covered.",
                     name, Size, bounds.size.x, bounds.size.y, bounds.size.z,
@@ -192,7 +192,7 @@ namespace Stoker
             }
             catch (Exception e)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "Could not photograph " + name + " for its icon: " + e.Message
                     + " - falling back to the png beside the dll.");
                 return null;
@@ -239,7 +239,7 @@ namespace Stoker
         /// </summary>
         private static void Dump(Texture2D texture, string name)
         {
-            if (StokerConfig.Verbose == null || !StokerConfig.Verbose.Value) return;
+            if (KyndaConfig.Verbose == null || !KyndaConfig.Verbose.Value) return;
 
             try
             {
@@ -256,11 +256,11 @@ namespace Stoker
                 var path = System.IO.Path.Combine(dir, name + "_rendered.png");
                 System.IO.File.WriteAllBytes(path, bytes);
 
-                StokerPlugin.Log.LogInfo("Wrote " + path + " to look at.");
+                KyndaPlugin.Log.LogInfo("Wrote " + path + " to look at.");
             }
             catch (Exception e)
             {
-                StokerPlugin.Log.LogWarning("Could not dump the icon: " + e.Message);
+                KyndaPlugin.Log.LogWarning("Could not dump the icon: " + e.Message);
             }
         }
 

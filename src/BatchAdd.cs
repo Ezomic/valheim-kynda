@@ -2,7 +2,7 @@ using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Adds several items per press instead of one.
@@ -54,7 +54,7 @@ namespace Stoker
 
             if (missing.Count == 0) return true;
 
-            StokerPlugin.Log.LogError(
+            KyndaPlugin.Log.LogError(
                 "Game members this mod reflects on are missing - batching is disabled: "
                 + string.Join(", ", missing.ToArray()));
             return false;
@@ -73,7 +73,7 @@ namespace Stoker
         /// </summary>
         private static int Extra(int perAdd)
         {
-            var key = StokerConfig.BatchModifier.Value;
+            var key = KyndaConfig.BatchModifier.Value;
             if (key != KeyCode.None && !Input.GetKey(key)) return 0;
 
             return Mathf.Max(0, perAdd - 1);
@@ -91,7 +91,7 @@ namespace Stoker
         {
             if (perAdd <= 1) return "";
 
-            var key = StokerConfig.BatchModifier.Value;
+            var key = KyndaConfig.BatchModifier.Value;
 
             return key == KeyCode.None
                 ? "\n<color=grey>x" + perAdd + " per press</color>"
@@ -106,7 +106,7 @@ namespace Stoker
         {
             if (!__result || user == null || !Ready) return;
 
-            var extra = Extra(StokerConfig.SmelterItemsPerAdd.Value);
+            var extra = Extra(KyndaConfig.SmelterItemsPerAdd.Value);
             if (extra <= 0) return;
 
             var nview = SmelterNView.GetValue(__instance) as ZNetView;
@@ -144,7 +144,7 @@ namespace Stoker
         {
             if (!__result || user == null || !Ready) return;
 
-            var extra = Extra(StokerConfig.SmelterItemsPerAdd.Value);
+            var extra = Extra(KyndaConfig.SmelterItemsPerAdd.Value);
             if (extra <= 0) return;
 
             var nview = SmelterNView.GetValue(__instance) as ZNetView;
@@ -214,7 +214,7 @@ namespace Stoker
 
         private static void TopUpFire(Fireplace fireplace, Humanoid user)
         {
-            var extra = Extra(StokerConfig.FireplaceItemsPerAdd.Value);
+            var extra = Extra(KyndaConfig.FireplaceItemsPerAdd.Value);
             if (extra <= 0 || !Ready || fireplace.m_infiniteFuel || !fireplace.m_canRefill) return;
 
             var nview = FireplaceNView.GetValue(fireplace) as ZNetView;
@@ -245,8 +245,8 @@ namespace Stoker
 
         private static void Report(string station, string what, int added)
         {
-            if (!StokerConfig.Verbose.Value || added == 0) return;
-            StokerPlugin.Log.LogInfo(station + ": batched " + added + " extra " + what + ".");
+            if (!KyndaConfig.Verbose.Value || added == 0) return;
+            KyndaPlugin.Log.LogInfo(station + ": batched " + added + " extra " + what + ".");
         }
     }
 }

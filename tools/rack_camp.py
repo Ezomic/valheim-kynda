@@ -36,7 +36,7 @@ RIP = "E:/Repositories/valheim/own-profile/BepInEx/rips/log__1_/log__1_.obj"
 WALL_RIP = "E:/Repositories/valheim/own-profile/BepInEx/rips/woodwall/woodwall.obj"
 ROOF_RIP = "E:/Repositories/valheim/own-profile/BepInEx/rips/wood_roof/wood_roof.obj"
 
-NAME = "stoker_rack_camp"
+NAME = "kynda_rack_camp"
 
 
 def material(name):

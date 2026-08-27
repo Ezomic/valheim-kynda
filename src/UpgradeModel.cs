@@ -4,7 +4,7 @@ using System.Globalization;
 using System.IO;
 using UnityEngine;
 
-namespace Stoker
+namespace Kynda
 {
     /// <summary>
     /// Puts a hand-modelled mesh onto a cloned prefab, in place of the donor's own look.
@@ -29,7 +29,7 @@ namespace Stoker
 
             if (model == null || model.Mesh == null)
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "No " + modelFile + " beside the dll - falling back to the donor's look.");
                 return false;
             }
@@ -65,7 +65,7 @@ namespace Stoker
             ReplaceColliders(prefab, Path.Combine(dir,
                 Path.GetFileNameWithoutExtension(modelFile) + ".col"));
 
-            StokerPlugin.Log.LogInfo(string.Format(
+            KyndaPlugin.Log.LogInfo(string.Format(
                 "{0}: {1} verts, {2} tris, groups [{3}].",
                 modelFile, model.Mesh.vertexCount, model.Mesh.triangles.Length / 3,
                 string.Join(", ", model.Groups)));
@@ -81,7 +81,7 @@ namespace Stoker
         {
             if (!File.Exists(path))
             {
-                StokerPlugin.Log.LogWarning(
+                KyndaPlugin.Log.LogWarning(
                     "No " + Path.GetFileName(path) + " beside the dll - keeping the donor's "
                     + "collision.");
                 return;
@@ -134,7 +134,7 @@ namespace Stoker
                     float.Parse(parts[6], culture));
             }
 
-            StokerPlugin.Log.LogInfo(
+            KyndaPlugin.Log.LogInfo(
                 Path.GetFileName(path) + ": " + boxes.Count + " collision boxes.");
         }
     }

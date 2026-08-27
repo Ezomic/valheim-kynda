@@ -241,7 +241,7 @@ def main():
     triangulate(obj)
 
     os.makedirs(OUT_DIR, exist_ok=True)
-    obj_path = os.path.join(OUT_DIR, "stoker_hopper.obj")
+    obj_path = os.path.join(OUT_DIR, "kynda_hopper.obj")
 
     bpy.ops.wm.obj_export(
         filepath=obj_path,
@@ -257,7 +257,7 @@ def main():
         path_mode="AUTO",
     )
 
-    write_colliders(os.path.join(OUT_DIR, "stoker_hopper.col"))
+    write_colliders(os.path.join(OUT_DIR, "kynda_hopper.col"))
 
     verts = len(obj.data.vertices)
     tris = len(obj.data.polygons)
