@@ -106,13 +106,28 @@ namespace Stoker
             var host = new GameObject("upgrade_collision");
             host.transform.SetParent(prefab.transform, false);
 
+            var count = 0;
             foreach (var parts in boxes)
             {
-                var box = host.AddComponent<BoxCollider>();
-                box.center = new Vector3(
+                // One child per box, because the sidecar carries a rotation and a
+                // BoxCollider cannot rotate on its own - the transform under it is the
+                // only place an angle can live. The woodrack's roof is why: a single
+                // axis-aligned box over a sloped roof holds your feet at its highest
+                // corner, hovering above the straw you look like you are standing on.
+                var child = new GameObject("box_" + count++);
+                child.transform.SetParent(host.transform, false);
+                child.transform.localPosition = new Vector3(
                     float.Parse(parts[1], culture),
                     float.Parse(parts[2], culture),
                     float.Parse(parts[3], culture));
+                if (parts.Length >= 11)
+                    child.transform.localRotation = new Quaternion(
+                        float.Parse(parts[7], culture),
+                        float.Parse(parts[8], culture),
+                        float.Parse(parts[9], culture),
+                        float.Parse(parts[10], culture));
+
+                var box = child.AddComponent<BoxCollider>();
                 box.size = new Vector3(
                     float.Parse(parts[4], culture),
                     float.Parse(parts[5], culture),

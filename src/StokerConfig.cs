@@ -342,7 +342,7 @@ namespace Stoker
             // firewood. A pile and the thing holding it are two materials in vanilla too:
             // a prop is one, furniture is two, and this is furniture holding a prop.
             UpgradePrefabs.Woodrack.SkinDonors = config.Bind("Woodrack", "SkinDonors",
-                "@wood_pile:keep,frame=wood_beam",
+                "@wood_item:keep,frame=@woodwall:keep,roof=@straw_roof:keep,roofalpha=@straw_roof_alpha:keep",
                 "Which vanilla prefab this piece borrows its surface from. A bare prefab "
                 + "name covers the whole piece; group=prefab pairs override a single "
                 + "group. Empty uses the general list.");
