@@ -41,6 +41,12 @@ namespace Kynda
             Log = Logger;
             KyndaConfig.Bind(Config);
 
+            // Before anything else touches a soft reference. The asset loader is built
+            // lazily on first use and reads this flag once, in its constructor, so the
+            // window for asking it to list materials as well as locations is here in
+            // Awake and nowhere later. It reads nothing and loads nothing by itself.
+            SoftAssets.MakeEverythingLoadable();
+
             TryRegisterWithCore();
 
             _harmony = new Harmony(PluginGuid);

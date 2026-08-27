@@ -57,11 +57,13 @@ namespace Kynda
 
             DonorCarrierLocations = config.Bind("Diagnostics", "DonorCarrierLocations",
                 "Vendor,Hildir",
-                "Location prefabs to soft-ref load when a donor material is missing, "
-                + "comma-separated name fragments. The camp donors live in location "
-                + "assets nothing loads until a player walks there - which on a fresh "
-                + "server world is never, and was a magenta Tun on live. Blank turns "
-                + "the summoning off.");
+                "Fallback only, and normally unused. A missing donor material is now "
+                + "loaded straight out of its own bundle by name, so no location has to "
+                + "be summoned for it. These location prefabs are soft-ref loaded only if "
+                + "that direct load finds nothing under the wanted name - a game update "
+                + "renaming an asset, or one of the few assets that exist solely inside a "
+                + "containing prefab. Comma-separated name fragments; blank turns the "
+                + "fallback off.");
 
             Verbose = config.Bind("Diagnostics", "Verbose", false,
                 "Log each batched add and why it stopped.");

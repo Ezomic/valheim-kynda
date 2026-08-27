@@ -228,6 +228,14 @@ namespace Kynda
 
             if (loose == null)
             {
+                // Not loaded by anything in the world - so ask the game's asset loader for
+                // it directly, which is a supported operation once the extended manifest
+                // is enabled in Awake. This is the answer to the magenta Tun: the material
+                // arrives here and now, out of its own bundle, with no location involved
+                // and nothing waiting on a player to walk somewhere.
+                var direct = SoftAssets.LoadMaterial(name);
+                if (direct != null) return direct;
+
                 var near = new List<string>();
                 foreach (var candidate in Resources.FindObjectsOfTypeAll<Material>())
                 {
@@ -242,12 +250,13 @@ namespace Kynda
                     + "exists once something using it has loaded. Loaded names sharing its "
                     + "prefix: " + (near.Count == 0 ? "none" : string.Join(", ", near.ToArray())));
 
-                // And do something about it: the camp donors live in location assets
-                // that Valheim soft-ref streams - nothing loads them until somebody
-                // WALKS to a vendor camp, which on a fresh server world is never. On
-                // live that was a magenta Tun and a broken icon for every player. So
-                // a missing material summons its carrier location through the softref
-                // loader; the LateSkin watch applies the donor when the load lands.
+                // The fallback, for when the direct load above could not find the name:
+                // summon a whole location known to carry the donor and let the LateSkin
+                // watch apply it when the load lands. Kept because it fails differently -
+                // it needs no extended manifest, so it still works if MakeAllAssetsLoadable
+                // ran too late to take effect, and it can reach a material that is not
+                // individually addressable (a handful of extended entries carry an all-zero
+                // id and only exist inside a containing prefab).
                 SummonDonorCarriers();
             }
 
