@@ -7,7 +7,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Ezomic"
 name = "Kynda"
-versionNumber = "1.0.0"
+versionNumber = "1.0.1"
 description = "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out."
 websiteUrl = "https://github.com/Ezomic/valheim-kynda"
 containsNsfwContent = false

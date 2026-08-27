@@ -23,7 +23,7 @@ namespace Kynda
     {
         public const string PluginGuid = "ezomic.valheim.kynda";
         public const string PluginName = "Kynda";
-        public const string PluginVersion = "1.0.1";
+        public const string PluginVersion = "1.0.2";
         public const string PluginAuthor = "Robbin Thijssen";
 
         /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>

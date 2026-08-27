@@ -3,6 +3,20 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.0.2] - 2026-08-27
+
+### Changed
+
+- **A missing donor material is now loaded by name, straight out of its own bundle**,
+  instead of summoning the whole vendor camp it happens to live in. 1.0.1 fixed the
+  magenta Tun by streaming in an entire village prefab and waiting for its material to
+  appear; this asks the game for the material itself, which it supports once the asset
+  loader is told to list materials as well as locations. The Tun is painted in its first
+  build pass rather than magenta-then-healed, its hammer icon is right the first time,
+  and the camp's object graph never becomes resident. The location summoner stays as the
+  fallback for a material that has been renamed or that only exists inside a containing
+  prefab.
+
 ## [1.0.1] - 2026-08-27
 
 ### Fixed
