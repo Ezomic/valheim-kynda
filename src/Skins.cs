@@ -241,9 +241,55 @@ namespace Kynda
                 KyndaPlugin.Log.LogWarning("No loaded material called '" + name + "'. It only "
                     + "exists once something using it has loaded. Loaded names sharing its "
                     + "prefix: " + (near.Count == 0 ? "none" : string.Join(", ", near.ToArray())));
+
+                // And do something about it: the camp donors live in location assets
+                // that Valheim soft-ref streams - nothing loads them until somebody
+                // WALKS to a vendor camp, which on a fresh server world is never. On
+                // live that was a magenta Tun and a broken icon for every player. So
+                // a missing material summons its carrier location through the softref
+                // loader; the LateSkin watch applies the donor when the load lands.
+                SummonDonorCarriers();
             }
 
             return loose;
+        }
+
+        private static float _nextSummon;
+
+        private static void SummonDonorCarriers()
+        {
+            if (UnityEngine.Time.time < _nextSummon) return;
+            _nextSummon = UnityEngine.Time.time + 30f;
+
+            var zone = ZoneSystem.instance;
+            if (zone == null || zone.m_locations == null) return;
+
+            var hints = (KyndaConfig.DonorCarrierLocations.Value ?? "")
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            if (hints.Length == 0) return;
+
+            foreach (var location in zone.m_locations)
+            {
+                if (location == null) continue;
+
+                var prefabName = location.m_prefab.Name;
+                if (string.IsNullOrEmpty(prefabName)) continue;
+
+                foreach (var hint in hints)
+                {
+                    if (prefabName.IndexOf(hint.Trim(),
+                            StringComparison.OrdinalIgnoreCase) < 0) continue;
+
+                    if (location.m_prefab.IsValid && !location.m_prefab.IsLoaded
+                        && !location.m_prefab.IsLoading)
+                    {
+                        location.m_prefab.LoadAsync();
+                        KyndaPlugin.Log.LogInfo("Summoned location asset '" + prefabName
+                            + "' for its donor materials.");
+                    }
+                    break;
+                }
+            }
         }
 
         /// <summary>

@@ -3,6 +3,17 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.0.1] - 2026-08-28
+
+### Fixed
+
+- **The Tun is no longer magenta on a fresh world.** Its donor materials live in the
+  vendor camp's location asset, which Valheim soft-ref streams - nothing loads it until
+  a player walks to a camp, which on a fresh server world is never. A missing donor now
+  summons its carrier location through the softref loader; the late-skin watch applies
+  the paint when the load lands, and the hammer icon re-shoots itself. Every standing
+  piece heals in place.
+
 ## [1.0.0] - 2026-08-25
 
 Both halves ship: the batching, and the two upgrade pieces.

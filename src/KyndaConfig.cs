@@ -19,6 +19,7 @@ namespace Kynda
         public static ConfigEntry<int> FireplaceItemsPerAdd;
         public static ConfigEntry<KeyCode> BatchModifier;
         public static ConfigEntry<bool> Verbose;
+        public static ConfigEntry<string> DonorCarrierLocations;
 
         public static ConfigEntry<bool> Enabled;
         public static ConfigEntry<string> Donor;
@@ -53,6 +54,14 @@ namespace Kynda
             TestMode = config.Bind("Diagnostics", "TestMode", false,
                 "Makes both upgrades cost one wood, so they can be built and looked at "
                 + "without bronze. Announced in the log on startup so it is hard to leave on.");
+
+            DonorCarrierLocations = config.Bind("Diagnostics", "DonorCarrierLocations",
+                "Vendor,Hildir",
+                "Location prefabs to soft-ref load when a donor material is missing, "
+                + "comma-separated name fragments. The camp donors live in location "
+                + "assets nothing loads until a player walks there - which on a fresh "
+                + "server world is never, and was a magenta Tun on live. Blank turns "
+                + "the summoning off.");
 
             Verbose = config.Bind("Diagnostics", "Verbose", false,
                 "Log each batched add and why it stopped.");

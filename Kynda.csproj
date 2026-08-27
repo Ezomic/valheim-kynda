@@ -28,6 +28,7 @@
   <ItemGroup>
     <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)\assembly_valheim.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="assembly_utils"><HintPath>$(ManagedDir)\assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="SoftReferenceableAssets"><HintPath>$(ManagedDir)\SoftReferenceableAssets.dll</HintPath><Private>false</Private></Reference>
     <!-- Localization lives here, not in assembly_valheim. -->
     <Reference Include="assembly_guiutils"><HintPath>$(ManagedDir)\assembly_guiutils.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(ManagedDir)\UnityEngine.dll</HintPath><Private>false</Private></Reference>

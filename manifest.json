@@ -1,7 +1,7 @@
 {
   "name": "Kynda",
   "author": "Robbin Thijssen",
-  "version_number": "1.0.0",
+  "version_number": "1.0.1",
   "website_url": "https://github.com/Ezomic/valheim-kynda",
   "description": "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out.",
   "dependencies": [
