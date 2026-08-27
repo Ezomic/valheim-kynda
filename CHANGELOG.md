@@ -3,7 +3,7 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [1.0.1] - 2026-08-28
+## [1.0.1] - 2026-08-27
 
 ### Fixed
 
