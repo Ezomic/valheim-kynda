@@ -258,21 +258,53 @@ namespace Kynda
 
         private static void SummonDonorCarriers()
         {
-            if (UnityEngine.Time.time < _nextSummon) return;
-            _nextSummon = UnityEngine.Time.time + 30f;
+            try
+            {
+                SummonDonorCarriersInner();
+            }
+            catch (Exception e)
+            {
+                // The LateSkin tick swallows exceptions, which made the first version
+                // of this look simply absent: warnings fired, summoner never spoke.
+                // Whatever throws in here, it says so exactly once.
+                if (_summonFault == null)
+                {
+                    _summonFault = e.ToString();
+                    KyndaPlugin.Log.LogError("Carrier summon failed: " + _summonFault);
+                }
+            }
+        }
 
+        private static string _summonFault;
+
+        private static void SummonDonorCarriersInner()
+        {
+            if (UnityEngine.Time.time < _nextSummon) return;
+
+            // The gate arms only after a REAL attempt: the first misses fire during
+            // registration, before ZoneSystem exists, and arming on those burned the
+            // whole window doing nothing - the summon then looked dead for 30s.
             var zone = ZoneSystem.instance;
             if (zone == null || zone.m_locations == null) return;
+            _nextSummon = UnityEngine.Time.time + 30f;
 
             var hints = (KyndaConfig.DonorCarrierLocations.Value ?? "")
                 .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             if (hints.Length == 0) return;
 
+            var scanned = 0;
+            var matched = 0;
             foreach (var location in zone.m_locations)
             {
                 if (location == null) continue;
+                scanned++;
 
-                var prefabName = location.m_prefab.Name;
+                // m_prefabName, the plain string - NOT m_prefab.Name. A location can
+                // carry an EMPTY soft-reference (an all-zero AssetID), and even the
+                // Name getter walks the loader's dictionary and throws on it. That
+                // exception, swallowed by the caller's tick, made the first summoner
+                // look simply absent.
+                var prefabName = location.m_prefabName;
                 if (string.IsNullOrEmpty(prefabName)) continue;
 
                 foreach (var hint in hints)
@@ -280,16 +312,27 @@ namespace Kynda
                     if (prefabName.IndexOf(hint.Trim(),
                             StringComparison.OrdinalIgnoreCase) < 0) continue;
 
-                    if (location.m_prefab.IsValid && !location.m_prefab.IsLoaded
-                        && !location.m_prefab.IsLoading)
+                    matched++;
+                    try
                     {
-                        location.m_prefab.LoadAsync();
-                        KyndaPlugin.Log.LogInfo("Summoned location asset '" + prefabName
-                            + "' for its donor materials.");
+                        if (location.m_prefab.IsValid && !location.m_prefab.IsLoaded
+                            && !location.m_prefab.IsLoading)
+                        {
+                            location.m_prefab.LoadAsync();
+                            KyndaPlugin.Log.LogInfo("Summoned location asset '"
+                                + prefabName + "' for its donor materials.");
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // An unresolvable reference on one location must not stop
+                        // the sweep from reaching the one that resolves.
                     }
                     break;
                 }
             }
+            KyndaPlugin.Log.LogInfo("Carrier summon pass: " + scanned + " locations, "
+                + matched + " matched.");
         }
 
         /// <summary>
