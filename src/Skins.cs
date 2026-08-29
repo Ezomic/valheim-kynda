@@ -92,6 +92,11 @@ namespace Kynda
             Atlas.Clear();
             TexPx.Clear();
             PropIndex.Forget();
+
+            // A new world gets to report its own misses. Without this a donor that was
+            // absent in the first world is silently never mentioned again, which is the
+            // opposite failure to the one the set was added for.
+            _missed.Clear();
         }
 
         /// <summary>
@@ -378,9 +383,41 @@ namespace Kynda
         /// remap everything from scratch, or the groups that resolved on time get placed
         /// twice.
         /// </summary>
+        /// <summary>
+        /// Nothing here is worth doing on a dedicated server, and doing it is actively
+        /// harmful.
+        ///
+        /// A headless process draws nothing, so every borrowed material is thrown away
+        /// the moment it is found. Worse, the @donor materials live in asset bundles a
+        /// server never loads, so the late-skin watch below can NEVER be satisfied - it
+        /// retried four groups every five seconds forever and put roughly 68,000 warning
+        /// lines a day into the live server's journal, 360MB of it, drowning every real
+        /// line in the log. That is how a mass disconnect came to be invisible.
+        ///
+        /// Three tests rather than one, because they become true at different moments:
+        /// batch mode and a null graphics device are known at process start, while
+        /// ZNet only knows it is dedicated once the world is up.
+        /// </summary>
+        internal static bool Headless
+        {
+            get
+            {
+                if (Application.isBatchMode) return true;
+                if (SystemInfo.graphicsDeviceType
+                    == UnityEngine.Rendering.GraphicsDeviceType.Null) return true;
+
+                var net = ZNet.instance;
+                return net != null && net.IsDedicated();
+            }
+        }
+
         public static Material[] SkinAndWatch(MeshRenderer renderer, Mesh mesh,
             string[] groups, IDictionary<string, string> overrides)
         {
+            // Skipped whole on a server: the lookup walks every loaded material, the
+            // result is never drawn, and the watch it would register never completes.
+            if (Headless) return new Material[groups.Length];
+
             var skins = Skin(groups, overrides);
 
             for (var i = 0; i < groups.Length; i++)
@@ -415,6 +452,7 @@ namespace Kynda
         public static void Tick()
         {
             if (_late.Count == 0) return;
+            if (Headless) { _late.Clear(); return; }
             if (Time.realtimeSinceStartup < _nextLate) return;
             _nextLate = Time.realtimeSinceStartup + 5f;
 
@@ -627,7 +665,11 @@ namespace Kynda
                 }
             }
 
-            KyndaPlugin.Log.LogWarning("No material found for group '" + key + "'.");
+            // Once per key, not once per retry. The late-skin watch re-asks every five
+            // seconds until the donor arrives, and a donor that never arrives used to
+            // mean this line forever.
+            if (_missed.Add(key))
+                KyndaPlugin.Log.LogWarning("No material found for group '" + key + "'.");
 
             // A missing @material is NOT cached as a failure. Those name a material that
             // only exists once something using it has streamed in, so "not found" means
@@ -640,6 +682,10 @@ namespace Kynda
 
             return null;
         }
+
+        /// <summary>Keys already reported missing, so the warning is not repeated.</summary>
+        private static readonly HashSet<string> _missed =
+            new HashSet<string>(StringComparer.Ordinal);
 
         private static readonly HashSet<string> _dumped =
             new HashSet<string>(StringComparer.Ordinal);
