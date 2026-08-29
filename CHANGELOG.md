@@ -3,6 +3,20 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.0.3] - 2026-08-29
+
+### Fixed
+
+- **A dedicated server no longer chases materials it can never load.** A headless
+  process has no renderers and never loads the asset bundles the borrowed materials
+  live in, so the retry that waits for one could never be satisfied and never gave up:
+  four warnings every five seconds, roughly 68,000 lines a day, which had built a 360MB
+  journal on the live server and drowned every real line in it - a mass disconnect of
+  every player went unnoticed there until the log was filtered by hand. Skinning is
+  skipped whole when headless, and nothing visual is lost because a server draws
+  nothing. The repeated warning was wrong on a client too: a donor that never arrives
+  said the same line every five seconds for the whole session, and is now reported once.
+
 ## [1.0.2] - 2026-08-27
 
 ### Changed
