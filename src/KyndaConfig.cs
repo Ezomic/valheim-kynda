@@ -126,10 +126,18 @@ namespace Kynda
             // built, and the two go together - the Core reference and the Suite.Register
             // call, never one without the other.
             Enabled = config.Bind("Upgrades", "Enabled", true,
-                "Add the two buildable upgrades that raise a nearby station's capacity. They "
-                + "register prefabs, so a world that later loads without this mod discards "
-                + "every one already built rather than reporting an error - which is what "
-                + "the version gate exists to prevent.");
+                "Whether the two buildable upgrades that raise a nearby station's capacity "
+                + "appear in the hammer.\n"
+                + "Turning this off hides them; it does not delete them. The prefabs are "
+                + "registered either way, so anything already built keeps resolving and stays "
+                + "in the world - it just cannot be built any more, from the next world load. "
+                + "That was not true before: this used to skip registration, and since "
+                + "ZNetScene discards any ZDO whose prefab name will not resolve, switching it "
+                + "off destroyed every Tun and Woodrack standing. A host could do it to "
+                + "everyone at once, because this file is host-imposed.\n"
+                + "What has not changed: uninstalling the mod entirely still discards them, "
+                + "because then nothing declares the names at all. That is what the version "
+                + "gate exists to prevent.");
 
             Donor = config.Bind("Upgrades", "Donor", "piece_chest_barrel",
                 "Prefab cloned for its machinery - ZNetView, Piece, WearNTear, placement "

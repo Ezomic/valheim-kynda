@@ -745,13 +745,31 @@ namespace Kynda
             }
         }
 
-        /// <summary>Idempotent, and safe to call every frame until it takes.</summary>
+        /// <summary>
+        /// Idempotent, and safe to call every frame until it takes.
+        ///
+        /// Enabled no longer gates REGISTRATION, only the build menu, and the difference is
+        /// somebody's buildings. It used to early-return here, so switching the setting off
+        /// meant kynda_tun and kynda_woodrack were never declared - and ZNetScene discards any
+        /// ZDO whose prefab name does not resolve, silently and permanently. One config edit
+        /// therefore deleted every Tun and Woodrack standing in the world, which is exactly
+        /// what this setting's own description warns happens when a world loads without the
+        /// mod. It reached further than that: Kynda declares no Suite.Local, so Core absorbs
+        /// the whole file and a HOST could impose the off value on everyone at once.
+        ///
+        /// Registering unconditionally costs nothing. A declared prefab nobody can build is
+        /// two entries in a dictionary; a ZDO nobody can resolve is a hole in a world.
+        ///
+        /// Turning it off now removes the pieces from the hammer instead - and only from the
+        /// next world load, because a piece table already holding them is not rewritten here.
+        /// That is the right way round: the feature goes away and what was built stays.
+        /// </summary>
         public static bool Register()
         {
-            if (!KyndaConfig.Enabled.Value) return true;
-
             if (ZNetScene.instance == null || ObjectDB.instance == null) return false;
-            if (Ready && InHammer()) return true;
+
+            var wanted = KyndaConfig.Enabled.Value;
+            if (Ready && (!wanted || InHammer())) return true;
 
             foreach (var def in Active())
             {
@@ -760,7 +778,8 @@ namespace Kynda
             }
 
             AddToScene();
-            AddToHammer();
+            if (wanted) AddToHammer();
+
             return Ready;
         }
 
