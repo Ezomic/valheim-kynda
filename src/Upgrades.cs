@@ -1079,6 +1079,38 @@ namespace Kynda
             return list.ToArray();
         }
 
+        /// <summary>
+        /// Into both of the places ZNetScene looks, through the suite's shared registry.
+        ///
+        /// This reflected on m_namedPrefabs itself until 2026-09-10, in a try/catch that
+        /// logged the exception and carried on, and two separate things were wrong with that.
+        ///
+        /// The dictionary is the only lookup GetPrefab reads - the list is merely what Awake
+        /// builds it from - so a binding that fails leaves both pieces declared and
+        /// unfindable by name. ZNetScene then reaches CreateObject with a saved ZDO's hash
+        /// that nothing resolves. On a client that is merely a piece that does not appear; on
+        /// the host it is ZDOMan.DestroyZDO on every Tun and Woodrack standing in the world,
+        /// because CreateObject returning null inside CreateObjects is what the IsServer
+        /// branch treats as an invalid ZDO. The game does say so - ZLog, "Destroyed invalid
+        /// predab ZDO", its typo - but ZLog writes to Player.log rather than to the BepInEx
+        /// log anybody reads. Nothing about the failure is recoverable and nothing about it
+        /// is visible.
+        ///
+        /// And the catch sat inside a method retried every frame from Update, so the one line
+        /// that did report it was written per piece per frame. That is not louder than saying
+        /// it once; it is quieter, because it buries every other line in the log.
+        ///
+        /// Prefabs.Register performs the same two writes with the field bound lazily inside
+        /// its own guard and the complaint collapsed to one per prefab name. It is shared
+        /// source linked into this project rather than a call into Core.dll, so routing
+        /// through it cannot make Core a hard dependency of registering a prefab - which is
+        /// the whole reason that file is linked instead of compiled into Core.
+        ///
+        /// Only the scene half goes through it. Prefabs.AddToTool appends to a build menu,
+        /// while AddToHammer below deliberately inserts each piece directly after the station
+        /// it upgrades, and honours Enabled - which must gate the menu without ever gating
+        /// the registration here. Sharing one more function would trade both of those away.
+        /// </summary>
         private static void AddToScene()
         {
             var scene = ZNetScene.instance;
@@ -1087,23 +1119,41 @@ namespace Kynda
             {
                 if (def.Prefab == null || scene.GetPrefab(def.PrefabName) != null) continue;
 
-                if (!scene.m_prefabs.Contains(def.Prefab)) scene.m_prefabs.Add(def.Prefab);
+                // Fully qualified rather than a using: this file already carries one
+                // ambiguity it works around at the top, and a bare Prefabs sitting inside a
+                // class called UpgradePrefabs reads like a typo.
+                if (Ezomic.Shared.Prefabs.Register(def.Prefab)) continue;
 
-                try
-                {
-                    // ZNetScene needs both the list and the private dictionary. The
-                    // dictionary is built in Awake and never rebuilt, so adding to the
-                    // list alone does nothing at all.
-                    var named = (Dictionary<int, GameObject>)
-                        AccessTools.Field(typeof(ZNetScene), "m_namedPrefabs").GetValue(scene);
-                    named[def.PrefabName.GetStableHashCode()] = def.Prefab;
-                }
-                catch (System.Exception e)
-                {
-                    KyndaPlugin.Log.LogError(
-                        "Could not register " + def.PrefabName + ": " + e.Message);
-                }
+                ReportLost(def.PrefabName);
             }
+        }
+
+        /// <summary>
+        /// Prefab names this session has already given up on, so the line below is written
+        /// once each. The only way that write fails is a private game field renamed by an
+        /// update, which is a condition that does not clear on its own inside a method called
+        /// every frame.
+        /// </summary>
+        private static readonly HashSet<string> Lost = new HashSet<string>();
+
+        /// <summary>
+        /// The one failure in this file that costs somebody's buildings, said in full.
+        ///
+        /// Prefabs.Register has already logged why the write failed; this says what that
+        /// means, in the words a player would grep their log for after a piece disappeared.
+        /// A silent fallback here would be indistinguishable from the mod working.
+        /// </summary>
+        private static void ReportLost(string prefabName)
+        {
+            if (!Lost.Add(prefabName)) return;
+
+            KyndaPlugin.Log.LogError(
+                "KYNDA COULD NOT REGISTER " + prefabName + " WITH ZNetScene, so the game "
+                + "cannot find it by name. A host loading a world that contains one DESTROYS "
+                + "EVERY " + prefabName + " ALREADY BUILT IN IT - look for \"Destroyed "
+                + "invalid predab ZDO\" in Player.log. They are still in the world file until "
+                + "it is next saved, so quit without saving and report this rather than "
+                + "playing on. Kynda's other features are unaffected.");
         }
 
         /// <summary>

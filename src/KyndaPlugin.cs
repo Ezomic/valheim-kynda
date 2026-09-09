@@ -39,6 +39,17 @@ namespace Kynda
         private void Awake()
         {
             Log = Logger;
+
+            // The shared prefab registry writes under whoever claims it, and left unset it
+            // makes its own source called "Prefabs" - which in a profile where several mods
+            // link the same file is several identically named sources and no way to tell
+            // which one is talking about a missing piece.
+            //
+            // Safe to name directly in Awake, unlike the Suite call further down: Prefabs.cs
+            // is linked source compiled into this DLL, so touching it resolves no other
+            // assembly and cannot throw when Core is absent.
+            Ezomic.Shared.Prefabs.Log = Logger;
+
             KyndaConfig.Bind(Config);
 
             // Before anything else touches a soft reference. The asset loader is built
