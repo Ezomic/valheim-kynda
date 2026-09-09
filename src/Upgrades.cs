@@ -402,6 +402,20 @@ namespace Kynda
             return _piece != null ? _piece.m_name : "";
         }
 
+        /// <summary>
+        /// How far up the hover text floats. New in Valheim 1.0 - Hoverable grew a third member,
+        /// so every implementer has to answer.
+        ///
+        /// Zero, which is what the vanilla field defaults to: every vanilla implementer returns a
+        /// serialized m_hoverOffset, and nothing that ships sets it on a smelter, kiln or
+        /// blast furnace. A bin sits on the station it upgrades, so the station's own text
+        /// position is the one to match, and matching it means not moving.
+        /// </summary>
+        public float GetHoverOffset()
+        {
+            return 0f;
+        }
+
         public string GetHoverText()
         {
             // Vanilla pokes the link effect from here too, for any extension that is not
