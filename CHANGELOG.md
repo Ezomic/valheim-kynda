@@ -3,6 +3,22 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [1.1.0] - 2026-09-09
+
+Rebuilt for Valheim 1.0. This version does not run on pre-1.0 Valheim, and the previous
+one does not run on 1.0.
+
+### Fixed
+
+- **Turning the upgrades off no longer deletes the ones you built.** That setting used to skip
+  prefab registration, and the game discards any saved object whose prefab name does not
+  resolve - so one config edit destroyed every Tun and Woodrack standing in the world,
+  permanently and silently. Because the file is host-imposed, a host could do it to everyone at
+  once. Registration is unconditional now and the setting gates only the build menu: turning it
+  off hides the pieces from the next world load and leaves what was built alone.
+- **Runs on Valheim 1.0.** The `Hoverable` interface gained a member, which every implementer
+  has to answer.
+
 ## [1.0.3] - 2026-08-29
 
 ### Fixed
