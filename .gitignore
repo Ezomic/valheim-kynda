@@ -21,3 +21,4 @@ previews/
 # Thunderstore packaging: staging folder and the zips tcli writes.
 package/
 build/
+dist/
