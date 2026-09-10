@@ -5,6 +5,6 @@
   "website_url": "https://github.com/Ezomic/valheim-kynda",
   "description": "Load a smelter, kiln or fire several at a time. Fewer trips; the same metal out.",
   "dependencies": [
-    "denikson-BepInExPack_Valheim-5.4.2333"
+    "denikson-BepInExPack_Valheim-5.4.2350"
   ]
 }

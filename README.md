@@ -2,7 +2,7 @@
 
 Fewer trips to the smelter. Same amount of metal out of it.
 
-Built against the installed game (0.221.12, Unity 6000.0.61, BepInEx 5.4.23.3, Harmony 2.9).
+Built against the installed game (1.0.7, Unity 6000.0.75, BepInEx 5.4.23.5, Harmony 2.9).
 
 ## The balance line
 
