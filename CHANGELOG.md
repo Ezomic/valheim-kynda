@@ -3,6 +3,28 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+
+- **The batch modifier does nothing.** The key was read with `UnityEngine.Input.GetKey`, and
+  Valheim runs on the new Input System, where the legacy Input class does not reliably see a
+  KeyCode. So holding Shift while using a smelter added one ore instead of three, with the
+  config file holding exactly the right key and nothing in any log. Read through `ZInput` now,
+  which is the game's own reader, and refused while chat, the console or a text field has
+  focus.
+- **A blast furnace could end up holding more ore than its capacity.** Vanilla checks capacity
+  only in `OnAddOre`, on the client, against `GetQueueSize()`; `RPC_AddOre` on the owner has no
+  check at all and writes the queue entry unconditionally. On a dedicated server that queue
+  size is a round trip behind, so pressing again before the ZDO caught up made every batch
+  count from the same stale number, and the overfilled state then persists. The predicted level
+  is now tracked per station across presses, with the ZDO's own value taking over the moment it
+  catches up.
+- **Batched ore was sent with the wrong RPC signature.** `Smelter` registers `RPC_AddOre` as
+  `Register<string, bool>` and vanilla sends `(name, item.m_cheated)`; the extra adds sent the
+  name alone, leaving the receiver to read a bool off the end of the package. Matches the
+  game's call now.
+
 ## [1.1.0] - 2026-09-09
 
 Rebuilt for Valheim 1.0. This version does not run on pre-1.0 Valheim, and the previous

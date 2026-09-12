@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -64,6 +65,86 @@ namespace Kynda
                                      && SmelterFindCookable != null && SmelterNView != null
                                      && FireplaceNView != null;
 
+        // --------------------------------------------------------------- pending adds
+
+        /// <summary>
+        /// How long a prediction is trusted, in seconds.
+        ///
+        /// Long enough to cover a round trip to a dedicated server and back, short enough that
+        /// it cannot outlive a smelt. One ore takes tens of seconds to process, so the queue
+        /// cannot legitimately fall inside this window, which is the only way a stale
+        /// prediction could hold back an add that should have been allowed.
+        /// </summary>
+        private const float PredictionSeconds = 3f;
+
+        private struct Prediction
+        {
+            public float Level;
+            public float Time;
+        }
+
+        private static readonly Dictionary<ZDOID, Prediction> Pending =
+            new Dictionary<ZDOID, Prediction>();
+
+        private static float _lastPrune;
+
+        /// <summary>
+        /// What the station's level will be once everything already sent has landed.
+        ///
+        /// This is the fix for a blast furnace ending up with more ore in it than its capacity
+        /// allows. Vanilla's only capacity check is in OnAddOre, on the client, against
+        /// GetQueueSize() - and RPC_AddOre on the owner has no check at all, it just writes
+        /// item&lt;n&gt; and increments the count. So whatever the client believes is the only
+        /// thing standing between a station and an overfilled ZDO, and an overfilled one stays
+        /// that way.
+        ///
+        /// What the client believes was wrong across presses. Each postfix read GetQueueSize()
+        /// fresh, and on a dedicated server that value is a round trip behind: the ZDO does not
+        /// reflect an add until the owner has written it and replicated it back. Press three
+        /// times quickly and all three batches count from the same stale number, so a furnace
+        /// two ore short of full accepts three batches of three.
+        ///
+        /// Tracking the level per station rather than per press closes that. The ZDO's own
+        /// answer wins the moment it catches up, so this only ever matters while something is
+        /// genuinely in flight, and a prediction that is somehow too low costs nothing - the
+        /// authoritative value is always the floor.
+        /// </summary>
+        private static float Predicted(ZDOID id, float authoritative)
+        {
+            Prune();
+
+            Prediction p;
+            if (Pending.TryGetValue(id, out p)
+                && Time.time - p.Time < PredictionSeconds
+                && p.Level > authoritative)
+                return p.Level;
+
+            return authoritative;
+        }
+
+        private static void Remember(ZDOID id, float level)
+        {
+            Pending[id] = new Prediction { Level = level, Time = Time.time };
+        }
+
+        /// <summary>
+        /// Drops expired entries so a long session does not accumulate one per station ever
+        /// touched. Rate-limited because it walks the dictionary, and nothing here is urgent.
+        /// </summary>
+        private static void Prune()
+        {
+            if (Time.time - _lastPrune < PredictionSeconds) return;
+            _lastPrune = Time.time;
+
+            if (Pending.Count == 0) return;
+
+            var dead = new List<ZDOID>();
+            foreach (var entry in Pending)
+                if (Time.time - entry.Value.Time >= PredictionSeconds) dead.Add(entry.Key);
+
+            foreach (var id in dead) Pending.Remove(id);
+        }
+
         /// <summary>
         /// How many extra items this press should add - zero unless the modifier is held.
         ///
@@ -74,9 +155,35 @@ namespace Kynda
         private static int Extra(int perAdd)
         {
             var key = KyndaConfig.BatchModifier.Value;
-            if (key != KeyCode.None && !Input.GetKey(key)) return 0;
+            if (key != KeyCode.None && !Held(key)) return 0;
 
             return Mathf.Max(0, perAdd - 1);
+        }
+
+        /// <summary>
+        /// True while the modifier is held.
+        ///
+        /// ZInput rather than UnityEngine.Input, and this is the whole of why Shift+use did
+        /// nothing while the config file held exactly the right key. Valheim runs on the new
+        /// Input System: ZInput.GetKey routes a KeyCode to Keyboard.current, Mouse.current or
+        /// Gamepad.current itself, and the legacy Input class does not see all of them here.
+        /// The symptom is the unhelpful kind - the key is bound, it is correct, and nothing
+        /// happens - so it is worth naming in a comment rather than only in a changelog.
+        ///
+        /// logWarning: false, or ZInput grumbles about every KeyCode it cannot map, and a key
+        /// nobody bound is a configuration choice rather than a fault.
+        ///
+        /// The text-field refusal matches Vaettir's Keys.Held. A held modifier hardly matters
+        /// while chat has focus, since you cannot reach a smelter anyway, but two key readers
+        /// in one suite with different manners is how one of them ends up wrong later.
+        /// </summary>
+        private static bool Held(KeyCode key)
+        {
+            if (key == KeyCode.None) return false;
+            if (!ZInput.GetKey(key, false)) return false;
+
+            if (Chat.instance != null && Chat.instance.HasFocus()) return false;
+            return !Console.IsVisible() && !TextInput.IsVisible();
         }
 
         /// <summary>
@@ -117,8 +224,11 @@ namespace Kynda
 
             var fuelName = __instance.m_fuelItem.m_itemData.m_shared.m_name;
 
-            // +1 for the add the game just made, which the ZDO has not caught up with.
-            var expected = (float)SmelterGetFuel.Invoke(__instance, null) + 1f;
+            // +1 for the add the game just made, which the ZDO has not caught up with, and
+            // counted from the prediction rather than the ZDO so a second press inside the
+            // round trip does not start over from a stale number.
+            var id = nview.GetZDO().m_uid;
+            var expected = Predicted(id, (float)SmelterGetFuel.Invoke(__instance, null)) + 1f;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -133,6 +243,7 @@ namespace Kynda
                 added++;
             }
 
+            Remember(id, expected);
             Report(__instance.m_name, "fuel", added);
         }
 
@@ -153,7 +264,9 @@ namespace Kynda
             var inventory = user.GetInventory();
             if (inventory == null) return;
 
-            var expected = (int)SmelterGetQueueSize.Invoke(__instance, null) + 1;
+            var id = nview.GetZDO().m_uid;
+            var expected =
+                Mathf.CeilToInt(Predicted(id, (int)SmelterGetQueueSize.Invoke(__instance, null))) + 1;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -169,11 +282,18 @@ namespace Kynda
                 if (item == null || item.m_dropPrefab == null) break;
 
                 inventory.RemoveItem(item, 1);
-                nview.InvokeRPC("RPC_AddOre", item.m_dropPrefab.name);
+
+                // Two arguments, not one. Smelter registers this as Register<string, bool> and
+                // vanilla's own OnAddOre sends (name, item.m_cheated); sending the name alone
+                // leaves the receiver reading a bool off the end of the package. Match the
+                // game's call exactly - a signature is not something to send an approximation
+                // of, and it changed under us when the cheated flag was added.
+                nview.InvokeRPC("RPC_AddOre", item.m_dropPrefab.name, item.m_cheated);
                 expected++;
                 added++;
             }
 
+            Remember(id, expected);
             Report(__instance.m_name, "ore", added);
         }
 
@@ -224,7 +344,8 @@ namespace Kynda
             if (inventory == null || fireplace.m_fuelItem == null) return;
 
             var fuelName = fireplace.m_fuelItem.m_itemData.m_shared.m_name;
-            var expected = nview.GetZDO().GetFloat(ZDOVars.s_fuel) + 1f;
+            var id = nview.GetZDO().m_uid;
+            var expected = Predicted(id, nview.GetZDO().GetFloat(ZDOVars.s_fuel)) + 1f;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -240,6 +361,7 @@ namespace Kynda
                 added++;
             }
 
+            Remember(id, expected);
             Report(fireplace.m_name, "logs", added);
         }
 
