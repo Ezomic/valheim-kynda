@@ -809,7 +809,12 @@ namespace Kynda
 
             if (_holder == null)
             {
-                _holder = new GameObject("KyndaUpgradeHolder");
+                // The name is load-bearing, not decoration. Devkit's site export attributes a
+                // prefab to a mod by its holder's name minus "Prefabs", the shape core's shared
+                // Prefabs.cs produces, and anything else is filed as unattributed and dropped
+                // without a word - which is how Kynda's upgrades came out missing from the
+                // site's costs table entirely.
+                _holder = new GameObject("KyndaPrefabs");
                 _holder.SetActive(false);
                 Object.DontDestroyOnLoad(_holder);
             }
