@@ -1,0 +1,9 @@
+{
+    "roadmap": [
+        {
+            "key": "blast-furnace-upgrade",
+            "title": "An upgrade for the blast furnace",
+            "body": "The Tun upgrades a smelter and the Woodrack a charcoal kiln. The blast furnace has neither.\n\nIt gets a piece of its own rather than the Tun learning a second station: a Tun is a picture of ore and coal, and a blast furnace is black metal and stone. Cost and capacity are still being decided.\n\nCapacity only, like the other two. Throughput stays vanilla, so a bigger load means fewer walks back to the station and not faster iron."
+        }
+    ]
+}
