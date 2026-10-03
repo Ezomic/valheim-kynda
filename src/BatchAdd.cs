@@ -82,6 +82,7 @@ namespace Kynda
         {
             public float Level;
             public float Time;
+            public float BurnPerSecond;
         }
 
         private static readonly Dictionary<ZDOID, Prediction> Pending =
@@ -121,13 +122,25 @@ namespace Kynda
             // to say. Dropping it here rather than letting it age out matters: every press
             // refreshes the timestamp, so a prediction that merely outlives its purpose
             // survives for as long as the key is held.
-            if (p.Level <= authoritative || Time.time - p.Time >= PredictionSeconds)
+            // A level that is lower than the prediction by no more than the station has burned
+            // since is also caught up: a burning fire or a running smelter keeps eating the
+            // level, so the real value can land just under the remembered one and never reach
+            // it, and the prediction would then outlive its purpose for as long as the key is
+            // held. A genuinely missing add leaves a gap of a whole item, which is more than
+            // the few seconds of burn allowed for here, so overshoot protection is kept.
+            if (CaughtUp(p, authoritative) || Time.time - p.Time >= PredictionSeconds)
             {
                 Pending.Remove(id);
                 return authoritative;
             }
 
             return p.Level;
+        }
+
+        private static bool CaughtUp(Prediction p, float authoritative)
+        {
+            var burned = p.BurnPerSecond * Mathf.Min(Time.time - p.Time, PredictionSeconds);
+            return authoritative >= p.Level - burned;
         }
 
         /// <summary>
@@ -159,7 +172,8 @@ namespace Kynda
             return predicted + 1f;
         }
 
-        private static void Remember(ZNetView nview, ZDOID id, float level)
+        private static void Remember(ZNetView nview, ZDOID id, float level,
+            float burnPerSecond)
         {
             if (nview.IsOwner())
             {
@@ -167,7 +181,12 @@ namespace Kynda
                 return;
             }
 
-            Pending[id] = new Prediction { Level = level, Time = Time.time };
+            Pending[id] = new Prediction
+            {
+                Level = level,
+                Time = Time.time,
+                BurnPerSecond = burnPerSecond
+            };
         }
 
         /// <summary>
@@ -289,7 +308,9 @@ namespace Kynda
                 added++;
             }
 
-            Remember(nview, id, expected);
+            var fuelBurn = __instance.m_secPerProduct > 0f
+                ? __instance.m_fuelPerProduct / __instance.m_secPerProduct : 0f;
+            Remember(nview, id, expected, fuelBurn);
             Report(__instance.m_name, "fuel", nview, real, predicted, start, expected, added,
                 __instance.m_maxFuel - 1);
         }
@@ -342,7 +363,11 @@ namespace Kynda
                 added++;
             }
 
-            Remember(nview, id, expected);
+            // The queue is whole items, so for ore this tolerance never admits a drop of one:
+            // a finished product and an add still in flight look the same, and the safe
+            // reading is the in-flight one.
+            var oreBurn = __instance.m_secPerProduct > 0f ? 1f / __instance.m_secPerProduct : 0f;
+            Remember(nview, id, expected, oreBurn);
             Report(__instance.m_name, "ore", nview, real, predicted, start, expected, added,
                 __instance.m_maxOre);
         }
@@ -414,7 +439,8 @@ namespace Kynda
                 added++;
             }
 
-            Remember(nview, id, expected);
+            var logBurn = fireplace.m_secPerFuel > 0f ? 1f / fireplace.m_secPerFuel : 0f;
+            Remember(nview, id, expected, logBurn);
             Report(fireplace.m_name, "logs", nview, real, predicted, start, expected, added,
                 fireplace.m_maxFuel);
         }
