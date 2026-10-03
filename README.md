@@ -18,6 +18,8 @@ Built against Valheim 1.0.7, Unity 6000.0.75, BepInEx 5.4.23.5, Harmony 2.9.
 - Works on fireplaces that can be refilled: campfire, hearth, bonfire, standing torches.
 - The station's hover text shows the modifier, so the feature is discoverable without
   reading this file.
+- Under it, one grey line says how long the ore, coal or wood already loaded will last, from
+  the station's own timing. Off with `ShowTimeLeft`.
 - Two buildable upgrades, the Tun and the Woodrack, that raise the capacity of a smelter or
   a charcoal kiln standing next to them.
 - Everything is configurable: the key, the batch size, the upgrade costs, which stations
@@ -118,6 +120,7 @@ a new default in code. If a setting appears to do nothing after an update, check
 | `BatchModifier` | `LeftShift` | Hold while interacting to batch. `None` makes batching unconditional. Read through Unity's legacy input, so use a keyboard key |
 | `SmelterItemsPerAdd` | `3` | Ore or coal per press at any Smelter-based station. `1` restores vanilla |
 | `FireplaceItemsPerAdd` | `3` | Logs per press at a fireplace. `1` restores vanilla |
+| `ShowTimeLeft` | `true` | Add a "time left" line to the hover text of stations and fireplaces. Off removes it |
 
 ### [Upgrades]
 

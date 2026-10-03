@@ -19,6 +19,7 @@ namespace Kynda
         public static ConfigEntry<int> FireplaceItemsPerAdd;
         public static ConfigEntry<KeyCode> BatchModifier;
         public static ConfigEntry<bool> Verbose;
+        public static ConfigEntry<bool> ShowTimeLeft;
         public static ConfigEntry<string> DonorCarrierLocations;
 
         public static ConfigEntry<bool> Enabled;
@@ -64,6 +65,12 @@ namespace Kynda
                 + "renaming an asset, or one of the few assets that exist solely inside a "
                 + "containing prefab. Comma-separated name fragments; blank turns the "
                 + "fallback off.");
+
+            ShowTimeLeft = config.Bind("Batching", "ShowTimeLeft", true,
+                "Add one line to a station's hover text saying how long what is loaded will "
+                + "last: the queued ore at a smelter-type station, the coal in its fuel "
+                + "switch, the wood in a fireplace. It is the game's own timing read from the "
+                + "station, so it never changes anything, and off removes the line.");
 
             Verbose = config.Bind("Diagnostics", "Verbose", false,
                 "Log each batched add and why it stopped.");

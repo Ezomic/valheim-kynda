@@ -5,6 +5,16 @@ and the mod uses [semantic versioning](https://semver.org).
 
 ## [Unreleased]
 
+### Added
+
+- **Hover text says how long what is loaded will last (LHM-48).** One short grey line under the
+  batch hint: the queued ore at a smelter-type station (queue times `m_secPerProduct`, minus
+  the progress already made), the coal in its fuel switch, and the wood in a fireplace. All of
+  it is the game's own timing read from the station, since Kynda never changes throughput. A
+  windmill gets no line (its speed follows the wind), and neither does a station with ore but
+  no coal, because that countdown is not counting. `ShowTimeLeft` under `[Batching]` turns it
+  off.
+
 ### Fixed
 
 - **Batching fell back to one coal at a time after the first few presses (LHM-50).** When this
