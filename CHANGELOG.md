@@ -16,6 +16,10 @@ and the mod uses [semantic versioning](https://semver.org).
   happened only sometimes. An owner now counts from the real level, and a remembered level is
   dropped as soon as the station's own value catches up with it. This is the same fault the
   overshoot note in the README described, seen from the other side: a wrong remembered level.
+  A remembered level is also dropped when the station's real level sits below it by no more
+  than the station has burned since, so a non-owner holding a burning fireplace or a running
+  smelter no longer keeps a prediction alive that the real level never quite reaches. A gap of
+  a whole missing item still keeps it, so the overfill protection is unchanged.
 - With Verbose on, every press now logs one line with the station's real level, the predicted
   level, who owns it, where the count started and ended and the ceiling, including presses that
   added nothing extra.
