@@ -203,11 +203,13 @@ the world it loads. Run it ungated on a world you control, not on one you share 
 
 ## Known limitations
 
-- **Repeated presses can overshoot a station's queue.** The capacity check reads the queue
-  size from the station's network object, which updates after the add rather than during it.
-  One batched press stops at capacity correctly. Pressing again before the station has caught
-  up can push the queue past its maximum, and the game does not clamp the ore queue on its
-  own side. Reported on smelters and blast furnaces. Not fixed yet.
+- **Batching can still overshoot a station's queue in two narrow cases.** The capacity check
+  reads the station's network object, which lags an add made from another machine. Kynda
+  tracks what it has already sent for three seconds, so quick repeated presses are counted
+  correctly, but a connection slower than three seconds, or a second player adding to the same
+  station in the same moment, can still push the ore queue past its maximum, because the game
+  does not clamp it on its own side. When you own the station, the add lands at once and the
+  count is exact. Reported on smelters and blast furnaces.
 - Uninstalling Kynda from a world that has Tuns or Woodracks in it deletes them permanently.
   Break them down first if you want the materials back.
 

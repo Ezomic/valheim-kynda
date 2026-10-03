@@ -1,0 +1,54 @@
+# Kynda LHM-50: every press of a batched coal add puts three in, until the smelter is full.
+#
+# Seven presses, one per frame, which is the part that matters. Presses closer together than
+# Kynda's three second prediction window chain, and the old code only misbehaved when they
+# chained AND this client owned the smelter's ZDO. Then InvokeRPC ran the add on the spot, the
+# ZDO already held vanilla's add, and the "+1 for the add in flight" counted it twice. Each press
+# left the remembered level one too high, so after four presses the loop believed the smelter
+# was nearly full and added nothing extra: coal went in one at a time from then on.
+#
+# A smelter holds 20 and vanilla refuses once it reads above 19, so with three per press the
+# presses read 3, 3, 3, 3, 3, 3 and then 2 (the last one stops at 20), and an eighth is refused.
+# Fixed: press six logs "count 16 to 18" and press seven "count 19 to 20", predicted equal to the
+# zdo every time. Broken: the predicted figure runs ahead of the zdo and press seven (or earlier)
+# never reaches 20.
+#
+# BEFORE RUNNING, in the profile's ezomic.valheim.kynda.cfg: Verbose = true (the assertions read
+# the per-press log line), BatchModifier = None (a scenario cannot hold Shift) and
+# SmelterItemsPerAdd = 3. Config entries are read once at load, so restart the game after.
+#
+# NOT YET RUN. `use` presses the first Interactable under the smelter, and which Switch that is
+# (fuel or ore) has not been checked in game. If the first press logs "ore" or the pane says the
+# smelter did not take coal, that is the step, not the mod: the smelter's fuel switch is the one
+# that has to be reached.
+#
+# The non-owner half (a dedicated server owning the smelter, where the add really is in flight)
+# cannot be staged on one machine. That path is unchanged from 1.1.1 and still hand-tested.
+
+clear
+give Coal:60
+god
+ghost
+sweep
+
+wipe 14
+wait 1
+
+flatten
+wait 1
+
+place smelter 4 0
+wait 2
+
+use smelter
+use smelter
+use smelter
+use smelter
+use smelter
+use smelter
+logged batched 2 extra fuel (zdo 16, predicted 16, owner me, count 16 to 18 yes
+use smelter
+logged batched 1 extra fuel (zdo 19, predicted 19, owner me, count 19 to 20 yes
+carrying Coal 40
+use smelter
+carrying Coal 40
