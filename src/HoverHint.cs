@@ -29,6 +29,7 @@ namespace Kynda
         {
             if (__instance.m_maxFuel <= 0) return;
             __result += BatchAdd.BatchHint(KyndaConfig.SmelterItemsPerAdd.Value);
+            __result += TimeLeft.Line(TimeLeft.FuelSeconds(__instance));
         }
 
         [HarmonyPostfix]
@@ -37,6 +38,7 @@ namespace Kynda
         {
             if (__instance.m_maxOre <= 0) return;
             __result += BatchAdd.BatchHint(KyndaConfig.SmelterItemsPerAdd.Value);
+            __result += TimeLeft.Line(TimeLeft.QueueSeconds(__instance));
         }
 
         // ------------------------------------------------------------------ fireplace
@@ -52,6 +54,7 @@ namespace Kynda
             if (!__instance.m_canRefill || __instance.m_infiniteFuel) return;
 
             __result += BatchAdd.BatchHint(KyndaConfig.FireplaceItemsPerAdd.Value);
+            __result += TimeLeft.Line(TimeLeft.FireplaceSeconds(__instance));
         }
 
         /// <summary>
