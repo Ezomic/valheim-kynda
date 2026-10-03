@@ -3,6 +3,28 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
+## [Unreleased]
+
+### Fixed
+
+- **Batching fell back to one coal at a time after the first few presses (LHM-50).** When this
+  client owned the station's network object, the add Kynda sends runs on the spot, so the level
+  it reads already includes the add the game just made. Kynda counted that add again as "in
+  flight", and with presses close enough together to chain, the remembered level crept one
+  higher per press until the loop believed the station was nearly full and added nothing extra.
+  That depended on who owned the station and how fast the presses came, which is why it
+  happened only sometimes. An owner now counts from the real level, and a remembered level is
+  dropped as soon as the station's own value catches up with it. This is the same fault the
+  overshoot note in the README described, seen from the other side: a wrong remembered level.
+- With Verbose on, every press now logs one line with the station's real level, the predicted
+  level, who owns it, where the count started and ended and the ceiling, including presses that
+  added nothing extra.
+
+### Added
+
+- A Devkit scenario, `scenarios/kynda-coal-three-per-press.txt`, that presses a smelter seven
+  times in a row and checks each press adds three until it is full.
+
 ## [1.1.1] - 2026-09-12
 
 ### Fixed

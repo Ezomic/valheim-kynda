@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
@@ -114,16 +115,58 @@ namespace Kynda
             Prune();
 
             Prediction p;
-            if (Pending.TryGetValue(id, out p)
-                && Time.time - p.Time < PredictionSeconds
-                && p.Level > authoritative)
-                return p.Level;
+            if (!Pending.TryGetValue(id, out p)) return authoritative;
 
-            return authoritative;
+            // The ZDO has caught up with everything sent, so the prediction has nothing left
+            // to say. Dropping it here rather than letting it age out matters: every press
+            // refreshes the timestamp, so a prediction that merely outlives its purpose
+            // survives for as long as the key is held.
+            if (p.Level <= authoritative || Time.time - p.Time >= PredictionSeconds)
+            {
+                Pending.Remove(id);
+                return authoritative;
+            }
+
+            return p.Level;
         }
 
-        private static void Remember(ZDOID id, float level)
+        /// <summary>
+        /// The level to count from for this press, including the add vanilla just made, and
+        /// what the prediction contributed (for the log).
+        ///
+        /// When this client owns the station's ZDO, InvokeRPC is not a message at all: the
+        /// routed RPC sees its own id as the target and runs the handler on the spot, so the
+        /// ZDO already holds vanilla's add by the time a postfix runs. Adding one for "the
+        /// add in flight" then counts it twice, and every press leaves the remembered level
+        /// one higher than the real one. Presses closer together than PredictionSeconds keep
+        /// refreshing it, so the surplus piles up until the loop believes the station is
+        /// full and stops while it is only part full - leaving vanilla's own single add to
+        /// finish the job one item per press. That is LHM-50, and why it was incidental: it
+        /// needs the player to own the ZDO, which depends on who is nearest the station, and
+        /// presses quick enough to chain.
+        /// </summary>
+        private static float StartLevel(ZNetView nview, ZDOID id, float authoritative,
+            out float predicted)
         {
+            if (nview.IsOwner())
+            {
+                Pending.Remove(id);
+                predicted = authoritative;
+                return authoritative;
+            }
+
+            predicted = Predicted(id, authoritative);
+            return predicted + 1f;
+        }
+
+        private static void Remember(ZNetView nview, ZDOID id, float level)
+        {
+            if (nview.IsOwner())
+            {
+                Pending.Remove(id);
+                return;
+            }
+
             Pending[id] = new Prediction { Level = level, Time = Time.time };
         }
 
@@ -224,11 +267,14 @@ namespace Kynda
 
             var fuelName = __instance.m_fuelItem.m_itemData.m_shared.m_name;
 
-            // +1 for the add the game just made, which the ZDO has not caught up with, and
-            // counted from the prediction rather than the ZDO so a second press inside the
-            // round trip does not start over from a stale number.
+            // Counted from the prediction rather than the ZDO when the add is still in flight,
+            // so a second press inside the round trip does not start over from a stale number.
+            // See StartLevel for why an owner counts from the ZDO alone.
             var id = nview.GetZDO().m_uid;
-            var expected = Predicted(id, (float)SmelterGetFuel.Invoke(__instance, null)) + 1f;
+            var real = (float)SmelterGetFuel.Invoke(__instance, null);
+            float predicted;
+            var expected = StartLevel(nview, id, real, out predicted);
+            var start = expected;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -243,8 +289,9 @@ namespace Kynda
                 added++;
             }
 
-            Remember(id, expected);
-            Report(__instance.m_name, "fuel", added);
+            Remember(nview, id, expected);
+            Report(__instance.m_name, "fuel", nview, real, predicted, start, expected, added,
+                __instance.m_maxFuel - 1);
         }
 
         // ------------------------------------------------------------------ smelter ore
@@ -265,8 +312,10 @@ namespace Kynda
             if (inventory == null) return;
 
             var id = nview.GetZDO().m_uid;
-            var expected =
-                Mathf.CeilToInt(Predicted(id, (int)SmelterGetQueueSize.Invoke(__instance, null))) + 1;
+            var real = (int)SmelterGetQueueSize.Invoke(__instance, null);
+            float predicted;
+            var expected = Mathf.CeilToInt(StartLevel(nview, id, real, out predicted));
+            var start = expected;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -293,8 +342,9 @@ namespace Kynda
                 added++;
             }
 
-            Remember(id, expected);
-            Report(__instance.m_name, "ore", added);
+            Remember(nview, id, expected);
+            Report(__instance.m_name, "ore", nview, real, predicted, start, expected, added,
+                __instance.m_maxOre);
         }
 
         // ------------------------------------------------------------------ fireplace
@@ -345,7 +395,10 @@ namespace Kynda
 
             var fuelName = fireplace.m_fuelItem.m_itemData.m_shared.m_name;
             var id = nview.GetZDO().m_uid;
-            var expected = Predicted(id, nview.GetZDO().GetFloat(ZDOVars.s_fuel)) + 1f;
+            var real = nview.GetZDO().GetFloat(ZDOVars.s_fuel);
+            float predicted;
+            var expected = StartLevel(nview, id, real, out predicted);
+            var start = expected;
             var added = 0;
 
             for (var i = 0; i < extra; i++)
@@ -361,14 +414,29 @@ namespace Kynda
                 added++;
             }
 
-            Remember(id, expected);
-            Report(fireplace.m_name, "logs", added);
+            Remember(nview, id, expected);
+            Report(fireplace.m_name, "logs", nview, real, predicted, start, expected, added,
+                fireplace.m_maxFuel);
         }
 
-        private static void Report(string station, string what, int added)
+        /// <summary>
+        /// One line per press, written even when nothing extra went in, because "nothing
+        /// extra" is the symptom LHM-50 was about and the numbers say why: the level the ZDO
+        /// held, the level the prediction put it at, whether this client owns the station,
+        /// where the count started and ended, and the ceiling it was counting against.
+        /// </summary>
+        private static void Report(string station, string what, ZNetView nview, float real,
+            float predicted, float start, float end, int added, float ceiling)
         {
-            if (!KyndaConfig.Verbose.Value || added == 0) return;
-            KyndaPlugin.Log.LogInfo(station + ": batched " + added + " extra " + what + ".");
+            if (!KyndaConfig.Verbose.Value) return;
+
+            KyndaPlugin.Log.LogInfo(station + ": batched " + added + " extra " + what
+                                    + " (zdo " + real.ToString("0.##", CultureInfo.InvariantCulture)
+                                    + ", predicted " + predicted.ToString("0.##", CultureInfo.InvariantCulture)
+                                    + ", owner " + (nview.IsOwner() ? "me" : "other")
+                                    + ", count " + start.ToString("0.##", CultureInfo.InvariantCulture)
+                                    + " to " + end.ToString("0.##", CultureInfo.InvariantCulture)
+                                    + ", ceiling " + ceiling.ToString("0.##", CultureInfo.InvariantCulture) + ").");
         }
     }
 }
