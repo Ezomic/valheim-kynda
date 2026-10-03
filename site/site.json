@@ -3,7 +3,7 @@
         {
             "key": "blast-furnace-upgrade",
             "title": "An upgrade for the blast furnace",
-            "body": "The Tun upgrades a smelter and the Woodrack a charcoal kiln. The blast furnace has neither.\n\nIt gets a piece of its own rather than the Tun learning a second station: a Tun is a picture of ore and coal, and a blast furnace is black metal and stone. Cost and capacity are still being decided.\n\nCapacity only, like the other two. Throughput stays vanilla, so a bigger load means fewer walks back to the station and not faster iron."
+            "body": "The Tun upgrades a smelter and the Woodrack a charcoal kiln. The blast furnace has neither.\n\nIt gets a piece of its own rather than the Tun learning a second station: a Tun is a picture of ore and coal, and a blast furnace is black metal and stone. The design is a short ore skip on iron rails up a stone bank, with a winch behind a stone buttress, so it shows ore being hauled up to the charging mouth. It costs 30 stone and 15 black metal, and a furnace beside it holds 30 ore and 60 coal instead of 10 and 20. The figures can still change once it has been played.\n\nCapacity only, like the other two. Throughput stays vanilla, so a bigger load means fewer walks back to the station and not faster iron."
         },
         {
             "key": "time-left-on-hover",
