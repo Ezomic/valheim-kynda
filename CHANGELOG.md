@@ -39,6 +39,25 @@ and the mod uses [semantic versioning](https://semver.org).
 
 ### Added
 
+- **An upgrade of its own for the blast furnace (LHM-47).** The Skip: a short ore skip on iron
+  rails up a stone bank, hauled by a winch behind a stone buttress, two materials and about
+  1,400 triangles. A blast furnace within `Range` (4 m) holds 30 ore and 60 coal instead of 10
+  and 20, with the same capacity-only rule as the Tun: throughput is untouched. It costs 30
+  stone and 15 black metal, needs a Forge in range, and stays off the hammer until the
+  character has held black metal. The prefab is `kynda_furnace`, named for the station and
+  not the design, so a different model is a `Model` line. Config is a new `[Furnace]` section
+  (`Name`, `Stations`, `Cost`, `Model`, `Scale`, `SkinDonors`, `OreCapacity`, `FuelCapacity`).
+  The Tun and the Woodrack are unchanged. The model's design was never picked from the four
+  drawn, and its surface (the blast furnace's own dark grey for the metal) has not been seen
+  in game.
+- A cost that names an item the game does not have now falls back to that piece's shipped
+  cost instead of silently dropping the entry, and a piece that cannot get a recipe at all is
+  registered but kept off the hammer. A recipe written before the game has loaded its items
+  would otherwise have been empty, and an empty recipe is a free piece.
+- A Devkit scenario, `scenarios/kynda-furnace-upgrade.txt`, that places a blast furnace, the
+  Skip and a Tun beside it and checks the capacity goes up, that the Tun says it has nothing
+  to feed, and that the capacity comes back when the Skip is torn down. With Verbose on, a
+  station now logs each change of its capacity.
 - A Devkit scenario, `scenarios/kynda-coal-three-per-press.txt`, that presses a smelter seven
   times in a row and checks each press adds three until it is full.
 

@@ -53,7 +53,7 @@ namespace Kynda
         public static void Bind(ConfigFile config)
         {
             TestMode = config.Bind("Diagnostics", "TestMode", false,
-                "Makes both upgrades cost one wood, so they can be built and looked at "
+                "Makes every upgrade cost one wood, so they can be built and looked at "
                 + "without bronze. Announced in the log on startup so it is hard to leave on.");
 
             DonorCarrierLocations = config.Bind("Diagnostics", "DonorCarrierLocations",
@@ -133,7 +133,7 @@ namespace Kynda
             // built, and the two go together - the Core reference and the Suite.Register
             // call, never one without the other.
             Enabled = config.Bind("Upgrades", "Enabled", true,
-                "Whether the two buildable upgrades that raise a nearby station's capacity "
+                "Whether the three buildable upgrades that raise a nearby station's capacity "
                 + "appear in the hammer.\n"
                 + "Turning this off hides them; it does not delete them. The prefabs are "
                 + "registered either way, so anything already built keeps resolving and stays "
@@ -156,9 +156,9 @@ namespace Kynda
             // build one is in step with what it is made of.
             Station = config.Bind("Upgrades", "Station", "forge",
                 "Prefab name of the crafting station you must stand near to build these. "
-                + "The forge, because both upgrades are held together with nails and a "
-                + "workbench could never have made them. Empty or an unknown name leaves "
-                + "the donor's, which is the workbench.");
+                + "The forge, because the upgrades are held together with nails or made of "
+                + "black metal and a workbench could never have made them. Empty or an "
+                + "unknown name leaves the donor's, which is the workbench.");
 
             Range = config.Bind("Upgrades", "Range", 4f,
                 "How close an upgrade must be to the station it feeds.");
@@ -378,6 +378,82 @@ namespace Kynda
 
             // No fuel entry. This one only ever serves stations with no fuel slot, so it
             // would be a setting that could never do anything.
+
+            // ------------------------------------------------------------------ the furnace
+
+            // The blast furnace and nothing else, and its own piece rather than the Tun
+            // learning a second station: a Tun is a picture of ore and coal, and a blast
+            // furnace is black metal and stone. The section is [Furnace] because the prefab
+            // is kynda_furnace, named for the station and not for whichever design is
+            // loaded, so swapping the model never touches a saved setting.
+            UpgradePrefabs.Furnace.Name = config.Bind("Furnace", "Name", "Skip",
+                "Name shown on the hammer and when you look at one. Change it with the model: "
+                + "the default names the skip, the first design built, and a different "
+                + "design wants a different word.");
+
+            UpgradePrefabs.Furnace.Stations = config.Bind("Furnace", "Stations", "blastfurnace",
+                "Station prefabs this upgrades, comma separated. A station not named here is "
+                + "left alone even if it is the right kind, and a piece standing next to one "
+                + "says it is feeding nothing rather than pretending. A station that is also "
+                + "named in the Tun's list is served by the Tun, never by both.");
+
+            // Chosen against the Tun, which is 20 fine wood and 15 iron nails (35 items, a
+            // biome beyond its smelter). A blast furnace is a Plains build, so this sits one
+            // biome further on, and it is made of what the model is made of: stone for the
+            // bank and the buttress, black metal for the rails, the skip and the winch.
+            // Two items for two material groups, 45 pieces in all against the Tun's 35,
+            // because a long ramp is more masonry than a pair of casks.
+            //
+            // Black metal is what a blast furnace smelts, so the piece cannot be raised
+            // before the furnace it serves has made some. That is the same tier gate the Tun
+            // has, and it matters in a second way: a piece whose cost names an item the
+            // character has never carried is absent from the hammer, not greyed out. Stone
+            // is everyone's, so black metal alone decides when this one appears.
+            UpgradePrefabs.Furnace.Cost = config.Bind("Furnace", "Cost",
+                "Stone:30,BlackMetal:15",
+                "Build cost, as Item:Amount pairs. The black metal puts it a step beyond the "
+                + "blast furnace it serves, so it is something you come back and add. The "
+                + "piece stays off the hammer until your character has held every item "
+                + "here at least once.");
+
+            UpgradePrefabs.Furnace.Model = config.Bind("Furnace", "Model",
+                "kynda_furnace_skip.obj",
+                "The OBJ loaded from beside the DLL, with its .col and _icon.png matched by "
+                + "name, so a different design brings its own shape and picture with it. "
+                + "Needs a restart.");
+
+            UpgradePrefabs.Furnace.Scale = config.Bind("Furnace", "Scale", 1.0f,
+                "Overall size of the piece. Scales the collision with it, since the boxes "
+                + "are children of the piece.");
+
+            // The blast furnace's own material, and this is the part nobody has seen in
+            // game yet. The furnace body is painted dark grey mottled stone on the left of
+            // its sheet and near black on the right, so its left half is what black metal
+            // looks like next to the furnace it serves, and a piece wearing it matches by
+            // construction. The rect is measured off BlastFurnace_d.png in the rip, not
+            // guessed: u 0.01 to 0.45, the full height. Stone comes off vanilla's stone
+            // wall, the donor the stone group already defaults to.
+            UpgradePrefabs.Furnace.SkinDonors = config.Bind("Furnace", "SkinDonors",
+                "iron=@BlastFurnace_mat:0.01/0.01/0.44/0.98,stone=stone_wall_2x1",
+                "Which vanilla prefab or material each mesh group borrows its surface from. "
+                + "A bare prefab name covers the whole piece; group=prefab pairs override one "
+                + "group, and @name borrows a material by its name. If the iron group comes "
+                + "out magenta or invisible, this is the line: try iron=forge for vanilla's "
+                + "own grey metal.");
+
+            // The same figures as the Tun, deliberately. The blast furnace starts where the
+            // smelter does, 10 ore and 20 coal, with the same two coal per ore, so the same
+            // +20 and +40 lands on the same round 30 and 60 and the coal still outlasts the
+            // ore. It costs more than the Tun and carries a more expensive burn, so it is
+            // not asked to carry more than the Tun does: capacity only, as with both of the
+            // others, and throughput is exactly vanilla's.
+            UpgradePrefabs.Furnace.OreCapacity = config.Bind("Furnace", "OreCapacity", 20,
+                "Extra ore a blast furnace holds. Vanilla's 10 becomes 30.");
+
+            UpgradePrefabs.Furnace.FuelCapacity = config.Bind("Furnace", "FuelCapacity", 40,
+                "Extra coal a blast furnace holds. Vanilla's 20 becomes 60. Twice the ore "
+                + "figure on purpose: it burns two coal per ore, so matching them would run "
+                + "the fuel out before the ore.");
 
             // ------------------------------------------------------------------ batching
 

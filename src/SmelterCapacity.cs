@@ -43,45 +43,24 @@ namespace Kynda
         }
 
         /// <summary>
-        /// Which kind of bin this station takes: one with a fuel slot takes the trough, one
-        /// without takes the woodrack. Read off the station's own numbers, so a modded
-        /// station lands on the right side of the split without anyone naming it.
+        /// Which kind of bin this station could take: one with a fuel slot, or one without.
+        /// Read off the station's own numbers, so a modded station lands on the right side of
+        /// the split without anyone naming it.
         ///
-        /// This decides the KIND. It no longer decides whether the bin serves this station
-        /// at all - see Serves. A blast furnace is fuelled and a windmill is not, and
-        /// neither is upgradable.
+        /// This only narrows the field. Which piece actually serves the station is the one
+        /// whose Stations list names it - see Def. A smelter and a blast furnace are both
+        /// fuelled, and it is the lists that tell the Tun from the furnace upgrade.
         /// </summary>
         private bool Fuelled { get { return _baseFuel > 0; } }
 
-        /// <summary>
-        /// Whether the upgrade that serves this kind will actually serve THIS station.
-        ///
-        /// Named stations rather than a component test, because the split by fuel slot is a
-        /// fact about how a station works and this is a decision about what the mod is for.
-        /// The Tun upgrades a smelter and the Woodrack upgrades a charcoal kiln, full stop:
-        /// a blast furnace and an eitr refinery are late-game stations that do not need
-        /// help, and a windmill and a spinning wheel are single-input like the kiln but are
-        /// not what a woodrack is a picture of.
-        ///
-        /// It is config, so a server that disagrees, or a modded station that wants in, is a
-        /// line in the .cfg rather than a rebuild.
-        /// </summary>
-        private bool Serves(UpgradeDef def)
+        /// <summary>The piece that raises this station's capacity, or null when none does.</summary>
+        private UpgradeDef Def
         {
-            if (def == null || def.Stations == null) return false;
-
-            var mine = Utils.GetPrefabName(gameObject);
-            foreach (var name in (def.Stations.Value ?? "").Split(','))
-            {
-                if (string.Equals(name.Trim(), mine, System.StringComparison.OrdinalIgnoreCase))
-                    return true;
-            }
-
-            return false;
+            get { return UpgradePrefabs.ServingStation(Utils.GetPrefabName(gameObject), Fuelled); }
         }
 
         /// <summary>
-        /// A flat amount, taken from whichever upgrade serves this kind of station.
+        /// A flat amount, taken from whichever upgrade serves this station.
         ///
         /// Per piece rather than one figure for the mod, and not a proportion either. The
         /// numbers wanted are a charcoal kiln landing on 50 from 25 and a smelter landing on
@@ -92,22 +71,31 @@ namespace Kynda
         {
             if (_smelter == null) return;
 
-            var def = UpgradePrefabs.For(Fuelled);
+            var def = Def;
 
-            var level = KyndaConfig.Enabled.Value && Serves(def)
-                ? Mathf.Min(UpgradeBin.CountNear(transform.position, Fuelled),
+            var level = KyndaConfig.Enabled.Value && def != null
+                ? Mathf.Min(UpgradeBin.CountNear(transform.position, def.Kind),
                             Mathf.Max(0, KyndaConfig.MaxPerStation.Value))
                 : 0;
 
-            var oreBonus = level * Mathf.Max(0, def.OreCapacity.Value);
-            var fuelBonus = def.FuelCapacity != null
+            var oreBonus = def != null ? level * Mathf.Max(0, def.OreCapacity.Value) : 0;
+            var fuelBonus = def != null && def.FuelCapacity != null
                 ? level * Mathf.Max(0, def.FuelCapacity.Value)
                 : 0;
+
+            var ore = _smelter.m_maxOre;
+            var fuel = _smelter.m_maxFuel;
 
             // Only raise a cap the station already has. A charcoal kiln has no fuel slot at
             // all - giving it one would have it refuse to work until fed coal it cannot take.
             if (_baseOre > 0) _smelter.m_maxOre = _baseOre + oreBonus;
             if (_baseFuel > 0) _smelter.m_maxFuel = _baseFuel + fuelBonus;
+
+            if (KyndaConfig.Verbose.Value && (ore != _smelter.m_maxOre || fuel != _smelter.m_maxFuel))
+                KyndaPlugin.Log.LogInfo(string.Format(
+                    "{0} capacity ore {1} to {2}, fuel {3} to {4}, {5} upgrade(s) counting.",
+                    Utils.GetPrefabName(gameObject), ore, _smelter.m_maxOre,
+                    fuel, _smelter.m_maxFuel, level));
         }
 
         /// <summary>
@@ -129,10 +117,12 @@ namespace Kynda
             }
         }
 
-        /// <summary>The nearest station of the matching kind, or null.</summary>
-        public static SmelterCapacity Nearest(Vector3 point, bool fuelled)
+        /// <summary>The nearest station that the piece of this kind actually serves, or null.</summary>
+        public static SmelterCapacity Nearest(Vector3 point, int kind)
         {
             var range = KyndaConfig.Range.Value;
+            var def = UpgradePrefabs.ByKind(kind);
+            if (def == null) return null;
 
             SmelterCapacity best = null;
             var bestDistance = float.MaxValue;
@@ -140,12 +130,13 @@ namespace Kynda
             foreach (var capacity in All)
             {
                 if (capacity == null || capacity._smelter == null) continue;
-                if (capacity.Fuelled != fuelled) continue;
 
                 // A bin standing next to a station it does not serve must not claim it, or
                 // the hover text names a station whose capacity never moved - which is the
-                // silent no-op this mod already went out of its way to avoid elsewhere.
-                if (!capacity.Serves(UpgradePrefabs.For(fuelled))) continue;
+                // silent no-op this mod already went out of its way to avoid elsewhere. A
+                // station named by two pieces is served by the first, and only that one
+                // claims it.
+                if (capacity.Def != def) continue;
 
                 var distance = Vector3.Distance(capacity.transform.position, point);
                 if (distance > range || distance >= bestDistance) continue;
@@ -162,9 +153,9 @@ namespace Kynda
         /// stations of the matching kind count, so a woodrack beside a smelter correctly
         /// reports that it is feeding nothing rather than claiming the smelter.
         /// </summary>
-        public static string NearestUsing(Vector3 point, bool fuelled)
+        public static string NearestUsing(Vector3 point, int kind)
         {
-            var best = Nearest(point, fuelled);
+            var best = Nearest(point, kind);
             if (best == null) return null;
 
             var smelter = best._smelter;

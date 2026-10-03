@@ -75,7 +75,7 @@ namespace Kynda
             Log.LogInfo(PluginName + " " + PluginVersion + " by " + PluginAuthor + " - ready.");
 
             if (KyndaConfig.TestMode.Value)
-                Log.LogWarning("TEST MODE: both upgrades cost one wood. "
+                Log.LogWarning("TEST MODE: every upgrade costs one wood. "
                                + "Turn TestMode off in the config before playing for real.");
         }
 

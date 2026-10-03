@@ -1,7 +1,7 @@
 # Kynda
 
-Load a smelter, kiln or fire several items at a time instead of one per press, and build two
-pieces that make a smelter or a charcoal kiln hold more.
+Load a smelter, kiln or fire several items at a time instead of one per press, and build three
+pieces that make a smelter, a charcoal kiln or a blast furnace hold more.
 
 Kynda never changes throughput. `m_secPerProduct` and `m_fuelPerProduct` are untouched, so
 twenty iron takes the same time and burns the same coal whether it went in as one load or
@@ -20,8 +20,8 @@ Built against Valheim 1.0.7, Unity 6000.0.75, BepInEx 5.4.23.5, Harmony 2.9.
   reading this file.
 - Under it, one grey line says how long the ore, coal or wood already loaded will last, from
   the station's own timing. Off with `ShowTimeLeft`.
-- Two buildable upgrades, the Tun and the Woodrack, that raise the capacity of a smelter or
-  a charcoal kiln standing next to them.
+- Three buildable upgrades, the Tun, the Woodrack and the blast furnace's Skip, that raise the
+  capacity of a smelter, a charcoal kiln or a blast furnace standing next to them.
 - Everything is configurable: the key, the batch size, the upgrade costs, which stations
   they serve, and how much capacity they add.
 
@@ -52,13 +52,15 @@ Some details worth knowing:
 
 ## The upgrades
 
-Two buildable pieces, on the hammer's Crafting tab, marked with the upgrade star. Both need
-a Forge in range to build, because both are held together with nails.
+Three buildable pieces, on the hammer's Crafting tab, marked with the upgrade star. All three
+need a Forge in range to build, because they are held together with nails or made of black
+metal.
 
 | Piece | Cost | Serves | Capacity |
 | --- | --- | --- | --- |
 | Tun | 20 Fine wood, 15 Iron nails | Smelter | 10 ore becomes 30, 20 coal becomes 60 |
 | Woodrack | 25 Fine wood, 20 Deer hide, 25 Bronze nails | Charcoal kiln | 25 wood becomes 50 |
+| Skip | 30 Stone, 15 Black metal | Blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
 
 Build one within 4 metres of the station it serves and the station's capacity goes up. The
 coal figure is twice the ore figure because a smelter burns two coal per ore; matching them
@@ -74,9 +76,19 @@ which piece belongs to which station in a row of eight. An upgrade that is not n
 anything it can serve says so in its hover text.
 
 Each piece serves exactly one station prefab by default: `smelter` for the Tun,
-`charcoal_kiln` for the Woodrack. Blast furnaces, eitr refineries, windmills and spinning
-wheels are left alone. Both lists are config, so adding a modded station is a line in the
-`.cfg` rather than a rebuild.
+`charcoal_kiln` for the Woodrack, `blastfurnace` for the Skip. Eitr refineries, windmills and
+spinning wheels are left alone. All three lists are config, so adding a modded station is a
+line in the `.cfg` rather than a rebuild. A station named in more than one list is served by
+the first of the Tun, Woodrack and Skip that names it, never by two added together.
+
+The blast furnace has a piece of its own rather than the Tun learning a second station. A Tun
+is a picture of ore and coal, and a blast furnace is black metal and stone, so the Skip is a
+short ore skip on iron rails up a stone bank, hauled by a winch behind a stone buttress. It
+gets the Tun's figures on purpose: the furnace holds the same 10 ore and 20 coal a smelter
+does and burns the same two coal per ore, so the same +20 and +40 lands on the same 30 and 60.
+The black metal in its cost is what a blast furnace smelts, so you cannot raise one before the
+furnace has made some, and Valheim keeps the piece off your hammer until you have held every
+item in the cost once.
 
 The models are plain `.obj` files read from beside the DLL at runtime, with a `.col` sidecar
 for collision and an `_icon.png` for the hammer icon, matched by filename. Rejected designs
@@ -85,7 +97,7 @@ live in `assets\variants\` and are not deployed; copy one up into `assets\` and 
 
 **The upgrades register prefabs, and that is permanent.** Valheim keys a placed piece on its
 prefab name hash and discards any saved object whose name no longer resolves. Loading a world
-without Kynda, or joining a server that does not run it, deletes every Tun and Woodrack
+without Kynda, or joining a server that does not run it, deletes every Tun, Woodrack and Skip
 standing there without an error. See Multiplayer below for what prevents that.
 
 Turning `Enabled` off is safe: since 1.1.0 it only hides the pieces from the hammer and
@@ -126,7 +138,7 @@ a new default in code. If a setting appears to do nothing after an update, check
 
 | Key | Default | Effect |
 | --- | --- | --- |
-| `Enabled` | `true` | Whether the two upgrades appear on the hammer. Off hides them from the next world load; it does not delete what is built |
+| `Enabled` | `true` | Whether the three upgrades appear on the hammer. Off hides them from the next world load; it does not delete what is built |
 | `Donor` | `piece_chest_barrel` | Prefab cloned for its machinery (ZNetView, Piece, WearNTear, placement rules). Its look, collision and icon are all replaced, so this is not a visual choice. Falls back to `piece_chest_wood`. Needs a restart |
 | `Station` | `forge` | Crafting station you must stand near to build them. Empty or an unknown name leaves the donor's, which is the workbench |
 | `Range` | `4` | How close an upgrade must be to the station it feeds, in metres |
@@ -166,11 +178,27 @@ under it, so it stays as it is.
 There is no `FuelCapacity` here. The Woodrack only serves stations with no fuel slot, so it
 would be a setting that could never do anything.
 
+### [Furnace] (the Skip)
+
+| Key | Default | Effect |
+| --- | --- | --- |
+| `Name` | `Skip` | Name on the hammer and in hover text. Change it with the model |
+| `Stations` | `blastfurnace` | Station prefabs this upgrades, comma separated |
+| `Cost` | `Stone:30,BlackMetal:15` | Build cost as `Item:Amount` pairs. The piece stays off the hammer until the character has held every item once |
+| `Model` | `kynda_furnace_skip.obj` | OBJ loaded from beside the DLL, with its `.col` and `_icon.png` matched by name. Needs a restart |
+| `Scale` | `1.0` | Overall size. Scales collision with it |
+| `SkinDonors` | `iron=@BlastFurnace_mat:0.01/0.01/0.44/0.98,stone=stone_wall_2x1` | Which vanilla prefab or material each mesh group borrows its surface from. The iron group wears the blast furnace's own dark grey; `iron=forge` is the fallback if it comes out wrong |
+| `OreCapacity` | `20` | Extra ore a blast furnace holds. 10 becomes 30 |
+| `FuelCapacity` | `40` | Extra coal a blast furnace holds. 20 becomes 60 |
+
+The prefab is `kynda_furnace`, named for the station and not for the design, so another model
+is a `Model` line and never a new prefab. The section is `[Furnace]` for the same reason.
+
 ### [Diagnostics]
 
 | Key | Default | Effect |
 | --- | --- | --- |
-| `TestMode` | `false` | Both upgrades cost one wood, so they can be built without bronze or iron. Logged loudly at startup |
+| `TestMode` | `false` | Every upgrade costs one wood, so they can be built without bronze, iron or black metal. Logged loudly at startup |
 | `Verbose` | `false` | Log each batched add |
 | `VariantMode` | `false` | Put every model in `assets\` on the hammer as its own piece at one wood each, named `var: ...`, to compare them side by side. **Destructive when turned off**: each variant is a registered prefab, and anything built from one vanishes when its name stops existing |
 | `SkinTrials` | *(empty)* | Comma-separated donor prefabs. Puts one copy of each upgrade on the hammer per donor, named `skin: ...`. Same destructive warning as `VariantMode` |
@@ -190,8 +218,8 @@ config file, so a server's capacity figures and batch sizes are the ones in play
 `BatchModifier` is exempt from that, because a key binding is personal.
 
 Without Core, Kynda still works and logs a warning at startup. Nothing then stops a client
-that lacks the mod from connecting, and that client will discard every Tun and Woodrack in
-the world it loads. Run it ungated on a world you control, not on one you share with people.
+that lacks the mod from connecting, and that client will discard every Tun, Woodrack and Skip
+in the world it loads. Run it ungated on a world you control, not on one you share with people.
 
 ## Compatibility
 
@@ -213,7 +241,7 @@ the world it loads. Run it ungated on a world you control, not on one you share 
   station in the same moment, can still push the ore queue past its maximum, because the game
   does not clamp it on its own side. When you own the station, the add lands at once and the
   count is exact. Reported on smelters and blast furnaces.
-- Uninstalling Kynda from a world that has Tuns or Woodracks in it deletes them permanently.
+- Uninstalling Kynda from a world that has Tuns, Woodracks or Skips in it deletes them permanently.
   Break them down first if you want the materials back.
 
 ## Troubleshooting
@@ -225,7 +253,8 @@ throwing later.
 
 **The upgrades are not on the hammer.** Valheim hides a piece whose materials you have never
 picked up, rather than greying it out. On a character that has never held bronze the Woodrack
-is simply absent. `TestMode` drops both to one wood if you want to check they registered.
+is simply absent, and the Skip is absent until the character has held black metal. `TestMode`
+drops all three to one wood if you want to check they registered.
 
 **An upgrade is next to its station and nothing changed.** Check the range (4 metres by
 default), that the station is one named in that piece's `Stations` list, and that there is

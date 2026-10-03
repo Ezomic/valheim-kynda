@@ -148,3 +148,23 @@ The upgrades:
     off; a warning there means no `StationExtension` was loaded to borrow from.
 17. A `Stripped inherited particle system` line means the donor was emitting something of
     its own, which is now gone. No such line means it never was.
+
+The blast furnace's Skip (LHM-47):
+
+18. **The Skip appears on the hammer only after the character has held black metal.** Same
+    rule as the Woodrack and bronze. `TestMode` shows it at once.
+19. Build one within 4 m of a blast furnace: the furnace should hold **30 ore and 60 coal**,
+    up from 10 and 20, within about three seconds. Tear the Skip down and it drops back.
+    With Verbose on, the log says `blastfurnace capacity ore 10 to 30, fuel 20 to 60`.
+20. A Tun beside a blast furnace should say `not beside anything it can feed`, and a Skip
+    beside a smelter likewise.
+21. **Look at the iron.** The metal groups borrow `BlastFurnace_mat` by name with a measured
+    rect. Magenta, invisible or a smear of several tiles means that name did not resolve or
+    the rect is wrong; `SkinDonors` `iron=forge` is the quick fallback. The log has a
+    `skinned with the material BlastFurnace_mat` line or a `No material found` one.
+22. The skip should sit on its rails, the cable should reach from the winch to the skip, and
+    the ore should be heaped above the skip's walls. Walk up the bank: its collision tilts
+    with it, and a flat box there would leave you hovering or snagged.
+23. The model was never picked from the four designs drawn. The other three (hopper, bunker,
+    crane) are in `tools/furnace_designs.py` as previews only; to swap one in it needs its
+    own `.obj`, `.col` and icon, and then the `Model` line.

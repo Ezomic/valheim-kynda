@@ -1,0 +1,47 @@
+# Kynda LHM-47: the furnace upgrade raises a blast furnace's capacity and nothing else, and a
+# Tun beside the same furnace does not.
+#
+# A blast furnace holds 10 ore and 20 coal. With the furnace upgrade within range it holds 30 and
+# 60 (OreCapacity 20 and FuelCapacity 40 are the defaults), and the stations reread their upgrades
+# every three seconds, so each change is allowed four. Throughput is not on the list because the
+# mod never writes m_secPerProduct or m_fuelPerProduct, and a scenario cannot time a smelt.
+#
+# BEFORE RUNNING, in the profile's ezomic.valheim.kynda.cfg: Verbose = true. The capacity change is
+# only logged with it, and the assertions read that line. Config entries are read once at load, so
+# restart the game after.
+#
+# NOT YET RUN, and the skip has never been seen in game either. What this proves is the wiring:
+# the piece resolves a station through its own Stations list, counts only its own kind, and gives
+# the capacity back when it is torn down. It says nothing about the model, the skin or the icon.
+#
+# `place` puts the pieces down for free, so no cost is paid and the build menu rule (the piece is
+# absent until the character has held black metal) is not exercised here. The furnace is placed
+# first and the upgrade 3.6 m to its side, inside Kynda's 4 m range. The Tun goes to the other
+# side at the same distance: it is in range and must still be told it has nothing to feed.
+
+clear
+god
+ghost
+sweep
+
+wipe 14
+wait 1
+
+flatten
+wait 1
+
+place blastfurnace 8 0
+wait 2
+
+place kynda_furnace 8 3.6
+wait 4
+logged blastfurnace capacity ore 10 to 30, fuel 20 to 60 yes
+hover kynda_furnace Skip
+
+place kynda_tun 8 -3.6
+wait 4
+hover kynda_tun not_beside_anything_it_can_feed
+
+break kynda_furnace
+wait 4
+logged blastfurnace capacity ore 30 to 10, fuel 60 to 20 yes

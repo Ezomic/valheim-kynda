@@ -367,4 +367,5 @@ def main():
     print("FURNACE_DONE")
 
 
-main()
+if __name__ == "__main__":
+    main()

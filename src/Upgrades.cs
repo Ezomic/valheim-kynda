@@ -158,8 +158,27 @@ namespace Kynda
 
         public string Description;
 
-        /// <summary>True for the trough, false for the woodrack.</summary>
+        /// <summary>
+        /// True for the Tun and the furnace upgrade, false for the woodrack. Decides which KIND
+        /// of station could take the piece; Stations decides which ones do.
+        /// </summary>
         public bool ServesFuelled;
+
+        /// <summary>
+        /// Which real piece this is, as its index in UpgradePrefabs.All. A bool could say
+        /// "fuelled" while there were two pieces, and says nothing now that the Tun and the
+        /// furnace upgrade both are. A comparison piece takes its host's, so it counts for
+        /// the stations its host counts for.
+        /// </summary>
+        public int Kind;
+
+        /// <summary>
+        /// Set when a cost named an item the game does not have, even after falling back to
+        /// the shipped default. The prefab is still registered, because a registered name is
+        /// what keeps somebody's standing piece alive, but it stays off the hammer: an empty
+        /// recipe would have made it free for everyone from the first login.
+        /// </summary>
+        public bool NoRecipe;
 
         /// <summary>
         /// The station prefabs this upgrade actually serves, comma separated. ServesFuelled
@@ -188,6 +207,9 @@ namespace Kynda
         /// what makes a placed copy remember what it is.
         /// </summary>
         public bool m_servesFuelled;
+
+        /// <summary>Which piece this is, so a Tun never counts towards a furnace and back.</summary>
+        public int m_kind;
 
         private Piece _piece;
         private GameObject _connection;
@@ -241,7 +263,7 @@ namespace Kynda
         {
             if (!_placed || !KyndaConfig.ShowLink.Value) return;
 
-            var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
+            var station = SmelterCapacity.Nearest(transform.position, m_kind);
             if (station == null) return;
 
             var from = transform.position + Vector3.up * KyndaConfig.LinkHeight.Value;
@@ -350,15 +372,15 @@ namespace Kynda
             _connectionSearched = false;
         }
 
-        /// <summary>How many upgrades of the matching kind are close enough to count.</summary>
-        public static int CountNear(Vector3 point, bool fuelled)
+        /// <summary>How many upgrades of this kind are close enough to count.</summary>
+        public static int CountNear(Vector3 point, int kind)
         {
             var range = KyndaConfig.Range.Value;
             var count = 0;
 
             foreach (var bin in All)
             {
-                if (bin == null || bin.m_servesFuelled != fuelled) continue;
+                if (bin == null || bin.m_kind != kind) continue;
                 if (Vector3.Distance(bin.transform.position, point) <= range) count++;
             }
 
@@ -382,7 +404,7 @@ namespace Kynda
 
             foreach (var bin in All)
             {
-                if (bin == null || bin == this || bin.m_servesFuelled != m_servesFuelled)
+                if (bin == null || bin == this || bin.m_kind != m_kind)
                     continue;
 
                 var theirs = Vector3.Distance(bin.transform.position, station);
@@ -435,7 +457,7 @@ namespace Kynda
             //
             // The unattached case keeps its line, because that one is not information
             // about the piece, it is the piece telling you it is doing nothing.
-            var station = SmelterCapacity.Nearest(transform.position, m_servesFuelled);
+            var station = SmelterCapacity.Nearest(transform.position, m_kind);
 
             if (station == null)
             {
@@ -480,6 +502,7 @@ namespace Kynda
             Description = "Smelter improvement. A cask of ore and a cask of coal. A "
                           + "smelter beside it holds more of both.",
             ServesFuelled = true,
+            Kind = 0,
         };
 
         public static readonly UpgradeDef Woodrack = new UpgradeDef
@@ -488,14 +511,54 @@ namespace Kynda
             Description = "Kiln improvement. Split logs, stacked and under cover. A "
                           + "charcoal kiln beside it holds more wood.",
             ServesFuelled = false,
+            Kind = 1,
         };
 
-        public static readonly UpgradeDef[] All = { Trough, Woodrack };
-
-        /// <summary>The upgrade that serves stations of this kind.</summary>
-        public static UpgradeDef For(bool fuelled)
+        /// <summary>
+        /// The blast furnace's own piece. Named for the station and not for the model, because
+        /// four designs were drawn for it, one was built without being picked, and a swap
+        /// has to be a Model line in the config. A prefab name is permanent, so this one
+        /// cannot be allowed to say "skip".
+        /// </summary>
+        public static readonly UpgradeDef Furnace = new UpgradeDef
         {
-            return fuelled ? Trough : Woodrack;
+            PrefabName = "kynda_furnace",
+            Description = "Blast furnace improvement. An ore skip on rails, hauled up to the "
+                          + "charging mouth by a winch. A blast furnace beside it holds "
+                          + "more of both.",
+            ServesFuelled = true,
+            Kind = 2,
+        };
+
+        public static readonly UpgradeDef[] All = { Trough, Woodrack, Furnace };
+
+        public static UpgradeDef ByKind(int kind)
+        {
+            return kind >= 0 && kind < All.Length ? All[kind] : null;
+        }
+
+        /// <summary>
+        /// The piece whose capacity a station gets: the first real one, in the order the
+        /// pieces are declared, that names this station prefab and is of its kind. A prefab
+        /// named in two Stations lists is served by one of them rather than by both added
+        /// together, so what the hover text claims and what the station holds cannot
+        /// disagree.
+        /// </summary>
+        public static UpgradeDef ServingStation(string stationPrefab, bool fuelled)
+        {
+            foreach (var def in All)
+            {
+                if (def.ServesFuelled != fuelled || def.Stations == null) continue;
+
+                foreach (var name in (def.Stations.Value ?? "").Split(','))
+                {
+                    if (string.Equals(name.Trim(), stationPrefab,
+                                      System.StringComparison.OrdinalIgnoreCase))
+                        return def;
+                }
+            }
+
+            return null;
         }
 
         // ------------------------------------------------------------------ variants
@@ -533,8 +596,15 @@ namespace Kynda
                 // "tun" as well as "trough": the piece was renamed and this filter was
                 // not, so a new candidate called kynda_tun_* was silently skipped and
                 // VariantMode looked like it had stopped working.
-                var isTrough = lower.Contains("trough") || lower.Contains("tun");
-                if (!isTrough && !lower.Contains("rack")) continue;
+                //
+                // The furnace is tested first and by its station name: its model is named for
+                // the design (kynda_furnace_skip), so the design can change without this
+                // list noticing.
+                var host = lower.Contains("furnace") ? Furnace
+                    : (lower.Contains("trough") || lower.Contains("tun")) ? Trough
+                    : lower.Contains("rack") ? Woodrack
+                    : null;
+                if (host == null) continue;
 
                 _variants.Add(new UpgradeDef
                 {
@@ -545,11 +615,12 @@ namespace Kynda
                     LiteralModel = stem + ".obj",
                     Description = "Comparison variant. Not a real piece - turn VariantMode "
                                   + "off and it stops existing.",
-                    ServesFuelled = isTrough,
+                    ServesFuelled = host.ServesFuelled,
+                    Kind = host.Kind,
                     // Inherit the real piece's station list. A trial that served nothing
                     // would build, stand there and upgrade no station - which is precisely
                     // the silent no-op the thing is meant to let you judge.
-                    Stations = (isTrough ? Trough : Woodrack).Stations,
+                    Stations = host.Stations,
 
                     // And its skin donor, which is the whole reason this mode exists. Left
                     // out, every variant fell through to the built-in fallback for its
@@ -558,10 +629,10 @@ namespace Kynda
                     // cask, while the real piece is configured to borrow the barrel's.
                     // A comparison that changes the surface as well as the shape is not a
                     // comparison of shapes.
-                    LiteralSkinDonors = (isTrough ? Trough : Woodrack).SkinDonors.Value,
-                    OreCapacity = isTrough ? Trough.OreCapacity : Woodrack.OreCapacity,
-                    FuelCapacity = isTrough ? Trough.FuelCapacity : null,
-                    LiteralScale = (isTrough ? Trough : Woodrack).ScaleValue,
+                    LiteralSkinDonors = host.SkinDonors.Value,
+                    OreCapacity = host.OreCapacity,
+                    FuelCapacity = host.FuelCapacity,
+                    LiteralScale = host.ScaleValue,
                     IsTrial = true,
                 });
             }
@@ -634,7 +705,7 @@ namespace Kynda
         /// a texture against a memory of the last one, in different weather, at a different
         /// time of day. Four relaunches is also four chances to forget which is which.
         ///
-        /// Entries are `rack:donor`, `trough:donor`, or a bare donor for both. Same
+        /// Entries are `rack:donor`, `tun:donor`, `furnace:donor`, or a bare donor for all three. Same
         /// destructive caveat as VariantMode: each of these is a registered prefab and
         /// ZNetScene silently discards the ZDOs of a name that no longer resolves.
         /// </summary>
@@ -651,8 +722,7 @@ namespace Kynda
                 var entry = raw.Trim();
                 if (entry.Length == 0) continue;
 
-                var wantsTun = true;
-                var wantsRack = true;
+                var wants = new HashSet<int> { Trough.Kind, Woodrack.Kind, Furnace.Kind };
                 var donor = entry;
 
                 var colon = entry.IndexOf(':');
@@ -664,15 +734,19 @@ namespace Kynda
                     // trough is kept as a synonym for tun. The piece was called that until
                     // the model stopped being one, and a diagnostic line someone already
                     // wrote should not start silently matching nothing.
-                    wantsTun = which.Equals("tun", System.StringComparison.OrdinalIgnoreCase)
-                        || which.Equals("trough", System.StringComparison.OrdinalIgnoreCase);
-                    wantsRack = which.Equals("rack",
-                        System.StringComparison.OrdinalIgnoreCase);
-                    if (!wantsTun && !wantsRack)
+                    wants.Clear();
+                    if (which.Equals("tun", System.StringComparison.OrdinalIgnoreCase)
+                        || which.Equals("trough", System.StringComparison.OrdinalIgnoreCase))
+                        wants.Add(Trough.Kind);
+                    else if (which.Equals("rack", System.StringComparison.OrdinalIgnoreCase))
+                        wants.Add(Woodrack.Kind);
+                    else if (which.Equals("furnace", System.StringComparison.OrdinalIgnoreCase))
+                        wants.Add(Furnace.Kind);
+                    else
                     {
                         KyndaPlugin.Log.LogWarning(
-                            "SkinTrials: '" + which + "' is not a piece. Use rack: or "
-                            + "tun:, or leave the prefix off for both.");
+                            "SkinTrials: '" + which + "' is not a piece. Use rack:, tun: or "
+                            + "furnace:, or leave the prefix off for all three.");
                         continue;
                     }
                 }
@@ -681,7 +755,7 @@ namespace Kynda
 
                 foreach (var host in All)
                 {
-                    if (host.ServesFuelled ? !wantsTun : !wantsRack) continue;
+                    if (!wants.Contains(host.Kind)) continue;
 
                     _trials.Add(new UpgradeDef
                     {
@@ -705,6 +779,7 @@ namespace Kynda
                         Description = "Skin trial on " + donor + ". Not a real piece - clear "
                                       + "SkinTrials and it stops existing.",
                         ServesFuelled = host.ServesFuelled,
+                        Kind = host.Kind,
                         Stations = host.Stations,
                         OreCapacity = host.OreCapacity,
                         FuelCapacity = host.FuelCapacity,
@@ -807,6 +882,11 @@ namespace Kynda
             var source = Donor();
             if (source == null) return null;
 
+            // Before the clone, not after it: this is retried every frame while ObjectDB is
+            // still the stub, and a clone made first would be left in the holder each time.
+            var recipe = Recipe(def);
+            if (recipe == null) return null;
+
             if (_holder == null)
             {
                 // The name is load-bearing, not decoration. Devkit's site export attributes a
@@ -857,7 +937,7 @@ namespace Kynda
             {
                 piece.m_name = def.NameValue;
                 piece.m_description = def.Description;
-                piece.m_resources = Requirements(KyndaConfig.CostNow(def));
+                piece.m_resources = recipe;
 
                 // Inherited from the donor, which is a chest and so files under Furniture.
                 // These upgrade a smelter, so they belong on the same hammer tab as one.
@@ -900,6 +980,7 @@ namespace Kynda
 
             var bin = clone.GetComponent<UpgradeBin>() ?? clone.AddComponent<UpgradeBin>();
             bin.m_servesFuelled = def.ServesFuelled;
+            bin.m_kind = def.Kind;
 
             // After the model, the materials and the scale, because the icon is a
             // photograph of the finished piece and none of that has happened yet where it
@@ -1050,27 +1131,71 @@ namespace Kynda
 
         // ------------------------------------------------------------------ registering
 
+        /// <summary>
+        /// The recipe for a piece, or null while the game has no items to build one from.
+        ///
+        /// The first ObjectDB of a session is a stub with no items in it, and a recipe is
+        /// resolved ItemDrops, never names. Written against the stub it comes out empty, and
+        /// an empty recipe is not a broken piece, it is a free one that every character is
+        /// shown from the first login (IsKnown is trivially true of nothing). Hence null
+        /// here, which Register treats as "not yet" and retries.
+        ///
+        /// All of a cost or none of it, for the same reason: half a recipe is a discount. A
+        /// cost with a name the game does not have falls back to the shipped default, and
+        /// if even that does not resolve the piece is registered anyway but kept off the
+        /// hammer (NoRecipe), because the registration is what keeps standing pieces alive.
+        /// </summary>
+        private static Piece.Requirement[] Recipe(UpgradeDef def)
+        {
+            var db = ObjectDB.instance;
+            if (db == null || db.m_items == null || db.m_items.Count == 0) return null;
+
+            var wanted = KyndaConfig.CostNow(def);
+            var list = Requirements(wanted);
+            if (list != null) return list;
+
+            if (def.Cost != null)
+            {
+                var shipped = (string)def.Cost.DefaultValue;
+                if (shipped != wanted)
+                {
+                    KyndaPlugin.Log.LogWarning(def.PrefabName + ": the configured cost '" + wanted
+                        + "' does not resolve, so the shipped cost '" + shipped + "' is used.");
+                    list = Requirements(shipped);
+                    if (list != null) return list;
+                }
+            }
+
+            KyndaPlugin.Log.LogError(def.PrefabName + " has no usable recipe, so it is "
+                + "registered but not offered on the hammer. Anything already built keeps "
+                + "working.");
+            def.NoRecipe = true;
+            return new Piece.Requirement[0];
+        }
+
+        /// <summary>Null when any entry is malformed or names an item the game lacks.</summary>
         private static Piece.Requirement[] Requirements(string spec)
         {
             var list = new List<Piece.Requirement>();
 
-            foreach (var entry in (spec ?? "").Split(','))
+            foreach (var entry in (spec ?? "").Split(new[] { ',' }, System.StringSplitOptions.RemoveEmptyEntries))
             {
                 var parts = entry.Split(':');
-                if (parts.Length != 2) continue;
+                if (parts.Length != 2) { Skipped(entry); return null; }
 
                 var itemName = parts[0].Trim();
-                if (itemName.Length == 0) continue;
+                if (itemName.Length == 0) { Skipped(entry); return null; }
 
                 int amount;
-                if (!int.TryParse(parts[1].Trim(), out amount) || amount <= 0) continue;
+                if (!int.TryParse(parts[1].Trim(), out amount) || amount <= 0)
+                { Skipped(entry); return null; }
 
                 var prefab = ObjectDB.instance.GetItemPrefab(itemName);
                 var drop = prefab != null ? prefab.GetComponent<ItemDrop>() : null;
                 if (drop == null)
                 {
                     KyndaPlugin.Log.LogWarning("Cost mentions unknown item '" + itemName + "'.");
-                    continue;
+                    return null;
                 }
 
                 list.Add(new Piece.Requirement
@@ -1082,6 +1207,11 @@ namespace Kynda
             }
 
             return list.ToArray();
+        }
+
+        private static void Skipped(string entry)
+        {
+            KyndaPlugin.Log.LogWarning("Cost entry '" + entry.Trim() + "' is not Item:Amount.");
         }
 
         /// <summary>
@@ -1179,6 +1309,7 @@ namespace Kynda
             foreach (var def in Active())
             {
                 if (def.Prefab == null) return false;
+                if (def.NoRecipe) continue;
                 if (!table.m_pieces.Contains(def.Prefab)) return false;
             }
 
@@ -1246,7 +1377,7 @@ namespace Kynda
             foreach (var def in Active())
             {
                 if (def.Prefab == null) return;
-                if (table.m_pieces.Contains(def.Prefab)) continue;
+                if (def.NoRecipe || table.m_pieces.Contains(def.Prefab)) continue;
 
                 // Directly after the station it upgrades, not at the tail of the menu.
                 // The build grid draws a category in list order, so "the Tun is the
