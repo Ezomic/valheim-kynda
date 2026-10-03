@@ -29,16 +29,26 @@ namespace Kynda
             return "\n<color=grey>" + Format(seconds) + " left</color>";
         }
 
+        private static readonly FieldInfo SmelterHaveRoof =
+            AccessTools.Field(typeof(Smelter), "m_haveRoof");
+
+        private static readonly FieldInfo SmelterBlockedSmoke =
+            AccessTools.Field(typeof(Smelter), "m_blockedSmoke");
+
         public static float QueueSeconds(Smelter smelter)
         {
             var zdo = Zdo(SmelterNView, smelter);
             if (zdo == null || smelter.m_secPerProduct <= 0f || smelter.m_windmill) return 0f;
+            if (!CanRun(smelter)) return 0f;
 
             var queued = zdo.GetInt(ZDOVars.s_queued);
             if (queued <= 0) return 0f;
-            if (smelter.m_maxFuel > 0 && zdo.GetFloat(ZDOVars.s_fuel) <= 0f) return 0f;
 
-            return queued * smelter.m_secPerProduct - zdo.GetFloat(ZDOVars.s_bakeTimer);
+            var queueTime = queued * smelter.m_secPerProduct - zdo.GetFloat(ZDOVars.s_bakeTimer);
+            if (smelter.m_maxFuel <= 0) return queueTime;
+
+            var fuelTime = FuelTime(smelter, zdo);
+            return fuelTime <= 0f ? 0f : Mathf.Min(queueTime, fuelTime);
         }
 
         public static float FuelSeconds(Smelter smelter)
@@ -46,16 +56,45 @@ namespace Kynda
             var zdo = Zdo(SmelterNView, smelter);
             if (zdo == null || smelter.m_secPerProduct <= 0f || smelter.m_fuelPerProduct <= 0
                 || smelter.m_windmill) return 0f;
+            if (!CanRun(smelter) || zdo.GetInt(ZDOVars.s_queued) <= 0) return 0f;
 
-            return zdo.GetFloat(ZDOVars.s_fuel) * smelter.m_secPerProduct / smelter.m_fuelPerProduct;
+            return FuelTime(smelter, zdo);
         }
 
         public static float FireplaceSeconds(Fireplace fireplace)
         {
             var zdo = Zdo(FireplaceNView, fireplace);
             if (zdo == null || fireplace.m_secPerFuel <= 0f) return 0f;
+            if (!fireplace.IsBurning()) return 0f;
 
             return zdo.GetFloat(ZDOVars.s_fuel) * fireplace.m_secPerFuel;
+        }
+
+        private static float FuelTime(Smelter smelter, ZDO zdo)
+        {
+            if (smelter.m_fuelPerProduct <= 0) return 0f;
+            return zdo.GetFloat(ZDOVars.s_fuel) * smelter.m_secPerProduct / smelter.m_fuelPerProduct;
+        }
+
+        // UpdateSmelter skips a second on every machine, owner or not, while the roof is
+        // missing or the smoke is blocked, and refreshes both flags before its owner check,
+        // so a client can read them. When a rename leaves either unreadable the answer is
+        // "no line", not a guess, because a countdown that is not counting is a lie.
+        private static bool CanRun(Smelter smelter)
+        {
+            if (smelter.m_requiresRoof)
+            {
+                if (SmelterHaveRoof == null || !(SmelterHaveRoof.GetValue(smelter) is bool roof)
+                    || !roof) return false;
+            }
+
+            if (smelter.m_smokeSpawner != null)
+            {
+                if (SmelterBlockedSmoke == null || !(SmelterBlockedSmoke.GetValue(smelter) is bool blocked)
+                    || blocked) return false;
+            }
+
+            return true;
         }
 
         private static ZDO Zdo(FieldInfo field, object owner)
