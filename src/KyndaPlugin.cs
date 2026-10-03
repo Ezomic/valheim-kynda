@@ -119,6 +119,20 @@ namespace Kynda
         {
             // Everyone, not HostOnly, and not a matter of taste: this registers prefabs.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config, Requirement.Everyone);
+
+            try { ListOnSettingsScreen(); }
+            catch (System.Exception e) { Log.LogInfo("Core has no settings screen to list on, so these settings are in the .cfg only: " + e.Message); }
+        }
+
+        /// <summary>
+        /// The settings this mod lists on Core's settings screen (LHM-51). Never inlined and called
+        /// inside a try, so an older Core that has no such screen costs the listing and nothing
+        /// else, and the JIT only meets the type on a machine that has it.
+        /// </summary>
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private void ListOnSettingsScreen()
+        {
+            SettingsPanel.Add(KyndaConfig.BatchModifier, "Batch modifier", SettingsGroup.Hotkeys, "while adding fuel or ore at a station");
         }
 
         private void OnDestroy()

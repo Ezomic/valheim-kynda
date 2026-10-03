@@ -7,6 +7,9 @@ and the mod uses [semantic versioning](https://semver.org).
 
 ### Added
 
+- **The batch modifier is on Core's Settings page (LHM-51)**, the page in the compendium that
+  lists a player's own settings and rebinds a key by pressing it. Without Core nothing changes: the
+  call is guarded and the `.cfg` is still the way. Built, not run in game.
 - **Hover text says how long what is loaded will last (LHM-48).** One short grey line under the
   batch hint: the queued ore at a smelter-type station (queue times `m_secPerProduct`, minus
   the progress already made), the coal in its fuel switch, and the wood in a fireplace. All of
@@ -17,28 +20,6 @@ and the mod uses [semantic versioning](https://semver.org).
   needs a roof or a clear chimney and does not have one. With ore queued the line is the
   smaller of the queue time and the time the coal lasts. `ShowTimeLeft` under `[Batching]`
   turns it off.
-
-### Fixed
-
-- **Batching fell back to one coal at a time after the first few presses (LHM-50).** When this
-  client owned the station's network object, the add Kynda sends runs on the spot, so the level
-  it reads already includes the add the game just made. Kynda counted that add again as "in
-  flight", and with presses close enough together to chain, the remembered level crept one
-  higher per press until the loop believed the station was nearly full and added nothing extra.
-  That depended on who owned the station and how fast the presses came, which is why it
-  happened only sometimes. An owner now counts from the real level, and a remembered level is
-  dropped as soon as the station's own value catches up with it. This is the same fault the
-  overshoot note in the README described, seen from the other side: a wrong remembered level.
-  A remembered level is also dropped when the station's real level sits below it by no more
-  than the station has burned since, so a non-owner holding a burning fireplace or a running
-  smelter no longer keeps a prediction alive that the real level never quite reaches. A gap of
-  a whole missing item still keeps it, so the overfill protection is unchanged.
-- With Verbose on, every press now logs one line with the station's real level, the predicted
-  level, who owns it, where the count started and ended and the ceiling, including presses that
-  added nothing extra.
-
-### Added
-
 - **An upgrade of its own for the blast furnace (LHM-47).** The Skip: a short ore skip on iron
   rails up a stone bank, hauled by a winch behind a stone buttress, two materials and about
   1,400 triangles. A blast furnace within `Range` (4 m) holds 30 ore and 60 coal instead of 10
@@ -60,6 +41,25 @@ and the mod uses [semantic versioning](https://semver.org).
   station now logs each change of its capacity.
 - A Devkit scenario, `scenarios/kynda-coal-three-per-press.txt`, that presses a smelter seven
   times in a row and checks each press adds three until it is full.
+
+### Fixed
+
+- **Batching fell back to one coal at a time after the first few presses (LHM-50).** When this
+  client owned the station's network object, the add Kynda sends runs on the spot, so the level
+  it reads already includes the add the game just made. Kynda counted that add again as "in
+  flight", and with presses close enough together to chain, the remembered level crept one
+  higher per press until the loop believed the station was nearly full and added nothing extra.
+  That depended on who owned the station and how fast the presses came, which is why it
+  happened only sometimes. An owner now counts from the real level, and a remembered level is
+  dropped as soon as the station's own value catches up with it. This is the same fault the
+  overshoot note in the README described, seen from the other side: a wrong remembered level.
+  A remembered level is also dropped when the station's real level sits below it by no more
+  than the station has burned since, so a non-owner holding a burning fireplace or a running
+  smelter no longer keeps a prediction alive that the real level never quite reaches. A gap of
+  a whole missing item still keeps it, so the overfill protection is unchanged.
+- With Verbose on, every press now logs one line with the station's real level, the predicted
+  level, who owns it, where the count started and ended and the ceiling, including presses that
+  added nothing extra.
 
 ## [1.1.1] - 2026-09-12
 

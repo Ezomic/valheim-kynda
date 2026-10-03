@@ -120,6 +120,9 @@ recommended on any server. Kynda works without it.
 
 ## Configuration
 
+With [Core](https://github.com/Ezomic/valheim-core) installed, `BatchModifier` is also on the Settings page of
+the compendium, where it is rebound by pressing the key you want.
+
 `BepInEx\config\ezomic.valheim.kynda.cfg`, written on first run.
 
 BepInEx writes every entry to disk the first time the plugin runs, and the saved value beats
