@@ -1,5 +1,5 @@
-# Kynda LHM-47: the furnace upgrade raises a blast furnace's capacity and nothing else, and a
-# Tun beside the same furnace does not.
+# Kynda LHM-47 and LHM-71: the furnace upgrade raises a blast furnace's capacity and nothing else,
+# and a Tun beside the same furnace adds nothing on top of it.
 #
 # A blast furnace holds 10 ore and 20 coal. With the furnace upgrade within range it holds 30 and
 # 60 (OreCapacity 20 and FuelCapacity 40 are the defaults), and the stations reread their upgrades
@@ -17,7 +17,9 @@
 # `place` puts the pieces down for free, so no cost is paid and the build menu rule (the piece is
 # absent until the character has held black metal) is not exercised here. The furnace is placed
 # first and the upgrade 3.6 m to its side, inside Kynda's 4 m range. The Tun goes to the other
-# side at the same distance: it is in range and must still be told it has nothing to feed.
+# side at the same distance. Since LHM-71 the Tun also serves a blast furnace, but one station gets one
+# piece's figures: the Tun is declared first so it counts and the Skip reports it adds nothing.
+# Both give 30 and 60, so no capacity line is logged until the last piece is gone.
 
 clear
 god
@@ -40,7 +42,12 @@ hover kynda_furnace Skip
 
 place kynda_tun 8 -3.6
 wait 4
-hover kynda_tun not_beside_anything_it_can_feed
+hover kynda_tun Tun
+hover kynda_furnace already_upgraded
+
+break kynda_tun
+wait 4
+hover kynda_furnace Skip
 
 break kynda_furnace
 wait 4

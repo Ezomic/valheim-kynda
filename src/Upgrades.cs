@@ -461,6 +461,13 @@ namespace Kynda
 
             if (station == null)
             {
+                // A station both this piece and another name, where the other is built too, is
+                // served by the other. "Not beside anything" would be false there: the piece is
+                // beside a station it can feed, it just is not the one feeding it.
+                if (SmelterCapacity.NamesNearby(transform.position, m_kind))
+                    return Localization.instance.Localize(
+                        name + "\n<color=grey>already upgraded - this one adds nothing</color>");
+
                 return Localization.instance.Localize(
                     name + "\n<color=grey>not beside anything it can feed</color>");
             }
@@ -500,7 +507,7 @@ namespace Kynda
             // this under the name, and the star in the corner only tells you that the
             // piece is an upgrade - never of what.
             Description = "Smelter improvement. A cask of ore and a cask of coal. A "
-                          + "smelter beside it holds more of both.",
+                          + "smelter or blast furnace beside it holds more of both.",
             ServesFuelled = true,
             Kind = 0,
         };
@@ -538,24 +545,40 @@ namespace Kynda
         }
 
         /// <summary>
-        /// The piece whose capacity a station gets: the first real one, in the order the
-        /// pieces are declared, that names this station prefab and is of its kind. A prefab
-        /// named in two Stations lists is served by one of them rather than by both added
-        /// together, so what the hover text claims and what the station holds cannot
-        /// disagree.
+        /// Whether this piece's Stations list names the prefab and the station is of the kind
+        /// the piece could take.
         /// </summary>
-        public static UpgradeDef ServingStation(string stationPrefab, bool fuelled)
+        public static bool Serves(UpgradeDef def, string stationPrefab, bool fuelled)
+        {
+            if (def.ServesFuelled != fuelled || def.Stations == null) return false;
+
+            foreach (var name in (def.Stations.Value ?? "").Split(','))
+            {
+                if (string.Equals(name.Trim(), stationPrefab,
+                                  System.StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// The piece whose capacity a station gets: the first one, in declaration order, that
+        /// names this station prefab, is of its kind AND is actually built within range of it.
+        ///
+        /// Built, not merely declared, because a blast furnace is named by both the Tun and the
+        /// Skip and the player picks either per furnace. Taking the first declared name would
+        /// have made a Skip beside a furnace do nothing the moment the Tun also named it. A
+        /// station still gets one piece's figures and never two added together, so what the
+        /// hover text claims and what the station holds cannot disagree; with both built
+        /// beside one furnace the Tun, declared first, is the one that counts.
+        /// </summary>
+        public static UpgradeDef ServingStation(string stationPrefab, bool fuelled, Vector3 at)
         {
             foreach (var def in All)
             {
-                if (def.ServesFuelled != fuelled || def.Stations == null) continue;
-
-                foreach (var name in (def.Stations.Value ?? "").Split(','))
-                {
-                    if (string.Equals(name.Trim(), stationPrefab,
-                                      System.StringComparison.OrdinalIgnoreCase))
-                        return def;
-                }
+                if (Serves(def, stationPrefab, fuelled) && UpgradeBin.CountNear(at, def.Kind) > 0)
+                    return def;
             }
 
             return null;

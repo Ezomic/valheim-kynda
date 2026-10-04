@@ -58,7 +58,7 @@ metal.
 
 | Piece | Cost | Serves | Capacity |
 | --- | --- | --- | --- |
-| Tun | 20 Fine wood, 15 Iron nails | Smelter | 10 ore becomes 30, 20 coal becomes 60 |
+| Tun | 20 Fine wood, 15 Iron nails | Smelter or blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
 | Woodrack | 25 Fine wood, 20 Deer hide, 25 Bronze nails | Charcoal kiln | 25 wood becomes 50 |
 | Skip | 30 Stone, 15 Black metal | Blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
 
@@ -75,14 +75,16 @@ feeding, the same run of motes a chopping block draws to its workbench. That is 
 which piece belongs to which station in a row of eight. An upgrade that is not next to
 anything it can serve says so in its hover text.
 
-Each piece serves exactly one station prefab by default: `smelter` for the Tun,
-`charcoal_kiln` for the Woodrack, `blastfurnace` for the Skip. Eitr refineries, windmills and
+By default the Tun serves `smelter` and `blastfurnace`, the Woodrack `charcoal_kiln` and the
+Skip `blastfurnace`. Eitr refineries, windmills and
 spinning wheels are left alone. All three lists are config, so adding a modded station is a
 line in the `.cfg` rather than a rebuild. A station named in more than one list is served by
-the first of the Tun, Woodrack and Skip that names it, never by two added together.
+whichever of those pieces is built beside it, never by two added together; if a Tun and a Skip
+stand beside the same blast furnace the Tun counts and the Skip's hover text says it adds nothing.
 
-The blast furnace has a piece of its own rather than the Tun learning a second station. A Tun
-is a picture of ore and coal, and a blast furnace is black metal and stone, so the Skip is a
+The blast furnace can take either piece, your choice per furnace. The Tun is the cheaper one and
+gives the same figures; a Tun is a picture of ore and coal and a blast furnace is black metal and
+stone, so the Skip is the one built to look right there: a
 short ore skip on iron rails up a stone bank, hauled by a winch behind a stone buttress. It
 gets the Tun's figures on purpose: the furnace holds the same 10 ore and 20 coal a smelter
 does and burns the same two coal per ore, so the same +20 and +40 lands on the same 30 and 60.
@@ -158,7 +160,7 @@ under it, so it stays as it is.
 | Key | Default | Effect |
 | --- | --- | --- |
 | `Name` | `Tun` | Name on the hammer and in hover text |
-| `Stations` | `smelter` | Station prefabs this upgrades, comma separated |
+| `Stations` | `smelter,blastfurnace` | Station prefabs this upgrades, comma separated. A cfg saved before the blast furnace was added keeps `smelter` until you edit the line |
 | `Cost` | `FineWood:20,IronNails:15` | Build cost as `Item:Amount` pairs |
 | `Model` | `kynda_tun_camp.obj` | OBJ loaded from beside the DLL, with its `.col` and `_icon.png` matched by name |
 | `Scale` | `1.0` | Overall size. Scales collision with it |

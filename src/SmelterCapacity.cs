@@ -48,15 +48,18 @@ namespace Kynda
         /// the split without anyone naming it.
         ///
         /// This only narrows the field. Which piece actually serves the station is the one
-        /// whose Stations list names it - see Def. A smelter and a blast furnace are both
-        /// fuelled, and it is the lists that tell the Tun from the furnace upgrade.
+        /// whose Stations list names it and that is built beside it - see Def. A smelter and a
+        /// blast furnace are both fuelled, and it is the lists that tell the Tun from the
+        /// furnace upgrade. The Tun names both, so a blast furnace takes whichever of the Tun
+        /// and the Skip the player built.
         /// </summary>
         private bool Fuelled { get { return _baseFuel > 0; } }
 
         /// <summary>The piece that raises this station's capacity, or null when none does.</summary>
         private UpgradeDef Def
         {
-            get { return UpgradePrefabs.ServingStation(Utils.GetPrefabName(gameObject), Fuelled); }
+            get { return UpgradePrefabs.ServingStation(
+                Utils.GetPrefabName(gameObject), Fuelled, transform.position); }
         }
 
         /// <summary>
@@ -134,8 +137,8 @@ namespace Kynda
                 // A bin standing next to a station it does not serve must not claim it, or
                 // the hover text names a station whose capacity never moved - which is the
                 // silent no-op this mod already went out of its way to avoid elsewhere. A
-                // station named by two pieces is served by the first, and only that one
-                // claims it.
+                // station named by two pieces is served by the one built beside it, and only that
+                // one claims it.
                 if (capacity.Def != def) continue;
 
                 var distance = Vector3.Distance(capacity.transform.position, point);
@@ -146,6 +149,30 @@ namespace Kynda
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// True when a station in range is named by this kind's Stations list but is served by
+        /// another piece built beside it, so the hover can say so.
+        /// </summary>
+        public static bool NamesNearby(Vector3 point, int kind)
+        {
+            var range = KyndaConfig.Range.Value;
+            var def = UpgradePrefabs.ByKind(kind);
+            if (def == null) return false;
+
+            foreach (var capacity in All)
+            {
+                if (capacity == null || capacity._smelter == null) continue;
+                if (Vector3.Distance(capacity.transform.position, point) > range) continue;
+                if (!UpgradePrefabs.Serves(def, Utils.GetPrefabName(capacity.gameObject),
+                                           capacity.Fuelled)) continue;
+
+                var serving = capacity.Def;
+                if (serving != null && serving != def) return true;
+            }
+
+            return false;
         }
 
         /// <summary>

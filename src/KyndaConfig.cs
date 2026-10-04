@@ -220,13 +220,29 @@ namespace Kynda
             UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Tun",
                 "Name shown on the hammer and when you look at one.");
 
-            // The smelter and nothing else. A blast furnace is fuelled too and would match
-            // on components alone, but it is a late-game station that does not need the
-            // help - and a Tun is a picture of a smelter's ore and coal, not of black metal.
-            UpgradePrefabs.Trough.Stations = config.Bind("Trough", "Stations", "smelter",
+            // The smelter and the blast furnace (LHM-71). It was the smelter alone, on the
+            // argument that a Tun is a picture of ore and coal and not of black metal. That
+            // argument is about looks, and the Skip still exists for anyone who wants the
+            // furnace to look like a furnace; what was asked for is the choice, so the player
+            // builds whichever of the two they like beside each furnace.
+            //
+            // The Tun gives its own OreCapacity and FuelCapacity at a blast furnace, below.
+            // That cannot unbalance the Skip: a blast furnace starts at the same 10 ore and 20
+            // coal as a smelter and burns the same two coal per ore, and the Skip's figures
+            // are the Tun's on purpose, so either piece lands the furnace on 30 and 60. The
+            // Tun is the cheaper of the two (35 items against 45, no black metal), so the Skip
+            // is the one you build for the look, not for the number.
+            //
+            // BepInEx saves the default it first wrote, so a cfg from before this change keeps
+            // "smelter" until the line is edited to "smelter,blastfurnace".
+            UpgradePrefabs.Trough.Stations = config.Bind("Trough", "Stations",
+                "smelter,blastfurnace",
                 "Station prefabs this upgrades, comma separated. A station not named here is "
                 + "left alone even if it is the right kind, and a bin standing next to one "
-                + "says it is feeding nothing rather than pretending.");
+                + "says it is feeding nothing rather than pretending. A station that the "
+                + "Skip's list also names takes whichever of the two is built beside it, and "
+                + "the Tun if both are, never the two added together. A cfg saved before the "
+                + "blast furnace was added keeps its old value until you edit it.");
 
             // The nails carry the gate now, so the loose bronze that used to do it is gone
             // rather than stacked on top - iron nails already require a smelter to have
@@ -292,16 +308,16 @@ namespace Kynda
                 + "gives a smelter's ore heap its own material too.");
 
             UpgradePrefabs.Trough.OreCapacity = config.Bind("Trough", "OreCapacity", 20,
-                "Extra ore a station holds per Tun, which serves the smelter unless Stations "
-                + "says otherwise. The blast furnace has its own figure under [Furnace]. "
+                "Extra ore a station holds per Tun, whether a smelter or a blast furnace. "
+                + "The Skip has its own figure under [Furnace], the same by default. "
                 + "Vanilla's 10 becomes 30.");
 
             // Twice the ore figure, because a smelter burns two coal for every ore it melts.
             // Matching them would leave the coal side empty with a third of the ore still in
             // the hopper, which is the upgrade only half working.
             UpgradePrefabs.Trough.FuelCapacity = config.Bind("Trough", "FuelCapacity", 40,
-                "Extra coal a station holds per Tun, which serves the smelter unless Stations "
-                + "says otherwise. The blast furnace has its own figure under [Furnace]. "
+                "Extra coal a station holds per Tun, whether a smelter or a blast furnace. "
+                + "The Skip has its own figure under [Furnace], the same by default. "
                 + "Vanilla's 20 becomes 60. "
                 + "Twice the ore figure on purpose - a smelter burns two coal per ore, so "
                 + "matching them would run the fuel out before the ore.");
@@ -399,7 +415,8 @@ namespace Kynda
                 "Station prefabs this upgrades, comma separated. A station not named here is "
                 + "left alone even if it is the right kind, and a piece standing next to one "
                 + "says it is feeding nothing rather than pretending. A station that is also "
-                + "named in the Tun's list is served by the Tun, never by both.");
+                + "named in the Tun's list is served by whichever of the two is built beside it, "
+                + "the Tun if both are, never by both.");
 
             // Chosen against the Tun, which is 20 fine wood and 15 iron nails (35 items, a
             // biome beyond its smelter). A blast furnace is a Plains build, so this sits one

@@ -7,6 +7,16 @@ and the mod uses [semantic versioning](https://semver.org).
 
 ### Added
 
+- **The Tun now serves the blast furnace too (LHM-71).** `Stations` under `[Trough]` defaults
+  to `smelter,blastfurnace`, so a Tun beside a blast furnace gives it the Tun's own +20 ore and
+  +40 coal, the same as the Skip, so either piece takes a furnace to 30 and 60. The player picks
+  either per furnace. Which piece serves a station is now the one actually built beside it, not
+  the first one whose list names it; if both stand beside one furnace the Tun counts, the Skip's
+  hover text says it adds nothing, and the two never add together. **A cfg saved before this
+  keeps `Stations = smelter` until the line is edited**, because BepInEx stores the old default:
+  change it to `smelter,blastfurnace` to get the new behaviour. Built, not run in game; new
+  scenario `kynda-tun-blast-furnace`, and `kynda-furnace-upgrade` was updated to match.
+
 - **`ShowTimeLeft` is yours alone, and on Core's Settings page.** It was host-imposed, so on a
   server whose host left it on, switching it off did nothing. It is now declared with
   `Suite.Local` (guarded like the other Core calls) and listed under Display, "while looking at a
