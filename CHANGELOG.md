@@ -7,6 +7,11 @@ and the mod uses [semantic versioning](https://semver.org).
 
 ### Added
 
+- **`ShowTimeLeft` is yours alone, and on Core's Settings page.** It was host-imposed, so on a
+  server whose host left it on, switching it off did nothing. It is now declared with
+  `Suite.Local` (guarded like the other Core calls) and listed under Display, "while looking at a
+  station". The cfg descriptions of the Tun's capacity entries and the upgrade pieces were
+  reworded to match the three pieces that exist. Built, not run in game.
 - **The batch modifier is on Core's Settings page (LHM-51)**, the page in the compendium that
   lists a player's own settings and rebinds a key by pressing it. Without Core nothing changes: the
   call is guarded and the `.cfg` is still the way. Built, not run in game.

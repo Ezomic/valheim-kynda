@@ -122,11 +122,11 @@ namespace Kynda
             // ------------------------------------------------------------------ upgrades
 
             // On, and what that commits to belongs where somebody will read it. These are
-            // registered prefabs - kynda_hopper and kynda_woodrack - and ZNetScene keys a
+            // registered prefabs - kynda_tun, kynda_woodrack and kynda_furnace - and ZNetScene keys a
             // piece on name.GetStableHashCode() and discards any ZDO whose name no longer
             // resolves. The names are therefore permanent from the first one built:
             // withdrawing this mod from a world, or joining a server that does not run it,
-            // deletes every Tun and Woodrack standing there, silently and for good.
+            // deletes every Tun, Woodrack and Skip standing there, silently and for good.
             //
             // That is exactly why Kynda registers with Core's gate again. The gate refuses
             // the mismatched connection rather than letting it quietly eat what somebody
@@ -204,7 +204,7 @@ namespace Kynda
 
             LinkHeight = config.Bind("Upgrades", "LinkHeight", 0.8f,
                 "How far up the upgrade the link starts, in metres. The default leaves it "
-                + "around the top of both pieces; at 0 it comes out of the ground.");
+                + "around the top of all three pieces; at 0 it comes out of the ground.");
 
             // ------------------------------------------------------------------ the trough
 
@@ -292,13 +292,17 @@ namespace Kynda
                 + "gives a smelter's ore heap its own material too.");
 
             UpgradePrefabs.Trough.OreCapacity = config.Bind("Trough", "OreCapacity", 20,
-                "Extra ore a smelter or furnace holds per trough. Vanilla's 10 becomes 30.");
+                "Extra ore a station holds per Tun, which serves the smelter unless Stations "
+                + "says otherwise. The blast furnace has its own figure under [Furnace]. "
+                + "Vanilla's 10 becomes 30.");
 
             // Twice the ore figure, because a smelter burns two coal for every ore it melts.
             // Matching them would leave the coal side empty with a third of the ore still in
             // the hopper, which is the upgrade only half working.
             UpgradePrefabs.Trough.FuelCapacity = config.Bind("Trough", "FuelCapacity", 40,
-                "Extra coal a smelter or furnace holds per trough. Vanilla's 20 becomes 60. "
+                "Extra coal a station holds per Tun, which serves the smelter unless Stations "
+                + "says otherwise. The blast furnace has its own figure under [Furnace]. "
+                + "Vanilla's 20 becomes 60. "
                 + "Twice the ore figure on purpose - a smelter burns two coal per ore, so "
                 + "matching them would run the fuel out before the ore.");
 

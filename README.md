@@ -120,8 +120,8 @@ recommended on any server. Kynda works without it.
 
 ## Configuration
 
-With [Core](https://github.com/Ezomic/valheim-core) installed, `BatchModifier` is also on the Settings page of
-the compendium, where it is rebound by pressing the key you want.
+With [Core](https://github.com/Ezomic/valheim-core) installed, `BatchModifier` and `ShowTimeLeft` are also on the Settings page of
+the compendium, where the key is rebound by pressing the one you want.
 
 `BepInEx\config\ezomic.valheim.kynda.cfg`, written on first run.
 
@@ -135,7 +135,7 @@ a new default in code. If a setting appears to do nothing after an update, check
 | `BatchModifier` | `LeftShift` | Hold while interacting to batch. `None` makes batching unconditional. Read through Unity's legacy input, so use a keyboard key |
 | `SmelterItemsPerAdd` | `3` | Ore or coal per press at any Smelter-based station. `1` restores vanilla |
 | `FireplaceItemsPerAdd` | `3` | Logs per press at a fireplace. `1` restores vanilla |
-| `ShowTimeLeft` | `true` | Add a "time left" line to the hover text of stations and fireplaces. Off removes it |
+| `ShowTimeLeft` | `true` | Add a "time left" line to the hover text of stations and fireplaces. Off removes it for you, whatever the host has set: it is your own setting, like the key, so a server never imposes it |
 
 ### [Upgrades]
 
@@ -218,7 +218,7 @@ Kynda registers at `Requirement.Everyone`: Core checks each client's Kynda versi
 id on connect and the server rejects a client that does not match. Core also applies the
 host's Kynda config to connected clients in memory, without writing to the client's own
 config file, so a server's capacity figures and batch sizes are the ones in play.
-`BatchModifier` is exempt from that, because a key binding is personal.
+`BatchModifier` is exempt from that, because a key binding is personal, and so is `ShowTimeLeft`, a hover line only you see.
 
 Without Core, Kynda still works and logs a warning at startup. Nothing then stops a client
 that lacks the mod from connecting, and that client will discard every Tun, Woodrack and Skip

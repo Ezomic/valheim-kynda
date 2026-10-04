@@ -120,8 +120,19 @@ namespace Kynda
             // Everyone, not HostOnly, and not a matter of taste: this registers prefabs.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config, Requirement.Everyone);
 
+            try { DeclareLocal(); }
+            catch (System.Exception e) { Log.LogInfo("Core has no Suite.Local, so ShowTimeLeft is the host's like the rest: " + e.Message); }
+
             try { ListOnSettingsScreen(); }
             catch (System.Exception e) { Log.LogInfo("Core has no settings screen to list on, so these settings are in the .cfg only: " + e.Message); }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private void DeclareLocal()
+        {
+            // A hover line is the player's own taste and cannot desync anything, so a host
+            // leaving it on must not be able to put it back on a client that turned it off.
+            Suite.Local(KyndaConfig.ShowTimeLeft);
         }
 
         /// <summary>
@@ -133,6 +144,7 @@ namespace Kynda
         private void ListOnSettingsScreen()
         {
             SettingsPanel.Add(KyndaConfig.BatchModifier, "Batch modifier", SettingsGroup.Hotkeys, "while adding fuel or ore at a station");
+            SettingsPanel.Add(KyndaConfig.ShowTimeLeft, "Show time left", SettingsGroup.Display, "while looking at a station");
         }
 
         private void OnDestroy()
