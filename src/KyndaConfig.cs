@@ -213,13 +213,20 @@ namespace Kynda
             UpgradePrefabs.Trough.Name = config.Bind("Trough", "Name", "Tun",
                 "Name shown on the hammer and when you look at one.");
 
-            // The smelter and nothing else. A blast furnace is fuelled too and would match
-            // on components alone, but it is a late-game station that does not need the
-            // help - and a Tun is a picture of a smelter's ore and coal, not of black metal.
-            UpgradePrefabs.Trough.Stations = config.Bind("Trough", "Stations", "smelter",
+            // The smelter and the blast furnace (LHM-71). It was the smelter alone, on the
+            // argument that a Tun is a picture of ore and coal and not of black metal. What
+            // was asked for is a Tun that works at a furnace too. A blast furnace starts at
+            // the same 10 ore and 20 coal as a smelter and burns the same two coal per ore,
+            // so the Tun's figures below land it on 30 and 60 as well.
+            //
+            // BepInEx saves the default it first wrote, so a cfg from before this change keeps
+            // "smelter" until the line is edited to "smelter,blastfurnace".
+            UpgradePrefabs.Trough.Stations = config.Bind("Trough", "Stations",
+                "smelter,blastfurnace",
                 "Station prefabs this upgrades, comma separated. A station not named here is "
                 + "left alone even if it is the right kind, and a bin standing next to one "
-                + "says it is feeding nothing rather than pretending.");
+                + "says it is feeding nothing rather than pretending. A cfg saved before the "
+                + "blast furnace was added keeps its old value until you edit it.");
 
             // The nails carry the gate now, so the loose bronze that used to do it is gone
             // rather than stacked on top - iron nails already require a smelter to have

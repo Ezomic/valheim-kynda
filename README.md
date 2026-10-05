@@ -55,7 +55,7 @@ a Forge in range to build, because both are held together with nails.
 
 | Piece | Cost | Serves | Capacity |
 | --- | --- | --- | --- |
-| Tun | 20 Fine wood, 15 Iron nails | Smelter | 10 ore becomes 30, 20 coal becomes 60 |
+| Tun | 20 Fine wood, 15 Iron nails | Smelter, blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
 | Woodrack | 25 Fine wood, 20 Deer hide, 25 Bronze nails | Charcoal kiln | 25 wood becomes 50 |
 
 Build one within 4 metres of the station it serves and the station's capacity goes up. The
@@ -71,9 +71,10 @@ feeding, the same run of motes a chopping block draws to its workbench. That is 
 which piece belongs to which station in a row of eight. An upgrade that is not next to
 anything it can serve says so in its hover text.
 
-Each piece serves exactly one station prefab by default: `smelter` for the Tun,
-`charcoal_kiln` for the Woodrack. Blast furnaces, eitr refineries, windmills and spinning
-wheels are left alone. Both lists are config, so adding a modded station is a line in the
+By default the Tun serves `smelter` and `blastfurnace` and the Woodrack serves
+`charcoal_kiln`. Eitr refineries, windmills and spinning wheels are left alone. A cfg saved
+before the Tun learned the blast furnace keeps `Stations = smelter` until you edit the line to
+`smelter,blastfurnace`. Both lists are config, so adding a modded station is a line in the
 `.cfg` rather than a rebuild.
 
 The models are plain `.obj` files read from beside the DLL at runtime, with a `.col` sidecar
@@ -140,7 +141,7 @@ under it, so it stays as it is.
 | Key | Default | Effect |
 | --- | --- | --- |
 | `Name` | `Tun` | Name on the hammer and in hover text |
-| `Stations` | `smelter` | Station prefabs this upgrades, comma separated |
+| `Stations` | `smelter,blastfurnace` | Station prefabs this upgrades, comma separated |
 | `Cost` | `FineWood:20,IronNails:15` | Build cost as `Item:Amount` pairs |
 | `Model` | `kynda_tun_camp.obj` | OBJ loaded from beside the DLL, with its `.col` and `_icon.png` matched by name |
 | `Scale` | `1.0` | Overall size. Scales collision with it |

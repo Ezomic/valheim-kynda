@@ -478,7 +478,7 @@ namespace Kynda
             // this under the name, and the star in the corner only tells you that the
             // piece is an upgrade - never of what.
             Description = "Smelter improvement. A cask of ore and a cask of coal. A "
-                          + "smelter beside it holds more of both.",
+                          + "smelter or blast furnace beside it holds more of both.",
             ServesFuelled = true,
         };
 

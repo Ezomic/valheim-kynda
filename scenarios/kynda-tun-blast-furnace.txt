@@ -1,0 +1,35 @@
+# Kynda LHM-71: a Tun beside a blast furnace raises its capacity.
+#
+# The Tun's Stations default is "smelter,blastfurnace". A cfg saved before LHM-71 keeps "smelter"
+# until the line is edited, and then this scenario fails at the first logged step, which is the
+# thing to check first.
+#
+# BEFORE RUNNING, in the profile's ezomic.valheim.kynda.cfg: Verbose = true, and Stations under
+# [Trough] set to smelter,blastfurnace. Config entries are read once at load, so restart after.
+#
+# NOT YET RUN. Stations reread their upgrades every three seconds, so each change is allowed four.
+# The Tun gives its own figures (OreCapacity 20, FuelCapacity 40), so a blast furnace's 10 ore and
+# 20 coal become 30 and 60, as a smelter's do.
+
+clear
+god
+ghost
+sweep
+
+wipe 14
+wait 1
+
+flatten
+wait 1
+
+place blastfurnace 8 0
+wait 2
+
+place kynda_tun 8 3.6
+wait 4
+logged blastfurnace capacity ore 10 to 30, fuel 20 to 60 yes
+hover kynda_tun Tun
+
+break kynda_tun
+wait 4
+logged blastfurnace capacity ore 30 to 10, fuel 60 to 20 yes
