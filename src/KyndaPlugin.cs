@@ -23,7 +23,7 @@ namespace Kynda
     {
         public const string PluginGuid = "ezomic.valheim.kynda";
         public const string PluginName = "Kynda";
-        public const string PluginVersion = "1.1.2";
+        public const string PluginVersion = "1.2.0";
         public const string PluginAuthor = "Robbin Thijssen";
 
         /// <summary>Core's plugin GUID. Optional - see TryRegisterWithCore.</summary>
@@ -119,6 +119,17 @@ namespace Kynda
         {
             // Everyone, not HostOnly, and not a matter of taste: this registers prefabs.
             Suite.Register(PluginGuid, PluginName, PluginVersion, Config, Requirement.Everyone);
+
+            try { DeclareLocal(); }
+            catch (System.Exception e) { Log.LogInfo("Core has no Suite.Local, so ShowTimeLeft is the host's like the rest: " + e.Message); }
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private void DeclareLocal()
+        {
+            // A hover line is the player's own taste and cannot desync anything, so a host
+            // leaving it on must not be able to put it back on a client that turned it off.
+            Suite.Local(KyndaConfig.ShowTimeLeft);
         }
 
         private void OnDestroy()

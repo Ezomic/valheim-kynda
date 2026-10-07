@@ -121,7 +121,7 @@ a new default in code. If a setting appears to do nothing after an update, check
 | `BatchModifier` | `LeftShift` | Hold while interacting to batch. `None` makes batching unconditional. Read through Unity's legacy input, so use a keyboard key |
 | `SmelterItemsPerAdd` | `3` | Ore or coal per press at any Smelter-based station. `1` restores vanilla |
 | `FireplaceItemsPerAdd` | `3` | Logs per press at a fireplace. `1` restores vanilla |
-| `ShowTimeLeft` | `true` | Add a "time left" line to the hover text of stations and fireplaces. Off removes it |
+| `ShowTimeLeft` | `true` | Add a "time left" line to the hover text of stations and fireplaces. Off removes it for you, whatever the host has set: it is your own setting, so a server never imposes it |
 
 ### [Upgrades]
 
@@ -188,7 +188,7 @@ Kynda registers at `Requirement.Everyone`: Core checks each client's Kynda versi
 id on connect and the server rejects a client that does not match. Core also applies the
 host's Kynda config to connected clients in memory, without writing to the client's own
 config file, so a server's capacity figures and batch sizes are the ones in play.
-`BatchModifier` is exempt from that, because a key binding is personal.
+`BatchModifier` is exempt from that, because a key binding is personal, and so is `ShowTimeLeft`, a hover line only you see.
 
 Without Core, Kynda still works and logs a warning at startup. Nothing then stops a client
 that lacks the mod from connecting, and that client will discard every Tun and Woodrack in

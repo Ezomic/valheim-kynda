@@ -3,20 +3,23 @@
 Notable changes to Kynda. Format follows [Keep a Changelog](https://keepachangelog.com),
 and the mod uses [semantic versioning](https://semver.org).
 
-## [1.1.2] - 2026-10-05
+## [1.2.0] - 2026-10-08
 
 ### Added
 
-- **Hover text says how long what is loaded will last (LHM-48).** One short grey line under the
-  batch hint: the queued ore at a smelter-type station (queue times `m_secPerProduct`, minus
-  the progress already made), the coal in its fuel switch, and the wood in a fireplace. All of
-  it is the game's own timing read from the station, since Kynda never changes throughput. A
-  windmill gets no line (its speed follows the wind), and neither does a station with ore but
-  no coal, because that countdown is not counting. It is also left off for a fireplace that
-  is turned off, blocked or under water, for coal with no ore queued, and for a station that
-  needs a roof or a clear chimney and does not have one. With ore queued the line is the
-  smaller of the queue time and the time the coal lasts. `ShowTimeLeft` under `[Batching]`
-  turns it off.
+- **Hover text says how long what is loaded will last (LHM-48).** One grey line under the batch
+  hint: the queued ore at a smelter-type station (queue time minus the progress already made),
+  the coal in its fuel switch, and the wood in a fireplace. It is the game's own timing read from
+  the station, since Kynda never changes throughput. With ore queued the line is the smaller of
+  the queue time and the time the coal lasts. There is no line for a windmill (its speed follows
+  the wind), for a station with ore but no coal, for coal with no ore queued, for a fireplace that
+  is off, blocked or under water, or for a station that needs a roof or a clear chimney and has
+  none. `ShowTimeLeft` under `[Batching]` turns it off. It is your own setting: it is declared
+  with `Suite.Local`, so a host that leaves it on cannot put it back on a client that switched it
+  off. With a Core older than that call it behaves like the other settings and the host's value
+  wins. Built, not played in game.
+
+## [1.1.2] - 2026-10-05
 
 ### Fixed
 
