@@ -34,6 +34,8 @@ namespace Kynda
                 return false;
             }
 
+            var donorShader = DonorShader(prefab);
+
             // The donor's renderers go, but its ZNetView, Piece and WearNTear stay: those
             // are the machinery that makes it a buildable, damageable, networked object,
             // and rebuilding them by hand is exactly the work cloning avoids.
@@ -53,11 +55,19 @@ namespace Kynda
             filter.sharedMesh = model.Mesh;
 
             var meshRenderer = visual.AddComponent<MeshRenderer>();
-            meshRenderer.sharedMaterials = Skins.SkinAndWatch(meshRenderer, model.Mesh, model.Groups, skins);
+            var own = OwnMaterials(dir, modelFile, model.Groups, donorShader);
+            if (own != null)
+            {
+                meshRenderer.sharedMaterials = own;
+            }
+            else
+            {
+                meshRenderer.sharedMaterials = Skins.SkinAndWatch(meshRenderer, model.Mesh, model.Groups, skins);
 
-            // Without this the mesh samples the whole texture sheet instead of the one
-            // tile its material actually occupies, and picks up the neighbouring tiles.
-            Skins.Remap(model.Mesh, model.Groups, skins);
+                // Without this the mesh samples the whole texture sheet instead of the one
+                // tile its material actually occupies, and picks up the neighbouring tiles.
+                Skins.Remap(model.Mesh, model.Groups, skins);
+            }
 
             // The collision sidecar sits beside the model and shares its name, so a model
             // swap in config brings the right boxes with it rather than leaving the last
@@ -71,6 +81,56 @@ namespace Kynda
                 string.Join(", ", model.Groups)));
 
             return true;
+        }
+
+        private static Shader DonorShader(GameObject prefab)
+        {
+            foreach (var renderer in prefab.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var material = renderer.sharedMaterial;
+                if (material != null && material.shader != null) return material.shader;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Materials painted for this model: a texture beside the model named
+        /// model_group.png for every group, on the donor's own shader so the light matches.
+        /// All or nothing. A model with one group missing its texture goes through Skins
+        /// whole, because the two paths place UVs differently (Skins fits them into a donor
+        /// atlas, these are tiled as exported) and mixing them would put one group's UVs
+        /// through the other's rules. Null on a server, which draws nothing.
+        /// </summary>
+        private static Material[] OwnMaterials(string dir, string modelFile, string[] groups,
+                                               Shader shader)
+        {
+            if (Skins.Headless || shader == null) return null;
+
+            var stem = Path.GetFileNameWithoutExtension(modelFile);
+            var materials = new Material[groups.Length];
+            for (var i = 0; i < groups.Length; i++)
+            {
+                var path = Path.Combine(dir, stem + "_" + groups[i] + ".png");
+                if (!File.Exists(path)) return null;
+
+                var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true)
+                {
+                    filterMode = FilterMode.Trilinear,
+                    wrapMode = TextureWrapMode.Repeat,
+                    name = stem + "_" + groups[i],
+                    hideFlags = HideFlags.HideAndDontSave
+                };
+
+                if (!UpgradePrefabs.LoadPng(texture, File.ReadAllBytes(path))) return null;
+
+                materials[i] = new Material(shader) { name = texture.name, mainTexture = texture };
+            }
+
+            KyndaPlugin.Log.LogInfo(string.Format(
+                "{0}: painted textures for [{1}] on shader {2}.",
+                modelFile, string.Join(", ", groups), shader.name));
+            return materials;
         }
 
         /// <summary>

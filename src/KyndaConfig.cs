@@ -390,10 +390,10 @@ namespace Kynda
             // furnace is black metal and stone. The section is [Furnace] because the prefab
             // is kynda_furnace, named for the station and not for whichever design is
             // loaded, so swapping the model never touches a saved setting.
-            UpgradePrefabs.Furnace.Name = config.Bind("Furnace", "Name", "Skip",
+            UpgradePrefabs.Furnace.Name = config.Bind("Furnace", "Name", "Funnel",
                 "Name shown on the hammer and when you look at one. Change it with the model: "
-                + "the default names the skip, the first design built, and a different "
-                + "design wants a different word.");
+                + "the default names the funnel, and a different design wants a different "
+                + "word.");
 
             UpgradePrefabs.Furnace.Stations = config.Bind("Furnace", "Stations", "blastfurnace",
                 "Station prefabs this upgrades, comma separated. A station not named here is "
@@ -404,9 +404,9 @@ namespace Kynda
             // Chosen against the Tun, which is 20 fine wood and 15 iron nails (35 items, a
             // biome beyond its smelter). A blast furnace is a Plains build, so this sits one
             // biome further on, and it is made of what the model is made of: stone for the
-            // bank and the buttress, black metal for the rails, the skip and the winch.
-            // Two items for two material groups, 45 pieces in all against the Tun's 35,
-            // because a long ramp is more masonry than a pair of casks.
+            // bowl, black metal for the bands, braces and chute. Two items for two material
+            // groups, 45 pieces in all against the Tun's 35, because a bowl of stacked
+            // blocks is more masonry than a pair of casks.
             //
             // Black metal is what a blast furnace smelts, so the piece cannot be raised
             // before the furnace it serves has made some. That is the same tier gate the Tun
@@ -421,15 +421,19 @@ namespace Kynda
                 + "here at least once.");
 
             UpgradePrefabs.Furnace.Model = config.Bind("Furnace", "Model",
-                "kynda_furnace_skip.obj",
+                "kynda_furnace_funnel.obj",
                 "The OBJ loaded from beside the DLL, with its .col and _icon.png matched by "
-                + "name, so a different design brings its own shape and picture with it. "
+                + "name, so a different design brings its own shape and picture with it. A "
+                + "model_group.png for every group is used as that group's painted texture. "
                 + "Needs a restart.");
 
             UpgradePrefabs.Furnace.Scale = config.Bind("Furnace", "Scale", 1.0f,
                 "Overall size of the piece. Scales the collision with it, since the boxes "
                 + "are children of the piece.");
 
+            // Only read for a model with no painted textures beside it; the funnel brings
+            // its own and never asks for a donor.
+            //
             // The blast furnace's own material, and this is the part nobody has seen in
             // game yet. The furnace body is painted dark grey mottled stone on the left of
             // its sheet and near black on the right, so its left half is what black metal
