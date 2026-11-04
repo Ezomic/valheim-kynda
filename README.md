@@ -20,7 +20,7 @@ Built against Valheim 1.0.7, Unity 6000.0.75, BepInEx 5.4.23.5, Harmony 2.9.
   reading this file.
 - Under it, one grey line says how long the ore, coal or wood already loaded will last, from
   the station's own timing. Off with `ShowTimeLeft`.
-- Three buildable upgrades, the Tun, the Woodrack and the blast furnace's Skip, that raise the
+- Three buildable upgrades, the Tun, the Woodrack and the blast furnace's Funnel, that raise the
   capacity of a smelter, a charcoal kiln or a blast furnace standing next to them.
 - Everything is configurable: the key, the batch size, the upgrade costs, which stations
   they serve, and how much capacity they add.
@@ -60,7 +60,7 @@ metal.
 | --- | --- | --- | --- |
 | Tun | 20 Fine wood, 15 Iron nails | Smelter | 10 ore becomes 30, 20 coal becomes 60 |
 | Woodrack | 25 Fine wood, 20 Deer hide, 25 Bronze nails | Charcoal kiln | 25 wood becomes 50 |
-| Skip | 30 Stone, 15 Black metal | Blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
+| Funnel | 30 Stone, 15 Black metal | Blast furnace | 10 ore becomes 30, 20 coal becomes 60 |
 
 Build one within 4 metres of the station it serves and the station's capacity goes up. The
 coal figure is twice the ore figure because a smelter burns two coal per ore; matching them
@@ -76,14 +76,15 @@ which piece belongs to which station in a row of eight. An upgrade that is not n
 anything it can serve says so in its hover text.
 
 Each piece serves exactly one station prefab by default: `smelter` for the Tun,
-`charcoal_kiln` for the Woodrack, `blastfurnace` for the Skip. Eitr refineries, windmills and
+`charcoal_kiln` for the Woodrack, `blastfurnace` for the Funnel. Eitr refineries, windmills and
 spinning wheels are left alone. All three lists are config, so adding a modded station is a
 line in the `.cfg` rather than a rebuild. A station named in more than one list is served by
-the first of the Tun, Woodrack and Skip that names it, never by two added together.
+the first of the Tun, Woodrack and Funnel that names it, never by two added together.
 
 The blast furnace has a piece of its own rather than the Tun learning a second station. A Tun
-is a picture of ore and coal, and a blast furnace is black metal and stone, so the Skip is a
-short ore skip on iron rails up a stone bank, hauled by a winch behind a stone buttress. It
+is a picture of ore and coal, and a blast furnace is black metal and stone, so the Funnel is a
+bowl of stacked pale stone on three braced timber legs, banded in green-bronze metal, with an
+iron chute under it and a basket of coal beside it, in the furnace's own colours. It
 gets the Tun's figures on purpose: the furnace holds the same 10 ore and 20 coal a smelter
 does and burns the same two coal per ore, so the same +20 and +40 lands on the same 30 and 60.
 The black metal in its cost is what a blast furnace smelts, so you cannot raise one before the
@@ -91,13 +92,15 @@ furnace has made some, and Valheim keeps the piece off your hammer until you hav
 item in the cost once.
 
 The models are plain `.obj` files read from beside the DLL at runtime, with a `.col` sidecar
-for collision and an `_icon.png` for the hammer icon, matched by filename. Rejected designs
+for collision and an `_icon.png` for the hammer icon, matched by filename. A model that has a
+`model_group.png` beside it for every material group wears those painted textures; one that
+does not borrows vanilla surfaces for its groups (`SkinDonors`). Rejected designs
 live in `assets\variants\` and are not deployed; copy one up into `assets\` and point
 `Model` at it to try it.
 
 **The upgrades register prefabs, and that is permanent.** Valheim keys a placed piece on its
 prefab name hash and discards any saved object whose name no longer resolves. Loading a world
-without Kynda, or joining a server that does not run it, deletes every Tun, Woodrack and Skip
+without Kynda, or joining a server that does not run it, deletes every Tun, Woodrack and Funnel
 standing there without an error. See Multiplayer below for what prevents that.
 
 Turning `Enabled` off is safe: since 1.1.0 it only hides the pieces from the hammer and
@@ -181,16 +184,16 @@ under it, so it stays as it is.
 There is no `FuelCapacity` here. The Woodrack only serves stations with no fuel slot, so it
 would be a setting that could never do anything.
 
-### [Furnace] (the Skip)
+### [Furnace] (the Funnel)
 
 | Key | Default | Effect |
 | --- | --- | --- |
-| `Name` | `Skip` | Name on the hammer and in hover text. Change it with the model |
+| `Name` | `Funnel` | Name on the hammer and in hover text. Change it with the model |
 | `Stations` | `blastfurnace` | Station prefabs this upgrades, comma separated |
 | `Cost` | `Stone:30,BlackMetal:15` | Build cost as `Item:Amount` pairs. The piece stays off the hammer until the character has held every item once |
-| `Model` | `kynda_furnace_skip.obj` | OBJ loaded from beside the DLL, with its `.col` and `_icon.png` matched by name. Needs a restart |
+| `Model` | `kynda_furnace_funnel.obj` | OBJ loaded from beside the DLL, with its `.col` and `_icon.png` matched by name. Needs a restart |
 | `Scale` | `1.0` | Overall size. Scales collision with it |
-| `SkinDonors` | `iron=@BlastFurnace_mat:0.01/0.01/0.44/0.98,stone=stone_wall_2x1` | Which vanilla prefab or material each mesh group borrows its surface from. The iron group wears the blast furnace's own dark grey; `iron=forge` is the fallback if it comes out wrong |
+| `SkinDonors` | `iron=@BlastFurnace_mat:0.01/0.01/0.44/0.98,stone=stone_wall_2x1` | Only read by a model with no painted textures, which the funnel is not. Which vanilla prefab or material each mesh group borrows its surface from. The iron group wears the blast furnace's own dark grey; `iron=forge` is the fallback if it comes out wrong |
 | `OreCapacity` | `20` | Extra ore a blast furnace holds. 10 becomes 30 |
 | `FuelCapacity` | `40` | Extra coal a blast furnace holds. 20 becomes 60 |
 
@@ -221,7 +224,7 @@ config file, so a server's capacity figures and batch sizes are the ones in play
 `BatchModifier` is exempt from that, because a key binding is personal, and so is `ShowTimeLeft`, a hover line only you see.
 
 Without Core, Kynda still works and logs a warning at startup. Nothing then stops a client
-that lacks the mod from connecting, and that client will discard every Tun, Woodrack and Skip
+that lacks the mod from connecting, and that client will discard every Tun, Woodrack and Funnel
 in the world it loads. Run it ungated on a world you control, not on one you share with people.
 
 ## Compatibility
@@ -244,7 +247,7 @@ in the world it loads. Run it ungated on a world you control, not on one you sha
   station in the same moment, can still push the ore queue past its maximum, because the game
   does not clamp it on its own side. When you own the station, the add lands at once and the
   count is exact. Reported on smelters and blast furnaces.
-- Uninstalling Kynda from a world that has Tuns, Woodracks or Skips in it deletes them permanently.
+- Uninstalling Kynda from a world that has Tuns, Woodracks or Funnels in it deletes them permanently.
   Break them down first if you want the materials back.
 
 ## Troubleshooting
@@ -256,7 +259,7 @@ throwing later.
 
 **The upgrades are not on the hammer.** Valheim hides a piece whose materials you have never
 picked up, rather than greying it out. On a character that has never held bronze the Woodrack
-is simply absent, and the Skip is absent until the character has held black metal. `TestMode`
+is simply absent, and the Funnel is absent until the character has held black metal. `TestMode`
 drops all three to one wood if you want to check they registered.
 
 **An upgrade is next to its station and nothing changed.** Check the range (4 metres by

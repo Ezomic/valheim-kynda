@@ -10,7 +10,7 @@
 # only logged with it, and the assertions read that line. Config entries are read once at load, so
 # restart the game after.
 #
-# NOT YET RUN, and the skip has never been seen in game either. What this proves is the wiring:
+# NOT YET RUN, and the funnel has never been seen in game either. What this proves is the wiring:
 # the piece resolves a station through its own Stations list, counts only its own kind, and gives
 # the capacity back when it is torn down. It says nothing about the model, the skin or the icon.
 #
@@ -36,7 +36,7 @@ wait 2
 place kynda_furnace 8 3.6
 wait 4
 logged blastfurnace capacity ore 10 to 30, fuel 20 to 60 yes
-hover kynda_furnace Skip
+hover kynda_furnace Funnel
 
 place kynda_tun 8 -3.6
 wait 4

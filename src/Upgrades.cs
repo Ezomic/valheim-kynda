@@ -523,9 +523,9 @@ namespace Kynda
         public static readonly UpgradeDef Furnace = new UpgradeDef
         {
             PrefabName = "kynda_furnace",
-            Description = "Blast furnace improvement. An ore skip on rails, hauled up to the "
-                          + "charging mouth by a winch. A blast furnace beside it holds "
-                          + "more of both.",
+            Description = "Blast furnace improvement. A bowl of stacked stone on timber legs, "
+                          + "with an iron chute and a basket of coal. A blast furnace beside "
+                          + "it holds more of both.",
             ServesFuelled = true,
             Kind = 2,
         };
@@ -1099,7 +1099,7 @@ namespace Kynda
         /// CS1705. The method is there at runtime regardless, so reaching it this way costs
         /// one lookup and removes the whole problem.
         /// </summary>
-        private static bool LoadPng(Texture2D texture, byte[] data)
+        internal static bool LoadPng(Texture2D texture, byte[] data)
         {
             var type = AccessTools.TypeByName("UnityEngine.ImageConversion");
             if (type == null)
